@@ -1,0 +1,56 @@
+name: Application checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Formatting
+        run: npm run format:check
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Independent business and access tests
+        run: npm test
+      - name: Production build without deployment credentials
+        run: npm run build
+      - name: HTTP integration against an isolated loopback server
+        shell: bash
+        env:
+          GP_FORCE_LOCAL_DEMO: 'true'
+          GP_PUBLIC_LAUNCH: 'false'
+          GP_DATABASE_PATH: ${{ runner.temp }}/gp-ci-local.sqlite
+          GP_MEDIA_PATH: ${{ runner.temp }}/gp-ci-media
+        run: |
+          ./node_modules/.bin/next dev --hostname 127.0.0.1 --port 3100 > "$RUNNER_TEMP/gp-ci-server.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=false
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:3100/api/health > /dev/null; then
+              ready=true
+              break
+            fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" != true ]; then
+            echo 'The owned loopback test server did not become ready.'
+            exit 1
+          fi
+          GP_ACCOUNT_TEST_URL=http://127.0.0.1:3100 ./node_modules/.bin/tsx --test tests/account-flow.test.ts

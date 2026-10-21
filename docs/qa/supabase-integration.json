@@ -1,0 +1,621 @@
+{
+  "timestamp": "2026-10-21T16:48:51.035Z",
+  "scope": "Next HTTP + confirmed GoTrue accounts + direct PostgREST/Storage with publishable key",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "supabase_session_http",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "supabase_mode_selected",
+      "passed": true
+    },
+    {
+      "name": "anonymous_session_empty",
+      "passed": true
+    },
+    {
+      "name": "demo_personas_unavailable",
+      "passed": true,
+      "httpStatus": 404,
+      "code": "NOT_FOUND"
+    },
+    {
+      "name": "local_mailbox_unavailable",
+      "passed": true,
+      "httpStatus": 404,
+      "code": "NOT_FOUND"
+    },
+    {
+      "name": "seller_next_gotrue_login",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "seller_identity_matches",
+      "passed": true
+    },
+    {
+      "name": "seller_confirmed_email",
+      "passed": true
+    },
+    {
+      "name": "seller_cookie_session",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "seller_http_only_cookie_identity",
+      "passed": true
+    },
+    {
+      "name": "seller_direct_gotrue_login",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "seller_direct_token_received",
+      "passed": true
+    },
+    {
+      "name": "buyer_next_gotrue_login",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "buyer_identity_matches",
+      "passed": true
+    },
+    {
+      "name": "buyer_confirmed_email",
+      "passed": true
+    },
+    {
+      "name": "buyer_cookie_session",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "buyer_http_only_cookie_identity",
+      "passed": true
+    },
+    {
+      "name": "buyer_direct_gotrue_login",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "buyer_direct_token_received",
+      "passed": true
+    },
+    {
+      "name": "outsider_next_gotrue_login",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "outsider_identity_matches",
+      "passed": true
+    },
+    {
+      "name": "outsider_confirmed_email",
+      "passed": true
+    },
+    {
+      "name": "outsider_cookie_session",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "outsider_http_only_cookie_identity",
+      "passed": true
+    },
+    {
+      "name": "outsider_direct_gotrue_login",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "outsider_direct_token_received",
+      "passed": true
+    },
+    {
+      "name": "moderator_next_gotrue_login",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "moderator_identity_matches",
+      "passed": true
+    },
+    {
+      "name": "moderator_confirmed_email",
+      "passed": true
+    },
+    {
+      "name": "moderator_cookie_session",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "moderator_http_only_cookie_identity",
+      "passed": true
+    },
+    {
+      "name": "moderator_direct_gotrue_login",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "moderator_direct_token_received",
+      "passed": true
+    },
+    {
+      "name": "moderator_server_role",
+      "passed": true
+    },
+    {
+      "name": "anon_gp_limit_not_callable",
+      "passed": true,
+      "httpStatus": 401,
+      "code": "42501"
+    },
+    {
+      "name": "anon_gp_limit_permission_or_hidden",
+      "passed": true,
+      "httpStatus": 401,
+      "code": "42501"
+    },
+    {
+      "name": "member_gp_limit_not_callable",
+      "passed": true,
+      "httpStatus": 403,
+      "code": "42501"
+    },
+    {
+      "name": "member_gp_limit_permission_or_hidden",
+      "passed": true,
+      "httpStatus": 403,
+      "code": "42501"
+    },
+    {
+      "name": "draft_creation",
+      "passed": true,
+      "httpStatus": 201
+    },
+    {
+      "name": "direct_rest_owner_can_read",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "direct_rest_owner_row_visible",
+      "passed": true
+    },
+    {
+      "name": "direct_rest_other_member_query",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "rls_other_member_has_no_draft",
+      "passed": true
+    },
+    {
+      "name": "api_draft_other_owner_hidden",
+      "passed": true,
+      "httpStatus": 404,
+      "code": "NOT_FOUND"
+    },
+    {
+      "name": "anon_private_table_denied",
+      "passed": true,
+      "httpStatus": 401,
+      "code": "42501"
+    },
+    {
+      "name": "incomplete_draft_autosave",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "private_upload_1",
+      "passed": true,
+      "httpStatus": 201
+    },
+    {
+      "name": "upload_1_url_contract",
+      "passed": true
+    },
+    {
+      "name": "anonymous_unapproved_image_1_denied",
+      "passed": true
+    },
+    {
+      "name": "other_member_private_image_1_denied",
+      "passed": true
+    },
+    {
+      "name": "owner_private_image_1_read",
+      "passed": true
+    },
+    {
+      "name": "private_image_1_exif_removed",
+      "passed": true
+    },
+    {
+      "name": "private_image_1_webp",
+      "passed": true
+    },
+    {
+      "name": "private_upload_2",
+      "passed": true,
+      "httpStatus": 201
+    },
+    {
+      "name": "upload_2_url_contract",
+      "passed": true
+    },
+    {
+      "name": "anonymous_unapproved_image_2_denied",
+      "passed": true
+    },
+    {
+      "name": "other_member_private_image_2_denied",
+      "passed": true
+    },
+    {
+      "name": "owner_private_image_2_read",
+      "passed": true
+    },
+    {
+      "name": "private_image_2_exif_removed",
+      "passed": true
+    },
+    {
+      "name": "private_image_2_webp",
+      "passed": true
+    },
+    {
+      "name": "private_upload_3",
+      "passed": true,
+      "httpStatus": 201
+    },
+    {
+      "name": "upload_3_url_contract",
+      "passed": true
+    },
+    {
+      "name": "anonymous_unapproved_image_3_denied",
+      "passed": true
+    },
+    {
+      "name": "other_member_private_image_3_denied",
+      "passed": true
+    },
+    {
+      "name": "owner_private_image_3_read",
+      "passed": true
+    },
+    {
+      "name": "private_image_3_exif_removed",
+      "passed": true
+    },
+    {
+      "name": "private_image_3_webp",
+      "passed": true
+    },
+    {
+      "name": "complete_draft_autosave",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "unknown_dimensions_remain_null",
+      "passed": true
+    },
+    {
+      "name": "unknown_charges_remain_null",
+      "passed": true
+    },
+    {
+      "name": "stale_draft_version_refused",
+      "passed": true,
+      "httpStatus": 409,
+      "code": "VERSION_CONFLICT"
+    },
+    {
+      "name": "draft_mutation_other_owner_refused",
+      "passed": true,
+      "httpStatus": 404,
+      "code": "NOT_FOUND"
+    },
+    {
+      "name": "attestation_required_by_server",
+      "passed": true,
+      "httpStatus": 400,
+      "code": "OWNERSHIP_ATTESTATION_REQUIRED"
+    },
+    {
+      "name": "submission",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "submission_pending",
+      "passed": true
+    },
+    {
+      "name": "not_public_before_approval",
+      "passed": true,
+      "httpStatus": 404,
+      "code": "NOT_FOUND"
+    },
+    {
+      "name": "moderation_null_version_refused",
+      "passed": true,
+      "httpStatus": 400,
+      "code": "P0001"
+    },
+    {
+      "name": "moderation_null_version_conflict",
+      "passed": true,
+      "httpStatus": 400,
+      "code": "P0001"
+    },
+    {
+      "name": "member_moderation_endpoint_denied",
+      "passed": true,
+      "httpStatus": 403,
+      "code": "VALIDATION_ERROR"
+    },
+    {
+      "name": "moderation_queue",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "submitted_revision_in_queue",
+      "passed": true
+    },
+    {
+      "name": "approved_publication",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "approved_status",
+      "passed": true
+    },
+    {
+      "name": "public_listing",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "public_total_price",
+      "passed": true
+    },
+    {
+      "name": "private_address_absent",
+      "passed": true
+    },
+    {
+      "name": "area_scene_unavailable",
+      "passed": true
+    },
+    {
+      "name": "no_private_owner_identifiers",
+      "passed": true
+    },
+    {
+      "name": "public_unknown_unit_area",
+      "passed": true
+    },
+    {
+      "name": "public_approved_image_accessible",
+      "passed": true
+    },
+    {
+      "name": "public_image_exif_removed",
+      "passed": true
+    },
+    {
+      "name": "public_image_webp",
+      "passed": true
+    },
+    {
+      "name": "approved_bucket_has_no_unconditional_public_route",
+      "passed": true
+    },
+    {
+      "name": "surface_filter",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "unknown_bundle_unit_excluded",
+      "passed": true
+    },
+    {
+      "name": "favorite_first_put",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "favorite_repeated_put_idempotent",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "favorite_list",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "favorite_not_duplicated",
+      "passed": true
+    },
+    {
+      "name": "contact_creation",
+      "passed": true,
+      "httpStatus": 201
+    },
+    {
+      "name": "message_send",
+      "passed": true,
+      "httpStatus": 201
+    },
+    {
+      "name": "message_repeat",
+      "passed": true,
+      "httpStatus": 201
+    },
+    {
+      "name": "message_idempotent",
+      "passed": true
+    },
+    {
+      "name": "seller_read_message",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "seller_received_message",
+      "passed": true
+    },
+    {
+      "name": "outsider_conversation_api_denied",
+      "passed": true,
+      "httpStatus": 404,
+      "code": "VALIDATION_ERROR"
+    },
+    {
+      "name": "direct_messages_other_query",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "rls_other_member_cannot_read_messages",
+      "passed": true
+    },
+    {
+      "name": "visit_request",
+      "passed": true,
+      "httpStatus": 201
+    },
+    {
+      "name": "visit_null_action_refused",
+      "passed": true,
+      "httpStatus": 400,
+      "code": "P0001"
+    },
+    {
+      "name": "visit_null_action_validation",
+      "passed": true,
+      "httpStatus": 400,
+      "code": "P0001"
+    },
+    {
+      "name": "buyer_cannot_accept_own_visit",
+      "passed": true,
+      "httpStatus": 403,
+      "code": "FORBIDDEN"
+    },
+    {
+      "name": "seller_accepts_without_time",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "accepted_is_not_confirmed",
+      "passed": true
+    },
+    {
+      "name": "seller_confirms_time",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "visit_confirmed_with_time",
+      "passed": true
+    },
+    {
+      "name": "stale_visit_version_refused",
+      "passed": true,
+      "httpStatus": 409,
+      "code": "VERSION_CONFLICT"
+    },
+    {
+      "name": "participant_cancels",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "visit_cancelled",
+      "passed": true
+    },
+    {
+      "name": "seller_withdraws_listing",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "withdrawn_listing_not_public",
+      "passed": true,
+      "httpStatus": 404,
+      "code": "NOT_FOUND"
+    },
+    {
+      "name": "private_history_preserved",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "withdrawn_image_not_anonymously_readable",
+      "passed": true
+    },
+    {
+      "name": "remove_favorite",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "seller_logout",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "buyer_logout",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "outsider_logout",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "moderator_logout",
+      "passed": true,
+      "httpStatus": 200
+    }
+  ],
+  "passed": 128,
+  "failedCheck": null,
+  "credentialsIncluded": false,
+  "fixtures": "Ignored .data/supabase-qa-result.json; coordinator must clean up exact IDs",
+  "emailsSent": false,
+  "limitations": [
+    "No signup/confirmation/recovery email delivery test",
+    "No production deployment",
+    "No verification of a real parking model"
+  ],
+  "sources": [
+    "https://supabase.com/docs/reference/javascript/auth-signinwithpassword",
+    "https://supabase.com/docs/guides/database/postgres/row-level-security",
+    "https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically"
+  ]
+}

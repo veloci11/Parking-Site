@@ -1,0 +1,21 @@
+{
+  "date": "2026-10-21",
+  "scope": "production dependencies",
+  "result": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "updated": {
+    "maplibre-gl": "6.15.0",
+    "sharp": "0.35.5"
+  },
+  "sources": [
+    "https://github.com/maplibre/maplibre-gl-js/security/advisories/GHSA-jrc7-96c5-q579",
+    "https://sharp.pixelplumbing.com/changelog/v0.35.5"
+  ],
+  "limitations": "npm audit reports known package advisories; it does not certify application security."
+}

@@ -1,0 +1,121 @@
+{
+  "priorAttempts": [],
+  "resumed": false,
+  "checkedAt": "2026-10-21T17:24:51.244Z",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "supabase_mode_http",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "connected_supabase_mode",
+      "passed": true
+    },
+    {
+      "name": "seller_login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "seller_identity",
+      "passed": true
+    },
+    {
+      "name": "seller_direct_login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "buyer_login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "buyer_identity",
+      "passed": true
+    },
+    {
+      "name": "buyer_direct_login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "outsider_login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "outsider_identity",
+      "passed": true
+    },
+    {
+      "name": "outsider_direct_login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "moderator_login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "moderator_identity",
+      "passed": true
+    },
+    {
+      "name": "moderator_direct_login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "visual_fixture_withdrawn",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "scene_hidden_after_fixture_withdrawal",
+      "passed": true,
+      "status": 404,
+      "code": "NOT_FOUND"
+    }
+  ],
+  "failure": null,
+  "fixture": "explicitly fictional test inventory, no real parking pilot",
+  "fixtureKeptForVisualQA": false,
+  "withdrawn": true,
+  "externalEmailsSent": false,
+  "geometrySource": "parametric JSON fixture; metric calibration and RLS tested against the configured service",
+  "verificationRun": {
+    "status": "passed",
+    "passed": 88,
+    "total": 88,
+    "command": "tsx scripts/verify-scenes.ts --resume --keep-for-visual",
+    "completedBeforeWithdrawal": true,
+    "detail": "Connected verification succeeded; withdrawal run replaced per-check detail. This summary preserves the actual emitted 88/88 result without reconstructing missing rows."
+  },
+  "withdrawalRun": {
+    "status": "passed",
+    "passed": 16,
+    "total": 16
+  },
+  "storageCleanup": {
+    "status": "passed",
+    "method": "authenticated Storage API; exact ignored QA inventory only",
+    "buckets": [
+      {
+        "bucket": "scene-sources",
+        "deleted": 2
+      },
+      {
+        "bucket": "private-uploads",
+        "deleted": 3
+      },
+      {
+        "bucket": "public-approved",
+        "deleted": 3
+      }
+    ]
+  }
+}
