@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "1.0",
+  "parkingId": "11111111-1111-4111-8111-111111111111",
+  "levelId": "22222222-2222-4222-8222-222222222222",
+  "sceneVersion": 1,
+  "isDemo": true,
+  "fidelity": "schematic",
+  "status": "draft",
+  "coordinates": {
+    "unit": "m",
+    "handedness": "right",
+    "upAxis": "Y",
+    "origin": [
+      0,
+      0,
+      0
+    ]
+  },
+  "scale": {
+    "calibrated": false,
+    "controlDistancesCount": 0,
+    "accuracyM": null,
+    "publicSourceSummary": "Exemple fictif sans plan de parking reel."
+  },
+  "observedAt": null,
+  "reviewedAt": null,
+  "camera": {
+    "position": [
+      10,
+      12,
+      12
+    ],
+    "target": [
+      3,
+      0,
+      3
+    ]
+  },
+  "spaces": [
+    {
+      "spaceId": "33333333-3333-4333-8333-333333333333",
+      "displayNumber": "12",
+      "meshName": "space_12",
+      "footprintXZ": [
+        [
+          0,
+          0
+        ],
+        [
+          2.4,
+          0
+        ],
+        [
+          2.4,
+          5
+        ],
+        [
+          0,
+          5
+        ]
+      ],
+      "dimensions": {
+        "lengthM": null,
+        "widthM": null,
+        "clearanceM": null
+      },
+      "source": "schematic"
+    }
+  ],
+  "observations": [],
+  "assets": {
+    "modelKey": "published-scenes/demo/level-1.glb",
+    "previewKey": "published-scenes/demo/level-1.webp"
+  },
+  "publicLocationContext": "exact_opt_in"
+}

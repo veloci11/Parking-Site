@@ -1,0 +1,19 @@
+﻿role,specialite,taches_reference,mission_attribuee,fichiers_exacts,contrat_version,dependances_validees,statut,preuve_livrable,relecteur
+A00,Coordinateur et intégrateur,P062;P064;P070,,,,,prepare,,Mathis
+A01,"Design system, typographie et fidélité visuelle",P001;P014,,,,,prepare,,A00
+A02,"Architecture, données et contrats",P011,,,,,prepare,,A00
+A03,"Identité, autorisations et sécurité",P011;P012;P061,,,,,prepare,,A00
+A04,Backend des annonces et du catalogue,P024;P031,,,,,prepare,,A00
+A05,Front public et découverte,P030;P033,,,,,prepare,,A00
+A06,Compte et dépôt vendeur,P012;P020,,,,,prepare,,A00
+A07,Médias et documents,P021,,,,,prepare,,A00
+A08,Cartographie urbaine,P032,,,,,prepare,,A00
+A09,Reconstruction des parkings 3D,P003;P040,,,,,prepare,,A00
+A10,Viewer intérieur et interactions 3D,P041;P043,,,,,prepare,,A00
+A11,Qualité réelle et preuves,P022,,,,,prepare,,A00
+A12,"Messagerie, visites et notifications",P050;P051;P052,,,,,prepare,,A00
+A13,Administration et modération,P023;P042;P053,,,,,prepare,,A00
+A14,SEO et accessibilité,P060,,,,,prepare,,A00
+A15,QA et recette indépendante,P002;P060;P061;P064;P074,,,,,prepare,,A00
+A16,"Fondations, DevOps et performance",P010;P063;P064,,,,,prepare,,A00
+A17,Droits gratuits puis abonnements mensuels,P013;P071;P072;P073;P074,,,,,prepare,,A00

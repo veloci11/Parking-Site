@@ -1,0 +1,36 @@
+﻿jalon,id,complexite,tache,dependances,critere_de_fin
+M0,P001,S,Figer les references et tokens,-,"Police unique, 7 tailles et palette selection douce documentees"
+M0,P002,M,Preparer donnees de demonstration,P001,"Cas vendeur A/B et lots, etats et inconnus couverts"
+M0,P003,M,Collecter un parking pilote reel,-,"Plans autorises, dimensions, photos et numeros rapproches"
+M1,P010,M,Initialiser application et environnements,P001,"TypeScript strict, CI et secrets separes"
+M1,P011,L,Migrer schema et politiques RLS,P010,"Tests directs A/B, public et Storage reussis"
+M1,P012,M,Comptes et recuperation email,P011,Inscription verification session recuperation et suppression en recette
+M1,P013,M,Moteur de droits gratuit,P011,Quotas transactionnels sans integration Stripe
+M1,P014,M,Bibliotheque composants,P001;P010,Etats clavier mobile erreur et charte couverts
+M2,P020,L,Assistant de depot sauvegarde,P012;P014,Reprise de brouillon et conflit de version controles
+M2,P021,L,Pipeline medias et documents prives,P011;P020,MIME taille EXIF droits et variantes controles
+M2,P022,M,Grille etat reel et preuves,P020;P021,"Inconnu declare, observations datees propres a la place"
+M2,P023,L,Admin de moderation et revisions,P020;P022,"Approbation et refus lies a version, historique conserve"
+M2,P024,L,Publication atomique et projection publique,P013;P023,"Rollback complet, claims et prix total corrects"
+M3,P030,M,Fiche publique indexable,P024,"HTML utile, medias approuves et etats retires corrects"
+M3,P031,L,Recherche filtres pagination,P024,"Filtres avant limite, curseurs stables et total explicite"
+M3,P032,L,Carte ville 3D et repli,P031,"Attribution, synchronisation liste et position publique respecte"
+M3,P033,M,Favoris et comparaison,P030;P031,"Etats vendu et lots non trompeurs, 3 maximum"
+M4,P040,L,Modele pilote et contrat manifest,P003;P022,Deux controles echelle et etat documente
+M4,P041,L,Viewer niveaux et selection,P032;P040,"space_id, lot multi-place et retour carte fiables"
+M4,P042,L,Revue des scenes et assets publics,P023;P041,"Sources privees, mapping et versions valides"
+M4,P043,M,Repli 2D et performances 3D,P041;P042,"Sans WebGL catalogue utile, budget teste sur appareils"
+M5,P050,L,Messagerie privee et anti-abus,P012;P024,Participants seulement et envoi idempotent
+M5,P051,M,Demandes de visite,P050,"Demande distincte de confirmation, pas de reservation payante"
+M5,P052,M,Notifications et outbox,P050,Retry sans doublon et preference respectee
+M5,P053,M,Signalements et traitement,P023;P050,"Dossier, decision et retrait explicites"
+M6,P060,L,Recette responsive et accessibilite,P033;P043;P051,"390 a 1440px, clavier, zoom et reduced motion"
+M6,P061,L,Audit acces et fichiers,P053,RLS API Storage cache et assets sans fuite
+M6,P062,M,Textes editeur marque et confidentialite,P001,"Operateur, textes, domaine et signe examines avant lancement"
+M6,P063,L,Sauvegarde restauration et observabilite,P024;P042,Base ET fichiers restaures sur environnement isole
+M6,P064,M,Staging puis ouverture V1,P060;P061;P062;P063,Recette reelle et absence de facturation ou donnees fictives en production
+M7,P070,M,Valider offre de forfaits,P064,Prix taxes quotas couts et transition arretes
+M7,P071,L,Stripe Billing Checkout et portail,P070;P013,"Prix serveur, test et production isoles"
+M7,P072,L,Webhooks et reconciliation,P071,Signature doublons ordre et retries verifies
+M7,P073,L,Droits abonnes et cycle de vie,P072,Periode grace resililiation quota et suspension coherents
+M7,P074,L,Transition anciens comptes et recette V2,P073,"Aucun prelevement sans choix, depassement sans suppression"

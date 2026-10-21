@@ -1,0 +1,2629 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GP — dossier complet de construction</title><style>
+@font-face{font-family:Inter;src:url('assets/InterVariable.woff2') format('woff2');font-style:normal;font-weight:100 900;font-display:swap}
+:root{--canvas:#FFFFFF;--surface:#FFFFFF;--surfaceSubtle:#F8F9FC;--textPrimary:#12141D;--textSecondary:#596174;--textMuted:#667085;--brand:#6D28FF;--brandHover:#5720CC;--brandSoft:#F0E9FF;--accent:#C9A558;--onBrand:#FFFFFF;--onAccent:#12141D;--border:#E5E7EF;--controlBorder:#8992A5;--mapLand:#F0EFFA;--mapBuilding:#DAD6ED;--mapWater:#A8D6F0;--mapPark:#DCEAC8;--success:#166534;--warning:#92400E;--danger:#B42318;--accentSoft:#F3ECD9;--accentBorder:#D7C6A6;--logoGoldLight:#E5D3A3;--logoGoldDark:#A67D36;--line:var(--border)}*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:24px}
+body{margin:0;background:var(--canvas);color:var(--textPrimary);font:400 16px/1.6 Inter,system-ui,sans-serif}
+a{color:var(--brand);text-underline-offset:3px}a:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offset:4px}
+header{border-bottom:1px solid var(--line);padding:32px max(24px,calc((100vw - 1280px)/2));background:var(--surface)}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand)}
+.hero{font-size:48px;line-height:1.08;letter-spacing:-.035em;font-weight:800;margin:12px 0 16px}
+.sub{color:var(--textSecondary);max-width:72ch}.pill{display:inline-block;padding:8px 16px;border-radius:999px;background:var(--accentSoft);border:1px solid var(--accentBorder);font-size:14px;font-weight:600;color:var(--textPrimary)}
+.layout{display:grid;grid-template-columns:260px minmax(0,1fr);max-width:1344px;margin:auto;gap:40px;padding:32px}
+aside{position:sticky;top:24px;align-self:start;max-height:calc(100vh - 48px);overflow:auto;border-right:1px solid var(--line);padding-right:20px}
+aside a{display:block;font-size:14px;color:var(--textSecondary);text-decoration:none;padding:8px 4px}aside a:hover{color:var(--brand)}
+main{min-width:0}article{padding-bottom:48px;margin-bottom:48px;border-bottom:1px solid var(--line)}
+h1{font-size:32px;line-height:1.2;letter-spacing:-.025em;margin:0 0 24px;font-weight:700}h2{font-size:24px;line-height:1.25;letter-spacing:-.015em;margin:40px 0 16px}h3{font-size:20px;line-height:1.3;margin:28px 0 12px}
+p,li{max-width:82ch}li+li{margin-top:8px}ul,ol{padding-left:24px}p{margin:12px 0 16px}strong{font-weight:700}
+table{border-collapse:collapse;width:100%;font-size:14px;margin:20px 0 28px;display:block;overflow:auto}th,td{text-align:left;vertical-align:top;padding:12px 16px;border-bottom:1px solid var(--line);min-width:120px}th{font-weight:700;background:var(--surfaceSubtle)}td:last-child{min-width:240px}
+pre{padding:20px;background:var(--surfaceSubtle);border:1px solid var(--line);border-radius:12px;overflow:auto;font-size:14px;line-height:1.5}code{font-family:ui-monospace,SFMono-Regular,monospace;font-size:.92em}p code,li code,td code{background:var(--surfaceSubtle);border-radius:4px;padding:2px 4px}
+img{max-width:100%;height:auto;border-radius:12px}img[src*="logo-gp"]{display:block;max-height:260px;object-fit:contain;margin:auto}
+.toolbar{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}.toolbar a{padding:10px 16px;border:1px solid var(--line);border-radius:8px;text-decoration:none;font-size:14px}
+.charter{max-width:1280px;margin:0 auto;padding:40px 24px}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}.block{padding:24px;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.swatch{height:96px;border-radius:8px;margin-bottom:12px}.sample{padding:24px 0;border-bottom:1px solid var(--line)}.sample p{margin:8px 0}.meta{font-size:14px;color:var(--textSecondary)}
+.demo-button{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:12px 20px;border-radius:8px;background:var(--brand);color:var(--onBrand);font-size:16px;font-weight:600;text-decoration:none}
+.demo-chip{display:inline-flex;align-items:center;min-height:44px;padding:8px 20px;border-radius:999px;background:var(--accentSoft);border:1px solid var(--accentBorder);font-size:16px;font-weight:500;color:var(--textPrimary)}
+.logo-preview{display:flex;align-items:center;justify-content:center;min-height:180px;border:1px solid var(--line);border-radius:16px;background:var(--surfaceSubtle)}.logo-preview img{max-height:180px}
+footer{padding:24px;text-align:center;font-size:12px;color:var(--textMuted);border-top:1px solid var(--line)}
+@media(max-width:900px){.layout{display:block;padding:24px}aside{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:32px}.hero{font-size:32px}.grid{grid-template-columns:1fr}h1{font-size:24px}h2{font-size:20px}table{font-size:14px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+@media print{aside,.toolbar{display:none}.layout{display:block;padding:0}header{padding:20px 0}.hero{font-size:32px}body{font-size:12px}h1{font-size:24px}h2{font-size:20px}h3{font-size:16px}article{break-before:page;padding-bottom:12px;margin-bottom:16px}table{display:table;font-size:12px}th,td{min-width:0!important;padding:6px}img{max-height:190mm;object-fit:contain}pre{white-space:pre-wrap;overflow:visible}a{color:inherit}tr,img,pre{break-inside:avoid}}
+</style></head><body><header><div class="eyebrow">Dossier de conception · version 1.1.0</div><div class="hero">Construire la plateforme GP.</div><p class="sub">Le plan complet : produit, charte, annonces, qualité réelle, ville et parking en 3D, comptes, architecture, modération et futurs forfaits mensuels.</p><span class="pill">V1 gratuite · Abonnements mensuels en V2</span><div class="toolbar"><a href="Charte-visuelle.html">Voir la charte visuelle</a><a href="README.md">Lire les sources Markdown</a><a href="specs/backlog.csv">Télécharger le backlog</a><a href="VERIFICATION.md">Contrôles du dossier</a></div></header><div class="layout"><aside aria-label="Sommaire"><a href="#chapitre-0">GP — dossier de construction de la plateforme de parkings</a><a href="#chapitre-1">01 — Produit, pages et parcours</a><a href="#chapitre-2">02 — Charte visuelle et composants</a><a href="#chapitre-3">03 — Dépôt d’annonces, données et qualité réelle</a><a href="#chapitre-4">04 — Carte de ville, parking intérieur et fidélité</a><a href="#chapitre-5">05 — Architecture, modèle de données et contrats serveur</a><a href="#chapitre-6">06 — Comptes, autorisations, modération et confidentialité</a><a href="#chapitre-7">07 — V2 : forfaits mensuels récurrents</a><a href="#chapitre-8">08 — Ordre de développement, recette et exploitation</a><a href="#chapitre-9">09 — Décisions, limites et sources</a><a href="#chapitre-10">10 — Équipe d’agents spécialisés et plan de délégation</a></aside><main><article id="chapitre-0"><h1 id="chapitre-0-titre-1">GP — dossier de construction de la plateforme de parkings</h1>
+<p>Version 1.1 · 20 octobre 2026 · langue de lancement : français · pays de départ : France.</p>
+<p><strong>Livrable de conception : cahier des charges, charte, contrats de données et ordre de développement. Aucun site, compte externe, abonnement ou paiement n’est créé par ce dossier.</strong> « GP » est un nom de travail et un monogramme proposé, pas une marque déclarée disponible.</p>
+<h2 id="chapitre-0-titre-2">Le produit à construire</h2>
+<p>Une plateforme de petites annonces spécialisée dans la vente de parkings et de box. Mathis peut publier ses biens ; d’autres utilisateurs peuvent créer un compte et déposer leurs annonces. Les acheteurs explorent une carte de ville en 3D, consultent les photos et, lorsqu’un modèle fidèle est disponible, sélectionnent les places dans une vue 3D du parking.</p>
+<p><strong>V1 : dépôt gratuit. V2 : forfaits mensuels récurrents.</strong> L’exemple de 5 €/mois donné par Mathis sert à préparer la structure, sans arrêter le tarif ni les quotas. Aucun paiement à l’annonce et aucun paiement du prix immobilier dans la plateforme.</p>
+<p>La présentation adoptée est <strong>claire et blanche, violet vif, avec doré doux pour les sélections</strong>, fidèle aux deux dernières maquettes retenues. Les essais de site entièrement noir/or ne sont plus la référence. Le dernier ajustement garde le doré sur la place et l’utilise très pâle sur le filtre actif. Le logo validé visuellement est le <strong>G doré devant le P violet du fichier joint par Mathis</strong> ; ses formes et couleurs ne sont plus à modifier. Le filtre actif est champagne pâle et la place sélectionnée reçoit un voile doré discret. La police principale choisie pour réaliser cette direction est Inter ; la police d’une image générée ne peut pas être identifiée avec certitude.</p>
+<h2 id="chapitre-0-titre-3">Ouvrir le dossier</h2>
+<ul>
+<li><a href="Dossier-complet.html">Dossier complet en lecture HTML</a></li>
+<li><a href="Charte-visuelle.html">Charte visuelle et exemples de composants</a></li>
+<li><a href="VERIFICATION.md">Rapport de vérification documentaire</a></li>
+</ul>
+<h2 id="chapitre-0-titre-4">Lire le dossier</h2>
+<table>
+<thead>
+<tr>
+<th>Document</th>
+<th>Ce qu’il tranche</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="#chapitre-1">01 — Produit et parcours</a></td>
+<td>Périmètre, rôles, pages, navigation, états et parcours complets</td>
+</tr>
+<tr>
+<td><a href="#chapitre-2">02 — Charte visuelle</a></td>
+<td>Police, tailles, graisses, couleurs, espacements, composants, mobile, animations et logo GP</td>
+</tr>
+<tr>
+<td><a href="#chapitre-3">03 — Annonces et qualité</a></td>
+<td>Dépôt guidé, champs, lot/place, photos, qualité réelle et règles de publication</td>
+</tr>
+<tr>
+<td><a href="#chapitre-4">04 — Cartes et 3D</a></td>
+<td>Carte gratuite, sélection des bâtiments, modèle intérieur, fidélité, formats et préparation des relevés</td>
+</tr>
+<tr>
+<td><a href="#chapitre-5">05 — Architecture, données et API</a></td>
+<td>Stack, tables, index, interfaces serveur, révisions et concurrence</td>
+</tr>
+<tr>
+<td><a href="#chapitre-6">06 — Comptes, sécurité et modération</a></td>
+<td>Authentification, autorisations, fichiers, messagerie, confidentialité et administration</td>
+</tr>
+<tr>
+<td><a href="#chapitre-7">07 — Abonnements V2</a></td>
+<td>Forfaits, droits, renouvellement, résiliation, impayés et migration depuis la gratuité</td>
+</tr>
+<tr>
+<td><a href="#chapitre-8">08 — Développement, recette et exploitation</a></td>
+<td>Étapes de construction, tests, livraison, sauvegardes, métriques et budgets</td>
+</tr>
+<tr>
+<td><a href="#chapitre-9">09 — Décisions et sources</a></td>
+<td>Choix retenus, points ouverts non bloquants, sources officielles et limites des références</td>
+</tr>
+<tr>
+<td><a href="#chapitre-10">10 — Équipe et délégation</a></td>
+<td>18 rôles spécialisés, missions, fichiers, dépendances et vagues de travail</td>
+</tr>
+<tr>
+<td><a href="agents/README.md">Index des briefs</a></td>
+<td>Consignes prêtes à transmettre à chaque spécialiste</td>
+</tr>
+<tr>
+<td><a href="specs/design-tokens.json">Spécification des tokens</a></td>
+<td>Valeurs structurées à reprendre dans le thème du futur code</td>
+</tr>
+<tr>
+<td><a href="specs/parking-level.schema.json">Schéma d’un niveau 3D</a></td>
+<td>Contrat des plans, unités, géométrie et preuves de fidélité</td>
+</tr>
+<tr>
+<td><a href="specs/backlog.csv">Backlog</a></td>
+<td>Tâches ordonnées et critères de fin</td>
+</tr>
+</tbody></table>
+<h2 id="chapitre-0-titre-5">Références visuelles</h2>
+<p>La vue ville conserve la structure de la maquette initiale (ses anciens accents citron sont historiques). La vue parking ci-dessous reprend la dernière demande : sélection dorée douce et filtre actif champagne pâle. Le fichier de tokens définit la palette courante pour les deux vues.</p>
+<p>Les deux fichiers suivants sont les maquettes de référence et restent des illustrations de démonstration, pas des photos de biens de Mathis ni des captures d’une application fonctionnelle.</p>
+<p><img src="assets/reference-ville.png" alt="Référence retenue : exploration de ville"></p>
+<p><img src="assets/reference-parking.png" alt="Référence retenue : vue intérieure du parking"></p>
+<h2 id="chapitre-0-titre-6">Décisions qui évitent de recoder</h2>
+<ol>
+<li>Une annonce n’est pas une place physique : une annonce peut regrouper plusieurs places avec un prix total explicite.</li>
+<li>Un seul compte peut acheter et publier ; les pouvoirs de modération sont attribués séparément.</li>
+<li>Les mises à jour d’une annonce publiée passent par une nouvelle révision ; elles ne remplacent pas instantanément une version approuvée.</li>
+<li>Un parking partage son modèle entre ses places, mais un vendeur ne peut pas modifier les données d’un autre vendeur.</li>
+<li>Les scènes 3D sont versionnées et reliées à des identifiants stables ; prix et disponibilité viennent de la base, jamais du fichier 3D.</li>
+<li>L’interface utilise une police, sept tailles de texte et des composants réutilisables. Les valeurs libres sont proscrites hors exceptions documentées.</li>
+<li>L’état réel du parking reste visible. Une mesure inconnue est enregistrée comme inconnue, jamais comme zéro ou comme absence de défaut.</li>
+<li>L’accès gratuit et les futurs abonnements utilisent le même calcul de droits côté serveur ; Stripe reste absent de la V1 publique.</li>
+<li>Un acheteur peut comprendre une annonce sans WebGL : liste, fiche et photos restent disponibles.</li>
+<li>Le logo et le nom restent provisoires jusqu’à une vérification de disponibilité ; une génération d’image ne prouve aucune exclusivité.</li>
+</ol>
+<h2 id="chapitre-0-titre-7">Logo et dernière direction</h2>
+<p><img src="assets/logo-gp-reference-validee.png" alt="Logo GP validé visuellement"></p>
+<p>Les essais de métal réaliste et d’or désaturé ont été écartés : revenir à la couleur du premier G doré et conserver un rendu lisse, cohérent avec le P. Le nom de travail et le signe restent à vérifier avant usage commercial. La source de chaque proposition est indiquée dans <code>assets/LOGO_PROMPTS.md</code>.</p>
+<h2 id="chapitre-0-titre-8">Pour lancer le développement</h2>
+<p>Les 18 rôles sont préparés ; seuls trois agents de relecture/organisation ont été lancés pendant la conception. Le développement se déroulera par vagues de trois spécialistes au maximum avec un coordinateur dans cette session.</p>
+<p>Commencer par le jalon M0 du document 08 : verrouiller les tokens et les contrats, préparer les données de démonstration et collecter un parking pilote réel. Ensuite développer une tranche complète : compte → brouillon → modération → publication → recherche → contact. La carte et la vue intérieure s’appuient sur ce flux au lieu de constituer un prototype isolé.</p>
+<p>Le premier vrai parking 3D nécessite un plan, des dimensions et des photos. En leur absence, le développement logiciel avance avec des fixtures clairement étiquetées, mais la fidélité d’un modèle réel ne peut pas être annoncée comme acquise.</p>
+</article><article id="chapitre-1"><h1 id="chapitre-1-titre-1">01 — Produit, pages et parcours</h1>
+<h2 id="chapitre-1-titre-2">1. Promesse</h2>
+<p>Permettre de trouver une place à acheter, de comprendre son emplacement et ses contraintes réelles, puis de contacter le vendeur. Pour le vendeur : déposer une annonce complète sans devoir savoir modéliser un parking. La plateforme assure la présentation, les comptes, la modération et la mise en relation.</p>
+<p>Référence de fonctionnement : une plateforme de petites annonces spécialisée, avec une exploration géographique et intérieure plus précise. Ne pas reproduire le nom, l’identité visuelle, les textes ou les actifs de Leboncoin.</p>
+<h2 id="chapitre-1-titre-3">2. Périmètre par version</h2>
+<table>
+<thead>
+<tr>
+<th>Fonction</th>
+<th>V1</th>
+<th>V2 ou plus tard</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Consultation sans compte, recherche, tri, filtres</td>
+<td>Oui</td>
+<td>Améliorations à partir des usages</td>
+</tr>
+<tr>
+<td>Compte email/mot de passe, récupération et vérification email</td>
+<td>Oui</td>
+<td>Connexions sociales facultatives</td>
+</tr>
+<tr>
+<td>Acheteur et annonceur dans le même compte</td>
+<td>Oui</td>
+<td>Comptes professionnels enrichis</td>
+</tr>
+<tr>
+<td>Annonces des biens de Mathis et d’autres utilisateurs</td>
+<td>Oui, publication gratuite après modération</td>
+<td>Forfaits mensuels</td>
+</tr>
+<tr>
+<td>Place à l’unité et lot de plusieurs places</td>
+<td>Oui</td>
+<td>Imports volumineux si nécessaires</td>
+</tr>
+<tr>
+<td>Carte ville 3D et repli 2D</td>
+<td>Oui</td>
+<td>Fournisseurs alternatifs si besoin</td>
+</tr>
+<tr>
+<td>Parking intérieur 3D</td>
+<td>Oui pour les parkings réellement documentés et validés</td>
+<td>Outillage de production plus automatisé</td>
+</tr>
+<tr>
+<td>Photos, favoris et comparaison de 3 annonces</td>
+<td>Oui</td>
+<td>Alertes de recherche enregistrée</td>
+</tr>
+<tr>
+<td>Messagerie texte et demande de visite</td>
+<td>Oui</td>
+<td>Agenda et pièces jointes, après besoin confirmé</td>
+</tr>
+<tr>
+<td>Administration, modération, signalements</td>
+<td>Oui</td>
+<td>Délégation plus fine</td>
+</tr>
+<tr>
+<td>Abonnement mensuel</td>
+<td>Non, structure de droits préparée</td>
+<td>Oui, Stripe Billing et portail client</td>
+</tr>
+<tr>
+<td>Paiement à l’annonce</td>
+<td>Non</td>
+<td>Non prévu</td>
+</tr>
+<tr>
+<td>Encaissement du prix d’achat immobilier</td>
+<td>Non</td>
+<td>Hors projet actuel</td>
+</tr>
+<tr>
+<td>Location horaire ou mensuelle d’une place</td>
+<td>Non</td>
+<td>Nouveau périmètre à décider séparément</td>
+</tr>
+<tr>
+<td>IA estimant automatiquement dimensions/état sur une photo</td>
+<td>Non</td>
+<td>Aucune promesse d’exactitude de ce type</td>
+</tr>
+</tbody></table>
+<h2 id="chapitre-1-titre-4">3. Personnes et permissions</h2>
+<table>
+<thead>
+<tr>
+<th>Profil</th>
+<th>Possibilités</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Visiteur</td>
+<td>Voir les annonces publiées et leurs médias publics, chercher, filtrer, comparer ; favoris temporaires sur son appareil</td>
+</tr>
+<tr>
+<td>Membre avec email vérifié</td>
+<td>Favoris persistants, envoyer un message, demander une visite, déposer et gérer ses annonces</td>
+</tr>
+<tr>
+<td>Annonceur</td>
+<td>C’est le même membre ; possède uniquement ses annonces et leurs brouillons. Profil particulier ou professionnel déclaré</td>
+</tr>
+<tr>
+<td>Modérateur</td>
+<td>Relire, demander une correction, approuver ou retirer une publication, traiter un signalement et consulter le contexte nécessaire</td>
+</tr>
+<tr>
+<td>Administrateur</td>
+<td>Gérer les rôles, réglages, accès sensibles, scènes partagées et paramètres ; V2 : plans d’abonnement</td>
+</tr>
+</tbody></table>
+<p>L’adresse email confirmée ne signifie pas identité ni propriété immobilière vérifiées. Aucun badge ambigu. Un administrateur peut être aussi annonceur, mais les décisions de publication restent tracées.</p>
+<h2 id="chapitre-1-titre-5">4. Routes et contenu des écrans</h2>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Écran et contenu essentiel</th>
+<th>Action principale</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>/</code></td>
+<td>Exploration claire : en-tête, recherche, filtres, résultats, carte, aperçu du bien</td>
+<td>Voir un bien</td>
+</tr>
+<tr>
+<td><code>/explorer</code></td>
+<td>Même espace ; accepte les filtres et la sélection en URL</td>
+<td>Sélectionner un bien</td>
+</tr>
+<tr>
+<td><code>/annonces/[id]/[slug]</code></td>
+<td>Fiche indexable : prix total, nombre de places, galerie, caractéristiques, état, localisation, vendeur, 3D si disponible</td>
+<td>Contacter le vendeur</td>
+</tr>
+<tr>
+<td><code>/parkings/[id]</code></td>
+<td>Vue publique assainie d’un parking autorisé ; niveau, places commercialisées et retour carte</td>
+<td>Choisir une annonce</td>
+</tr>
+<tr>
+<td><code>/comment-acheter</code></td>
+<td>Parcours de mise en relation, documents à examiner, limites de la plateforme</td>
+<td>Explorer</td>
+</tr>
+<tr>
+<td><code>/connexion</code>, <code>/inscription</code></td>
+<td>Email, mot de passe, conditions, lien retour au parcours interrompu</td>
+<td>Se connecter / créer le compte</td>
+</tr>
+<tr>
+<td><code>/verifier-email</code>, <code>/mot-de-passe-oublie</code>, <code>/reinitialiser</code></td>
+<td>États explicites et liens temporaires</td>
+<td>Terminer l’action</td>
+</tr>
+<tr>
+<td><code>/deposer</code></td>
+<td>Assistant de dépôt en étapes, brouillon sauvegardé</td>
+<td>Soumettre à modération</td>
+</tr>
+<tr>
+<td><code>/compte</code></td>
+<td>Vue d’ensemble utile : annonces à compléter, messages non lus, préférences</td>
+<td>Reprendre son action</td>
+</tr>
+<tr>
+<td><code>/compte/annonces</code></td>
+<td>Brouillons, en attente, publiées, en pause, vendues, refusées</td>
+<td>Gérer une annonce</td>
+</tr>
+<tr>
+<td><code>/compte/annonces/[id]/modifier</code></td>
+<td>Éditer une nouvelle révision, prévisualiser</td>
+<td>Soumettre la révision</td>
+</tr>
+<tr>
+<td><code>/compte/favoris</code></td>
+<td>Liste persistante et état vendu/retiré des anciens favoris</td>
+<td>Ouvrir la fiche</td>
+</tr>
+<tr>
+<td><code>/compte/messages/[id?]</code></td>
+<td>Conversations privées par annonce</td>
+<td>Répondre</td>
+</tr>
+<tr>
+<td><code>/compte/parametres</code></td>
+<td>Profil, coordonnées privées, mot de passe, notifications, export/suppression</td>
+<td>Sauvegarder</td>
+</tr>
+<tr>
+<td><code>/comparer</code></td>
+<td>2 à 3 annonces et leurs champs comparables, inconnus visibles</td>
+<td>Contacter</td>
+</tr>
+<tr>
+<td><code>/admin</code> et sous-routes</td>
+<td>File de modération, signalements, scènes 3D, comptes et journal</td>
+<td>Traiter un dossier</td>
+</tr>
+<tr>
+<td><code>/contact</code>, <code>/aide</code>, <code>/signaler</code></td>
+<td>Support, FAQ ciblée, signalement avec référence</td>
+<td>Envoyer la demande</td>
+</tr>
+<tr>
+<td><code>/mentions-legales</code>, <code>/confidentialite</code>, <code>/conditions-utilisation</code>, <code>/accessibilite</code></td>
+<td>Documents adaptés à l’opérateur réel</td>
+<td>Lecture</td>
+</tr>
+<tr>
+<td><code>/forfaits</code>, <code>/compte/abonnement</code></td>
+<td>Cachés en V1 ; V2 : offres, droits, statut et portail de gestion</td>
+<td>Gérer le forfait</td>
+</tr>
+</tbody></table>
+<p>Les liens ne doivent pas conduire à un écran vide. En V1, les routes d’abonnement renvoient une information de fonctionnalité indisponible, sans paiement possible ni simulation d’achat.</p>
+<h3 id="chapitre-1-titre-6">Navigation visible à ajouter aux maquettes</h3>
+<p>Les maquettes ont été dessinées avant l’ouverture à plusieurs annonceurs. Conserver leur style et leur grille, mais fournir dans l’en-tête : Explorer, Favoris, Comment acheter, <strong>Déposer une annonce</strong>, puis <strong>Se connecter</strong> (visiteur) ou <strong>Mon compte</strong> (membre). Le bouton de dépôt remplace le bouton générique Nous contacter de la maquette ; Contact reste dans Aide et le pied de page. Sur mobile, Déposer reste accessible dans la barre/menu et Connexion/Compte dans le menu, sans masquer ces fonctions derrière une route inconnue. Le dépôt reprend après authentification.</p>
+<h2 id="chapitre-1-titre-7">5. Exploration et URL</h2>
+<p>La liste et la carte partagent la même requête. Paramètres stables : <code>city</code>, <code>bbox</code>, <code>radiusKm</code>, <code>type</code>, <code>priceMin</code>, <code>priceMax</code>, <code>areaMin</code>, <code>covered</code>, <code>closed</code>, <code>occupancy</code>, <code>level</code>, <code>sort</code>, <code>listing</code>, <code>parking</code>, <code>floor</code>. Valeurs validées ; filtres inconnus ignorés avec normalisation de l’URL.</p>
+<p>Tri initial : plus récentes, puis prix croissant/décroissant, surface et nombre de places. Les annonces regroupées portent « lot de N places » et un prix total ; leur prix ne doit jamais être interprété comme le prix d’une seule place. Un prix par place calculé est secondaire, explicitement présenté comme une moyenne.</p>
+<p>Pour la surface : afficher le minimum–maximum <strong>par place</strong>, avec nombre d’unités renseignées ; afficher la surface totale séparément uniquement si toutes sont connues. Le filtre <code>areaMin</code> doit être satisfait par chacune des unités du lot ; s’il manque une surface, le lot est exclu lorsque ce filtre est actif. Le tri surface utilise le minimum par place, valeurs inconnues en dernier. La comparaison distingue plage par place et total ; elle ne compare jamais 12 m² individuels à 60 m² de lot comme s’ils décrivaient une place.</p>
+<p>Déplacer la carte ne relance pas chaque frappe ni chaque image : bouton « Rechercher dans cette zone » ; option d’actualisation automatique ultérieure. Pagination par curseur, 24 résultats par page. Les filtres sont appliqués avant la pagination. Une recherche sans résultat propose de retirer un filtre ou élargir la zone.</p>
+<h2 id="chapitre-1-titre-8">6. Parcours acheteur</h2>
+<ol>
+<li>Ouvrir le site sans compte, chercher une ville ou autoriser volontairement sa localisation.</li>
+<li>Consulter les mêmes biens en liste et sur la carte. Survol/clic synchronisent la sélection.</li>
+<li>Ouvrir le panneau aperçu ; lien vers une vraie fiche partageable et accessible au clavier.</li>
+<li>Si une scène validée existe : choisir le niveau et la place. Sinon afficher les photos et le plan disponible avec un statut honnête.</li>
+<li>Consulter l’état et les contraintes : poteau, humidité observée, largeur mesurée, hauteur, accès et occupation.</li>
+<li>Demander une visite ou écrire au vendeur. Un visiteur est invité à se connecter puis retrouve son annonce et son texte.</li>
+<li>Message et demande de visite sont enregistrés une seule fois ; confirmation dans la conversation. Une demande n’est pas un rendez-vous confirmé.</li>
+</ol>
+<p>Le bouton contact est indisponible si l’annonce est vendue, retirée ou si le vendeur est suspendu. Les favoris restent visibles avec cet état.</p>
+<h2 id="chapitre-1-titre-9">7. Parcours vendeur</h2>
+<ol>
+<li>Créer un compte et vérifier son email ; choisir particulier/professionnel sans créer un second compte.</li>
+<li>Créer un brouillon ; fournir lieu, type, quantité, prix, photos, dimensions connues et état.</li>
+<li>Déclarer s’il vend une place ou un ensemble indivisible de plusieurs places. Saisir les unités individuellement lorsqu’elles sont connues.</li>
+<li>Fournir plans/documents en zone privée pour préparer une scène. Un simple dépôt de plan ne publie aucun fichier source.</li>
+<li>Prévisualiser exactement les informations publiques, y compris précision de localisation et qualité du modèle 3D.</li>
+<li>Attester disposer des droits nécessaires, puis soumettre.</li>
+<li>Recevoir demande de correction ou notification d’approbation ; retrouver l’annonce publiée.</li>
+<li>Répondre aux messages, modifier via révision, mettre en pause ou déclarer vendu.</li>
+</ol>
+<p>Le vendeur n’a pas à produire son GLB. La création/validation du modèle intérieur est un flux dédié, pris en charge initialement par l’administration avec l’aide du vendeur. L’annonce peut être publiée en photos sans prétendre disposer d’une 3D fidèle.</p>
+<h2 id="chapitre-1-titre-10">8. Modération et révisions</h2>
+<p>Cycle de soumission : <code>draft → pending_review → approved / changes_requested / rejected</code>. Après approbation, la révision devient la publication courante. Cycle de visibilité : <code>published → paused / sold / withdrawn / expired / suspended</code>. Une révision refusée ne retire pas automatiquement la précédente publication valide ; le modérateur peut suspendre explicitement cette publication s’il découvre un problème de fond.</p>
+<p>Pause/vendu/retrait s’appliquent immédiatement, même si une révision est en attente. La remise en ligne passe à nouveau par les contrôles de disponibilité et de droits. Aucun statut ne résulte d’une simple valeur envoyée par le navigateur.</p>
+<h2 id="chapitre-1-titre-11">9. Responsive et états communs</h2>
+<p>Ordinateur : résultats gauche, carte ou parking au centre, inspecteur droit superposé comme dans les références. Sur une largeur insuffisante, un seul panneau secondaire est ouvert. Mobile : vue Liste par défaut, bouton Carte, fiche en panneau inférieur ; la scène intérieure se charge sur demande. Le bouton retour restaure filtres, liste et sélection.</p>
+<p>Chaque écran prévoit : chargement, succès, vide, erreur récupérable, absence de connexion, permission refusée, session expirée, publication retirée pendant la consultation, WebGL indisponible. Une erreur de carte ne masque jamais le catalogue. Une erreur de paiement V2 ne bloque jamais la lecture des messages déjà reçus.</p>
+<h2 id="chapitre-1-titre-12">10. Critères de réussite V1</h2>
+<ul>
+<li>Un utilisateur sans expertise publie un brouillon complet sans perdre ses données en revenant plus tard.</li>
+<li>Un acheteur comprend le prix, le nombre d’unités et les contraintes sans utiliser la 3D.</li>
+<li>La scène pilote représente le bon niveau, les bons numéros, dimensions et défauts documentés.</li>
+<li>Un compte ne peut ni lire les échanges ni modifier les annonces d’un autre compte.</li>
+<li>L’état publié/vendu est cohérent dans la fiche, la liste, les favoris et la scène.</li>
+<li>L’aspect reste fidèle aux deux références claires sur ordinateur et utilisable à 390 px de large.</li>
+</ul>
+</article><article id="chapitre-2"><h1 id="chapitre-2-titre-1">02 — Charte visuelle et composants</h1>
+<h2 id="chapitre-2-titre-2">1. Référence et règle d’autorité</h2>
+<p>Les références sont <code>assets/reference-ville.png</code> et <code>assets/reference-parking.png</code>. Fond blanc, sans serif très lisible, violet électrique, sélection dorée douce, carte lavande, surfaces simples, angles arrondis contenus. La vue parking conserve le même en-tête, les mêmes filtres, les mêmes résultats et la même fiche.</p>
+<p>Ne pas revenir aux propositions noir/or. Aucun changement de thème par page. L’objectif est de coder un système stable, pas de réinventer la mise en page pour chaque écran. Les tokens structurés sont dans <code>specs/design-tokens.json</code> ; ce fichier prime sur des valeurs recopiées à la main.</p>
+<h2 id="chapitre-2-titre-3">2. Police : une seule famille</h2>
+<p><strong>Inter variable, auto-hébergée en WOFF2</strong>, avec sa licence conservée. Source officielle : <a href="https://rsms.me/inter/">Inter</a>. C’est un choix de réalisation proche de la maquette, pas l’affirmation que l’image générée utilise exactement cette police. Le logo GP est un dessin vectoriel distinct, pas une seconde police d’interface.</p>
+<p>Pile : <code>Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif</code>. Les polices de repli servent uniquement au chargement ou à une défaillance. Utiliser des chiffres tabulaires pour prix, dimensions et tableaux. Pas de faux gras ou faux italique ; pas de chargement d’une famille différente dans un composant tiers.</p>
+<h3 id="chapitre-2-titre-4">Échelle autorisée : sept tailles</h3>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th align="right">Ordinateur</th>
+<th align="right">Mobile</th>
+<th align="right">Graisse</th>
+<th align="right">Interligne</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>hero</code></td>
+<td align="right">48 px</td>
+<td align="right">32 px</td>
+<td align="right">800</td>
+<td align="right">1,08</td>
+<td>« Votre prochaine place est ici. », une fois par vue principale</td>
+</tr>
+<tr>
+<td><code>pageTitle</code></td>
+<td align="right">32 px</td>
+<td align="right">24 px</td>
+<td align="right">700</td>
+<td align="right">1,20</td>
+<td>Titre de page compte, dépôt, fiche</td>
+</tr>
+<tr>
+<td><code>sectionTitle</code></td>
+<td align="right">24 px</td>
+<td align="right">20 px</td>
+<td align="right">700</td>
+<td align="right">1,25</td>
+<td>Sections et formulaires</td>
+</tr>
+<tr>
+<td><code>cardTitle</code></td>
+<td align="right">20 px</td>
+<td align="right">20 px</td>
+<td align="right">700</td>
+<td align="right">1,30</td>
+<td>Lieu et titre d’une fiche</td>
+</tr>
+<tr>
+<td><code>body</code></td>
+<td align="right">16 px</td>
+<td align="right">16 px</td>
+<td align="right">400</td>
+<td align="right">1,50</td>
+<td>Texte, champs et messages</td>
+</tr>
+<tr>
+<td><code>secondary</code></td>
+<td align="right">14 px</td>
+<td align="right">14 px</td>
+<td align="right">400</td>
+<td align="right">1,45</td>
+<td>Descriptions courtes, navigation secondaire</td>
+</tr>
+<tr>
+<td><code>caption</code></td>
+<td align="right">12 px</td>
+<td align="right">12 px</td>
+<td align="right">500</td>
+<td align="right">1,40</td>
+<td>Date, référence, attribution, aide courte</td>
+</tr>
+</tbody></table>
+<p>Tailles uniques : <strong>12, 14, 16, 20, 24, 32, 48 px</strong>. Prix de l’aperçu : <code>pageTitle</code> ; prix dans une ligne de résultat : <code>body</code> gras. Pas de huitième taille pour un prix, un badge ou un menu. Les champs restent à 16 px sur mobile.</p>
+<p>Graisses autorisées : 400 texte, 500 navigation/métadonnées, 600 labels/boutons, 700 titres/prix, 800 grand titre. Le même token peut recevoir une de ces emphases dans un composant défini ; pas de variation libre par page. Tracking : <code>hero -0.035em</code>, <code>pageTitle -0.025em</code>, autres titres <code>-0.015em</code>, corps <code>0</code>. Longs textes : maximum 65 caractères environ par ligne.</p>
+<h2 id="chapitre-2-titre-5">3. Palette</h2>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Valeur</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>canvas</code>, <code>surface</code></td>
+<td><code>#FFFFFF</code></td>
+<td>Fond et panneaux</td>
+</tr>
+<tr>
+<td><code>surfaceSubtle</code></td>
+<td><code>#F8F9FC</code></td>
+<td>Fond doux, sections de compte</td>
+</tr>
+<tr>
+<td><code>textPrimary</code></td>
+<td><code>#12141D</code></td>
+<td>Titres et corps</td>
+</tr>
+<tr>
+<td><code>textSecondary</code></td>
+<td><code>#596174</code></td>
+<td>Texte secondaire lisible</td>
+</tr>
+<tr>
+<td><code>textMuted</code></td>
+<td><code>#667085</code></td>
+<td>Métadonnées et aide</td>
+</tr>
+<tr>
+<td><code>brand</code></td>
+<td><code>#6D28FF</code></td>
+<td>CTA, lien actif, sélection</td>
+</tr>
+<tr>
+<td><code>brandHover</code></td>
+<td><code>#5720CC</code></td>
+<td>Survol CTA</td>
+</tr>
+<tr>
+<td><code>brandSoft</code></td>
+<td><code>#F0E9FF</code></td>
+<td>Fond léger sélectionné</td>
+</tr>
+<tr>
+<td><code>accent</code></td>
+<td><code>#C9A558</code></td>
+<td>Base dorée du G et voile de sélection de place</td>
+</tr>
+<tr>
+<td><code>accentSoft</code></td>
+<td><code>#F3ECD9</code></td>
+<td>Fond champagne très pâle du filtre actif et repère de carte</td>
+</tr>
+<tr>
+<td><code>accentBorder</code></td>
+<td><code>#D7C6A6</code></td>
+<td>Bordure douce du filtre actif</td>
+</tr>
+<tr>
+<td><code>onBrand</code></td>
+<td><code>#FFFFFF</code></td>
+<td>Texte sur violet</td>
+</tr>
+<tr>
+<td><code>onAccent</code></td>
+<td><code>#12141D</code></td>
+<td>Texte sur champagne pâle ; jamais blanc</td>
+</tr>
+<tr>
+<td><code>border</code></td>
+<td><code>#E5E7EF</code></td>
+<td>Séparateurs décoratifs</td>
+</tr>
+<tr>
+<td><code>controlBorder</code></td>
+<td><code>#8992A5</code></td>
+<td>Limite de champ quand nécessaire pour son identification</td>
+</tr>
+<tr>
+<td><code>mapLand</code> / <code>mapBuilding</code></td>
+<td><code>#F0EFFA</code> / <code>#DAD6ED</code></td>
+<td>Carte indicative claire</td>
+</tr>
+<tr>
+<td><code>mapWater</code> / <code>mapPark</code></td>
+<td><code>#A8D6F0</code> / <code>#DCEAC8</code></td>
+<td>Eau et végétation</td>
+</tr>
+<tr>
+<td><code>success</code> / <code>warning</code> / <code>danger</code></td>
+<td><code>#166534</code> / <code>#92400E</code> / <code>#B42318</code></td>
+<td>Texte d’état accompagné d’un libellé</td>
+</tr>
+</tbody></table>
+<p>Le doré ne sert pas à écrire un paragraphe sur blanc. Les CTA restent violets. Le voile doré du sol utilise une opacité cible de 22 %, ajustée pour conserver sa texture ; les filtres actifs ont le fond <code>accentSoft</code>, bordure <code>accentBorder</code> et texte foncé. Aucune capsule en or saturé. La couleur seule ne dit jamais « sélectionné », « vendu » ou « problème » : ajouter texte, contour, icône ou motif. Le fond de sélection d’une place ne remplace pas sa vraie texture d’état ; le filtre peut être masqué.</p>
+<h2 id="chapitre-2-titre-6">4. Espacements, formes et dimensions</h2>
+<p>Échelle d’espacement unique : <strong>4, 8, 12, 16, 20, 24, 32, 40, 48, 64 px</strong>. Pas de <code>margin: 17px</code> pour corriger une page. Grille par défaut : 8 px ; les demi-pas 4/12/20 sont réservés aux ajustements prévus des composants.</p>
+<p>Rayons : 8 px champs et petites images, 12 px cartes, 16 px panneau de bien, 24 px grand groupe de recherche ; <code>999px</code> seulement pour puces, avatars, boutons ronds. Bordures 1 px ; focus et sélection 2 px. Ombres : une légère pour un panneau flottant, une moyenne pour une modale ; pas d’ombre sur toutes les lignes de résultats.</p>
+<p>Conteneur éditorial maximum : 1 280 px ; espace de recherche plein écran. En-tête 76 px sur grand écran, 64 px sur mobile. Colonne résultats 320–400 px selon largeur ; inspecteur 320–360 px. À 1 440 px : gauche 360 px, carte flexible, inspecteur 336 px superposé dans la zone cartographique. À moins de 1 180 px, privilégier un seul panneau latéral. Ces mesures de grille sont des tokens de layout, pas des tailles de police supplémentaires.</p>
+<h2 id="chapitre-2-titre-7">5. Bibliothèque de composants à créer une fois</h2>
+<table>
+<thead>
+<tr>
+<th>Composant</th>
+<th>Variantes et dimensions</th>
+<th>États obligatoires</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Button</code></td>
+<td>primary violet, secondary contour, ghost, danger ; hauteur 44/48 px ; texte body 600</td>
+<td>défaut, hover, focus, pressé, chargé, désactivé</td>
+</tr>
+<tr>
+<td><code>IconButton</code></td>
+<td>carré/rond 44 px ; icône 20 px</td>
+<td>libellé accessible, actif, focus, disabled</td>
+</tr>
+<tr>
+<td><code>Input</code>, <code>Select</code>, <code>Textarea</code></td>
+<td>label secondary 600 ; texte body ; champ 48 px</td>
+<td>vide, rempli, invalide, lecture seule, chargement</td>
+</tr>
+<tr>
+<td><code>FilterChip</code></td>
+<td>hauteur 44 px, capsule ; champagne très pâle pour filtre actif, blanc sinon ; texte foncé</td>
+<td>non choisi, choisi, supprimer, focus</td>
+</tr>
+<tr>
+<td><code>ListingRow</code></td>
+<td>photo ratio 16:9, titre cardTitle, prix body 700 ; diviseur commun</td>
+<td>sélection, favori, vendu, image absente</td>
+</tr>
+<tr>
+<td><code>ListingInspector</code></td>
+<td>surface blanche, rayon 16, photo 4:3, prix pageTitle</td>
+<td>chargé, fermé, erreur, retiré</td>
+</tr>
+<tr>
+<td><code>MediaGallery</code></td>
+<td>ratios cohérents, légende et compteur</td>
+<td>navigation clavier/tactile, chargement, échec</td>
+</tr>
+<tr>
+<td><code>StatusBadge</code></td>
+<td>secondary ou caption selon densité ; icon + texte</td>
+<td>neutre, publié, en attente, vendu, correction</td>
+</tr>
+<tr>
+<td><code>StatePanel</code></td>
+<td>titre sectionTitle, explication body, action simple</td>
+<td>vide, indisponible, erreur, hors ligne</td>
+</tr>
+<tr>
+<td><code>Dialog</code>, <code>Drawer</code></td>
+<td>focus contenu, fermeture explicite, titre</td>
+<td>ouverture, confirmation, erreur</td>
+</tr>
+<tr>
+<td><code>WizardStep</code></td>
+<td>titre sectionTitle, aide secondary, étapes numérotées</td>
+<td>incomplet, sauvegardé, erreur, envoi</td>
+</tr>
+<tr>
+<td><code>QualityFact</code></td>
+<td>libellé body, valeur et date, source</td>
+<td>déclaré, documenté, mesuré, non renseigné</td>
+</tr>
+<tr>
+<td><code>PlanTabs</code></td>
+<td>Ville / Plan 3D / Photos selon contexte</td>
+<td>actif, indisponible avec explication</td>
+</tr>
+<tr>
+<td><code>MapMarker</code></td>
+<td>prix total body 700, selected champagne pâle + contour violet</td>
+<td>groupé, sélectionné, plusieurs annonces</td>
+</tr>
+</tbody></table>
+<p>Icônes : une seule bibliothèque, Lucide, trait 1,75–2 px. Tailles permises 16/20/24 px, commandes de carte dans une cible 44 px. Pas d’emojis comme icônes produit. Tous les composants métier sont construits sur les primitives communes.</p>
+<h2 id="chapitre-2-titre-8">6. Mobile et accessibilité</h2>
+<p>Points de rupture : <code>sm 640</code>, <code>md 768</code>, <code>lg 1024</code>, <code>xl 1280</code>, <code>2xl 1536</code>. Recette aux largeurs 390, 768, 1 024 et 1 440 px. Les bascules métier utilisent les seuils de layout prévus, sans multiplier les media queries locales.</p>
+<p>Sur mobile : une seule vue principale à la fois, bouton Liste/Carte, panneau inférieur dépliable. Filtres en modale avec boutons Appliquer/Réinitialiser. Pas de scène 3D à manipuler derrière un dialogue actif. Navigation et commande de fermeture restent accessibles au clavier et au lecteur d’écran.</p>
+<p>Cibles de réalisation : contraste WCAG AA pour texte et commandes, focus visible, zoom texte à 200 %, aucune action exclusivement au survol, toutes les places accessibles depuis une liste HTML. Voir <a href="https://www.w3.org/WAI/WCAG22/quickref/">référence W3C</a>. La conformité réelle sera vérifiée sur le site développé ; elle n’est pas établie par une maquette.</p>
+<h2 id="chapitre-2-titre-9">7. Animations</h2>
+<p>Trois durées : <code>fast 120ms</code>, <code>normal 200ms</code>, <code>slow 320ms</code> ; caméra au plus 700 ms quand il faut comprendre un déplacement. Courbe interface <code>cubic-bezier(0.2,0.8,0.2,1)</code>. Utiliser opacity/transform ; pas d’animation permanente des prix, formulaires ou textes.</p>
+<p>Effets autorisés : sélection synchronisée carte/liste, glissement de l’inspecteur, fondu entre niveaux, surbrillance de la place, transition d’orientation de caméra, retour d’enregistrement d’un brouillon. Éviter les effets qui modifient la couleur ou la lumière réelle des défauts du parking.</p>
+<p><code>prefers-reduced-motion</code> désactive déplacements et orbites : changement immédiat de position, visibilité et focus conservés. Aucun son automatique. Les scènes ne tournent pas toutes seules. Une scène quittée est déchargée pour libérer mémoire et batterie.</p>
+<h2 id="chapitre-2-titre-10">8. Logo GP</h2>
+<p>Objectif : garder le P géométrique violet de la référence, ajouter un G devant, même épaisseur, rayon, construction et hauteur. Le monogramme doit rester lisible comme <strong>G puis P</strong> à 24 et 32 px. Le mot « park. » des maquettes n’est pas un nom commercial validé ; la décision de nom reste séparée.</p>
+<p>Livraison cible avant production : SVG optimisé, variante couleur sur blanc, monochrome sombre, blanche, favicon et exports PNG. Zone de respiration : un quart de la hauteur. Taille minimale du monogramme complet : 24 px ; pour favicon 16 px, variante simplifiée spécifiquement validée. Le G reprend l’or initial préféré (#C9A558, clair #E5D3A3, ombre #A67D36) et le P reste violet. Le site garde sa base blanche/violette ; aucun bouton principal doré. Pas de refonte du P. Le dernier filtre actif utilise un doré beaucoup plus pâle, comme sur la place.</p>
+<p>La proposition jointe est une piste raster de travail. Le dernier retour demande le même rendu lisse et géométrique sur G et P : pas de métal réaliste brossé uniquement sur le G, ni de halo dans le petit logo d’interface. Le SVG final sera dessiné et comparé à cette piste après choix. La vérification de disponibilité du signe et du nom n’est pas équivalente à une recherche web générale ; voir INPI/EUIPO dans le document 09. Aucune exclusivité n’est affirmée.</p>
+<h2 id="chapitre-2-titre-11">9. Règles à imposer au futur code</h2>
+<ul>
+<li>Un seul fichier de tokens ; générer les variables CSS et les correspondances du thème à partir de celui-ci.</li>
+<li>Les composants importent ces tokens, jamais une couleur hexadécimale ou une taille de texte nouvelle.</li>
+<li>Interdire les classes de taille arbitraire et les styles de police en ligne dans l’interface, sauf exception nommée du registre design.</li>
+<li>Tests visuels des composants et des quatre écrans principaux : exploration, parking, dépôt, compte.</li>
+<li>Contrôler les états clavier et mobile, pas uniquement une capture au repos.</li>
+<li>Une évolution de token est documentée et appliquée globalement ; un besoin local se résout d’abord avec un composant existant.</li>
+</ul>
+</article><article id="chapitre-3"><h1 id="chapitre-3-titre-1">03 — Dépôt d’annonces, données et qualité réelle</h1>
+<h2 id="chapitre-3-titre-2">1. Les trois objets à ne pas confondre</h2>
+<ul>
+<li><strong>Parking</strong> : site ou résidence, avec ses niveaux, accès, géométrie et état des parties communes.</li>
+<li><strong>Place physique</strong> : unité identifiée dans un niveau ; dimensions, limites, poteaux proches, numéro de marquage et éventuelle référence de lot distincte.</li>
+<li><strong>Annonce</strong> : proposition commerciale d’un vendeur, portant sur une ou plusieurs places. Elle contient le prix total, les conditions de présentation, l’occupation et la version des informations publiées.</li>
+</ul>
+<p>Exemple de démonstration : annonce A = place 12 à 18 500 € ; annonce B = places 14 et 15 vendues ensemble à 31 000 € au total. Les deux places de B peuvent être sélectionnées dans la scène, mais ouvrent la même annonce. La moyenne de 15 500 €/place n’est pas une possibilité d’achat à l’unité.</p>
+<h2 id="chapitre-3-titre-3">2. Assistant vendeur : huit étapes</h2>
+<table>
+<thead>
+<tr>
+<th>Étape</th>
+<th>Contenu</th>
+<th>Condition de passage</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1 — Votre bien</td>
+<td>Parking couvert/extérieur, box fermé ; particulier/professionnel ; une place ou ensemble</td>
+<td>Type et mode de vente renseignés</td>
+</tr>
+<tr>
+<td>2 — Localisation</td>
+<td>Adresse privée, ville, code postal, position à confirmer ; précision publique</td>
+<td>Position validée manuellement sur carte</td>
+</tr>
+<tr>
+<td>3 — Places et accès</td>
+<td>Quantité, niveau, références, dimensions connues, fermeture, poteaux et circulation</td>
+<td>Nombre cohérent ; inconnus déclarés</td>
+</tr>
+<tr>
+<td>4 — État réel</td>
+<td>Grille d’état du site et des places, dates, observations, photos associées</td>
+<td>Toutes les rubriques répondent oui/non/inconnu selon le champ</td>
+</tr>
+<tr>
+<td>5 — Photos et plans</td>
+<td>Galerie publique ; plans et pièces sources en espace privé ; demande de vue 3D</td>
+<td>3 photos documentaires minimum, sauf dérogation modérateur motivée</td>
+</tr>
+<tr>
+<td>6 — Prix et occupation</td>
+<td>Prix total de vente, conditions, libre/occupé/inconnu, charges et taxe si connues</td>
+<td>Prix entier positif et quantité confirmés</td>
+</tr>
+<tr>
+<td>7 — Description et contact</td>
+<td>Titre, texte descriptif, profil public, préférences de contact</td>
+<td>Texte valide et email confirmé</td>
+</tr>
+<tr>
+<td>8 — Prévisualisation</td>
+<td>Informations publiques exactes, mentions d’incertitude, attestation et envoi</td>
+<td>Contrôles serveur + droit de publication</td>
+</tr>
+</tbody></table>
+<p>Brouillon créé dès la première étape. Sauvegarde après une modification stabilisée, bouton Sauvegarder toujours disponible, état « Enregistrement / Enregistré / Échec, réessayer ». Empêcher qu’une réponse ancienne écrase la plus récente. Retour à une étape sans perte ; reprise après connexion. Progression indique les vrais champs manquants, pas un pourcentage de qualité commerciale.</p>
+<h2 id="chapitre-3-titre-4">3. Dictionnaire des champs commerciaux</h2>
+<table>
+<thead>
+<tr>
+<th>Champ</th>
+<th>Type / règle</th>
+<th>Public</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Titre</td>
+<td>15–90 caractères, texte simple</td>
+<td>Oui</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>100–5 000 caractères ; pas de HTML arbitraire</td>
+<td>Oui</td>
+</tr>
+<tr>
+<td>Type</td>
+<td><code>indoor_parking</code>, <code>outdoor_parking</code>, <code>closed_garage</code>, <code>mixed_bundle</code></td>
+<td>Oui</td>
+</tr>
+<tr>
+<td>Mode</td>
+<td><code>single_space</code> ou <code>bundle</code></td>
+<td>Oui</td>
+</tr>
+<tr>
+<td>Quantité</td>
+<td>Entier 1–500 ; au-delà demande d’accompagnement</td>
+<td>Oui</td>
+</tr>
+<tr>
+<td>Prix total</td>
+<td>Entier en centimes EUR, strictement positif, borne de validation 100 M€ ; jamais un flottant</td>
+<td>Oui</td>
+</tr>
+<tr>
+<td>Vente séparée</td>
+<td>V1 : non dans une annonce lot ; créer des annonces séparées pour cette possibilité</td>
+<td>Explicite</td>
+</tr>
+<tr>
+<td>Adresse complète</td>
+<td>Objet normalisé et point exact ; jamais copié dans le flux public par défaut</td>
+<td>Privé par défaut</td>
+</tr>
+<tr>
+<td>Position publique</td>
+<td>Point distinct approuvé ; précision <code>area</code> ou <code>exact_opt_in</code></td>
+<td>Oui</td>
+</tr>
+<tr>
+<td>Niveau</td>
+<td>Code libre normalisé, ex. <code>-1</code>, <code>RDC</code>, extérieur</td>
+<td>Selon granularité autorisée</td>
+</tr>
+<tr>
+<td>Place / lot</td>
+<td>Deux références distinctes, texte 1–40 caractères</td>
+<td>Place publique facultative ; référence de lot privée par défaut</td>
+</tr>
+<tr>
+<td>Surface</td>
+<td>Par unité : décimal m² &gt; 0 si connu et source. Lot : plage min–max par place ; total uniquement si toutes connues</td>
+<td>Oui avec source et périmètre</td>
+</tr>
+<tr>
+<td>Longueur / largeur / hauteur libre</td>
+<td>Entiers en mm &gt; 0 si connus ; contraintes prises au point réellement limitant</td>
+<td>Oui avec source</td>
+</tr>
+<tr>
+<td>Occupation</td>
+<td><code>vacant</code>, <code>occupied</code>, <code>unknown</code> ; ne pas inventer un loyer</td>
+<td>Oui</td>
+</tr>
+<tr>
+<td>Revenu locatif</td>
+<td>Facultatif, montant et période, date et source ; sans promesse de rendement</td>
+<td>Si choisi</td>
+</tr>
+<tr>
+<td>Charges / taxe foncière</td>
+<td>Montant annuel si connu ; quote-part ou périmètre précisé, année et source</td>
+<td>Si choisi</td>
+</tr>
+<tr>
+<td>Fermeture / accès</td>
+<td>Portail, porte, badge, clé, ascenseur : enums et inconnu</td>
+<td>Description ; jamais code ou secret</td>
+</tr>
+<tr>
+<td>Profil annonceur</td>
+<td>Particulier/professionnel déclaré, nom public</td>
+<td>Oui</td>
+</tr>
+<tr>
+<td>Email / téléphone de connexion</td>
+<td>Données de compte</td>
+<td>Privé ; contact via messagerie par défaut</td>
+</tr>
+</tbody></table>
+<p>L’existence de dimensions, taxes ou loyers dans le formulaire ne transforme pas ces valeurs en données vérifiées. Pas de rentabilité calculée en V1. Aucun faux « sans charges » lorsque le vendeur n’a pas renseigné le montant.</p>
+<h2 id="chapitre-3-titre-5">4. Validation et erreurs</h2>
+<p>Toutes les validations s’exécutent côté serveur et sont partagées avec le formulaire. Un brouillon peut être incomplet ; la soumission ne le peut pas. Les zéros ne remplacent jamais les valeurs inconnues.</p>
+<p>Contrôles croisés : single = une unité ; bundle = au moins deux ; toutes les unités vendues par le même annonceur ; monnaie EUR ; nombre d’unités cohérent avec les rattachements ; unité d’un même parking et niveau avant scène partagée. V1 : une annonce relève d’un seul parking/site, éventuellement de plusieurs niveaux de ce parking. Les ensembles multi-sites ne passent pas par le dépôt autonome V1 : plusieurs annonces adaptées ou accompagnement préalable explicite. Le schéma de dépôt ne contient donc qu’une localisation ; ne pas inventer des sites supplémentaires côté interface.</p>
+<p>Message précis à côté du champ : « Indiquez le prix total des 3 places » ; récapitulatif d’erreur en tête avec liens ; aucune suppression d’une saisie correcte après erreur. Aucune information serveur interne exposée.</p>
+<h2 id="chapitre-3-titre-6">5. Photos</h2>
+<p>Photographies minimales recommandées : face de la place, vue latérale montrant les poteaux, circulation/manœuvre, accès au niveau, défauts éventuels. Pour un lot : couvrir chaque unité, sans réutiliser la même photo comme si elle décrivait toutes les places. Les images communes doivent porter « Accès commun » ou « Vue du parking ».</p>
+<p>Limites V1 : 20 photos dans la galerie générale de l’annonce, jusqu’à 6 photos propres par unité et <strong>120 photos au total par annonce</strong>, toutes galeries confondues ; 10 Mo par fichier source, JPEG/PNG/WebP ; pas de SVG utilisateur. Validation du type réel, décodage et réencodage, retrait des métadonnées EXIF/GPS, limite de pixels 40 mégapixels. Conserver les orientations utiles. Versions préparées : vignette 480 px, liste 960 px, galerie 1 920 px, formats adaptés sans déformation. Les noms de fichiers ne révèlent ni adresse ni email.</p>
+<p>Les photos ne doivent pas embellir l’état par génération IA. Recadrer, corriger une rotation et anonymiser sont des opérations distinctes, contrôlées et traçables. Flouter complètement les plaques et visages reconnaissables ; traitement proposé à vérifier humainement. Ne pas publier codes d’accès, badges lisibles, documents personnels ou vues de logements sans nécessité.</p>
+<p>Les photos propres aux places sont reliées via <code>media_space_links</code> ; une photo de groupe peut couvrir plusieurs unités seulement si celles-ci sont identifiables et légendées. Galerie générale et galerie de la place ne dupliquent pas le même fichier. La couverture par unité vaut <code>unknown</code>, <code>common_only</code> ou <code>unit_photos</code>. Si le plafond de 120 ne permet pas de couvrir un grand lot, proposer un accompagnement ou présenter explicitement une couverture partielle : aucune photo propre inventée, aucun statut « état documenté » ou <code>reviewed</code> pour cette unité. Une vue commune reste étiquetée Vue du parking.</p>
+<p>Une modération compare les photos des défauts avec la grille d’état. Un défaut visible ne peut pas disparaître du modèle 3D par un choix de matériau « neuf ».</p>
+<h2 id="chapitre-3-titre-7">6. Qualité réelle : grille structurée</h2>
+<table>
+<thead>
+<tr>
+<th>Domaine</th>
+<th>Informations</th>
+<th>Source / preuve</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Sol</td>
+<td>Béton/enrobé/résine/autre ; usure, fissures, trous, pente</td>
+<td>Photos localisées + observation datée</td>
+</tr>
+<tr>
+<td>Murs/plafond</td>
+<td>Finitions, fissures visibles, traces, éléments bas</td>
+<td>Photos ; ne pas conclure sur la structure</td>
+</tr>
+<tr>
+<td>Humidité</td>
+<td>Traces visibles, eau observée, déclaration d’absence ou inconnu</td>
+<td>Date et photo ; absence de trace ≠ garantie d’absence d’infiltration</td>
+</tr>
+<tr>
+<td>Éclairage</td>
+<td>Nature, répartition, zones faibles ; fonctionnement observé</td>
+<td>Photos représentatives et déclaration ; pas de lux inventés</td>
+</tr>
+<tr>
+<td>Marquage/propreté</td>
+<td>Marquage lisible, encombrement, entretien</td>
+<td>Photos du jour du relevé</td>
+</tr>
+<tr>
+<td>Manœuvres</td>
+<td>Largeur allée, angle, poteaux, murs, besoin de marche arrière</td>
+<td>Plan/mesures ; appréciation explicitement déclarée</td>
+</tr>
+<tr>
+<td>Hauteur/accès</td>
+<td>Point le plus bas, rampe, porte, pente connue</td>
+<td>Mesures prises aux endroits limitants</td>
+</tr>
+<tr>
+<td>Fermeture/sécurité</td>
+<td>Dispositifs réellement présents ; fonctionnement observé</td>
+<td>Déclaration/photo ; aucun « anti-effraction garanti »</td>
+</tr>
+<tr>
+<td>Place</td>
+<td>Dimensions, inclinaison, butée, voisinage, box ou place ouverte</td>
+<td>Plan et photos propres à cette place</td>
+</tr>
+</tbody></table>
+<p>Chaque observation conserve <code>value</code>, <code>source_kind</code>, <code>observed_at</code>, <code>observer_id</code>, <code>evidence_media_ids</code>, <code>confidence_scope</code> et commentaire factuel. Provenances : <code>seller_declared</code>, <code>photo_documented</code>, <code>measured</code>, <code>plan_derived</code>. Une rubrique inconnue apparaît « Non renseigné ». Distinguer l’état commun du parking et l’état spécifique de la place.</p>
+<p>Pas de note automatique « 9/10 » en V1. La qualité est décrite de façon intelligible et comparable ; un score éventuel nécessiterait une grille, des règles et une validation séparées. Un modèle vérifié signifie uniquement que les vérifications listées ont été faites, pas que tout le bien est certifié.</p>
+<h2 id="chapitre-3-titre-8">7. Pièces et dimensions pour la 3D</h2>
+<p>Plan PDF/PNG/JPEG de chaque niveau, échelle ou au moins deux distances de référence ; hauteur libre et passages contraignants ; photos d’ensemble et par place ; identifiants des places et lots ; emplacement des murs, portes, poteaux, rampes ; droit de réutiliser ces éléments. Limite documentaire : 25 Mo par PDF, 10 documents par annonce ; fichiers privés, analysés avant consultation.</p>
+<p>Pas de pièce d’identité ni de titre de propriété obligatoire à télécharger pour créer un compte. Une vérification documentaire supplémentaire peut être demandée par un modérateur en cas de risque précis, selon une procédure privée et une durée limitée.</p>
+<h2 id="chapitre-3-titre-9">8. Cycle de vie et changements d’un lot</h2>
+<p>Une vente du lot entier marque l’annonce vendue et met à jour les unités. Une vente partielle exige une nouvelle révision : retirer les unités concernées, confirmer nouveau prix total et quantité. Le site ne divise pas automatiquement le prix au prorata. Une unité ne peut pas appartenir simultanément à deux annonces actives du même vendeur ; une annonce concurrente d’un autre vendeur déclenche un examen sans révéler les informations privées de l’autre compte.</p>
+<p>Pour publier une annonce similaire, créer un nouveau brouillon et reconfirmer photos, unités, prix et disponibilité. La duplication ne duplique pas les permissions sur un parking partagé.</p>
+<h2 id="chapitre-3-titre-10">9. Durée et preuve d’actualité</h2>
+<p>Règle produit proposée V1 : demander reconfirmation après 90 jours sans confirmation de disponibilité ; rappels à J−14 et J−3 ; expiration à l’échéance. Une édition mineure ne renouvelle pas artificiellement la date de publication. L’administration peut adapter ce délai de produit ; ce n’est pas une durée légale.</p>
+<p>Dates distinctes : publication, dernière modification de contenu, disponibilité confirmée, dernier relevé de l’état, dernier contrôle de scène. L’acheteur sait de quand datent photos et observations lorsque cette information est connue. Les vendeurs n’effacent pas l’historique de modération en modifiant un texte.</p>
+</article><article id="chapitre-4"><h1 id="chapitre-4-titre-1">04 — Carte de ville, parking intérieur et fidélité</h1>
+<h2 id="chapitre-4-titre-2">1. Deux systèmes reliés, deux sources de données</h2>
+<p><strong>Ville : MapLibre GL JS + OpenFreeMap.</strong> Les données de voirie et volumes de bâtiments viennent de la cartographie publique. <strong>Intérieur : modèle propre au parking</strong>, construit à partir de plans et mesures, rendu avec Three.js via React Three Fiber. La carte publique ne renseigne pas les places privées en sous-sol.</p>
+<p>OpenFreeMap annonce une instance publique gratuite, sans clé ni inscription, avec usage commercial autorisé. Attribution requise et absence de garantie SLA à prendre en compte. Ce sont les conditions consultées le 20 octobre 2026, pas une garantie de gratuité perpétuelle. <a href="https://openfreemap.org/">Présentation officielle</a>. La bibliothèque et les données gratuites ne rendent pas gratuits l’hébergement du site, les photos, les courriels ni le travail de modélisation.</p>
+<p>L’aspect de la maquette est une direction visuelle : couleurs, volumes simples, perspective et repères peuvent être approchés. La présence et la précision des bâtiments dépendent des données locales. Ne pas promettre une ville photoréaliste identique à l’image générée. <a href="https://maplibre.org/maplibre-gl-js/docs/examples/display-buildings-in-3d/">Exemple de bâtiments extrudés</a>.</p>
+<h2 id="chapitre-4-titre-3">2. Parcours spatial</h2>
+<pre><code class="language-text">Ville / quartier
+  → regroupement d’annonces ou parking
+    → panneau de résidence autorisé
+      → niveau -1 / -2 / extérieur
+        → place ou ensemble de places
+          → annonce, photos, état et contact
+</code></pre>
+<p>Un parking sélectionné affiche les seules annonces publiques qu’on a le droit de présenter. Les autres places peuvent exister sous forme neutre de contexte, sans propriétaire, coordonnées ni statut commercial privé. Dans le manifest public, la liste spaces contient uniquement les unités publiquement autorisées ; le décor des autres places ne porte aucun UUID canonique ou liaison d’annonce, seulement des meshes de contexte assainis. « Pas proposé sur le site » ne veut dire ni vendu ni occupé.</p>
+<p>V1 : une annonce <code>area</code> reste en secteur et ne publie ni scène intérieure partagée, ni identifiant canonique de parking/niveau/place permettant sa corrélation avec une annonce exacte. Elle conserve photos et plan assaini sans rattachement public exact. La scène partagée publique est réservée aux contextes <code>exact_opt_in</code> compatibles, avec projection dédiée excluant tout lien vers les annonces <code>area</code> ; les autres unités ne sont que contexte neutre sans identité publique. Aucun consentement d’un vendeur ne dévoile les données d’un autre. Le consentement est lié à chaque annonce/révision et non imposé globalement par le parking.</p>
+<h2 id="chapitre-4-titre-4">3. Ville : réalisation</h2>
+<ul>
+<li>Charger le style et les tuiles OpenFreeMap dans un composant client isolé ; la liste et la fiche restent rendues sans carte.</li>
+<li>Afficher les bâtiments par extrusion aux zooms utiles, avec hauteur fournie ou estimation explicitement cartographique. Aucune hauteur estimée ne devient hauteur mesurée de l’annonce.</li>
+<li>Personnaliser couleurs claires, bâtiments lavande, eau bleue, repères champagne pâle/violet ; conserver labels et attribution lisibles.</li>
+<li>Fournir zoom, rotation, inclinaison, retour nord et bascule 2D. Commandes utilisables au clavier.</li>
+<li>Clustering aux faibles zooms. Un repère de parking avec plusieurs annonces affiche leur nombre ou un prix minimum explicitement « dès », jamais un prix total trompeur.</li>
+<li>Ne pas charger plus de 500 points individuels par réponse ; au-delà utiliser groupes calculés côté serveur. Une liste complète reste paginée séparément.</li>
+<li>Géocodage de l’adresse à la création, puis confirmation du point. Recherche villes en priorité dans un catalogue interne de communes, pas une requête de géocodage à chaque lettre. Fournisseur d’adresses interchangeable, conditions à valider avant sa sélection.</li>
+<li>Charger la carte seulement quand visible ; annuler les anciennes recherches, mettre en cache les réponses publiques sans session ni coordonnées privées.</li>
+</ul>
+<p>Si le fournisseur est indisponible : état d’erreur dans la carte, liste intacte, bouton réessayer. Le fournisseur de tuiles est configurable pour migrer sans réécrire l’application.</p>
+<h2 id="chapitre-4-titre-5">4. Intérieur : niveaux de fidélité distincts</h2>
+<table>
+<thead>
+<tr>
+<th>Niveau</th>
+<th>Données disponibles</th>
+<th>Présentation autorisée</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>photos_only</code></td>
+<td>Photos et description</td>
+<td>Galerie et caractéristiques ; aucune fausse scène exacte</td>
+</tr>
+<tr>
+<td><code>schematic</code></td>
+<td>Organisation connue mais mesures insuffisantes</td>
+<td>Plan indicatif, mention permanente « Schéma indicatif, non coté »</td>
+</tr>
+<tr>
+<td><code>measured</code></td>
+<td>Plan à l’échelle et mesures croisées</td>
+<td>Modèle proportionné, périmètre et date des mesures visibles</td>
+</tr>
+<tr>
+<td><code>reviewed</code></td>
+<td>Géométrie et état comparés aux preuves et validés par l’opérateur</td>
+<td>Mention limitée « Géométrie et état documentés au [date] » avec détail du contrôle</td>
+</tr>
+</tbody></table>
+<p>Une scène n’obtient pas le niveau supérieur parce que le vendeur a coché une case. Le passage est décidé par le processus de revue. <code>reviewed</code> ne signifie pas expertise immobilière, absence de défaut ni conformité juridique/technique du bien.</p>
+<h2 id="chapitre-4-titre-6">5. Production d’un modèle</h2>
+<ol>
+<li><strong>Collecter</strong> plans autorisés, numéros, dimensions, photos et état. Versionner les documents privés.</li>
+<li><strong>Calibrer</strong> au moins deux distances indépendantes sur le plan ; vérifier l’échelle, l’origine et les niveaux. Un plan ancien ne décrit pas forcément l’état actuel.</li>
+<li><strong>Reconstruire</strong> le sol, murs, poteaux, rampe, portes et limites des places. Commencer avec une géométrie paramétrique simple ; Blender sert aux détails nécessaires. Un seul modèle partagé par parking/niveau.</li>
+<li><strong>Relier</strong> chaque polygone/objet de sélection à son <code>space_id</code> stable. Les numéros affichés sont des labels distincts ; renuméroter ne change pas l’identité.</li>
+<li><strong>Reproduire l’état</strong> : matériau du sol, fissures/traces documentées, marquage, éclairage et zones d’ombre représentatifs. Pas de sol rénové fictif. Localiser les observations et leurs photos.</li>
+<li><strong>Vérifier</strong> la correspondance plan ↔ scène ↔ photo ↔ unité. Le vendeur relit le rapprochement ; un administrateur approuve la version publiée.</li>
+<li><strong>Optimiser</strong> : enlever objets cachés, limiter textures et polygones, compresser. Produire la vue 2D et un aperçu statique de repli.</li>
+<li><strong>Publier atomiquement</strong> modèle, manifest et correspondances de places. Garder la précédente version pour retour arrière.</li>
+</ol>
+<p>La modélisation paramétrique est une assistance de production interne, pas un éditeur 3D obligatoire pour chaque annonceur en V1. Une automatisation à partir de PDF/scan ne dispense jamais de contrôler l’échelle et les numéros.</p>
+<h2 id="chapitre-4-titre-7">6. Convention technique</h2>
+<p>Le contrat complet est <code>specs/parking-level.schema.json</code>. Géométrie en mètres, décimaux ; coordonnées locales main droite, plan horizontal X/Z, Y vertical, origine choisie à un repère stable. Transformations glTF conformes à la scène de rendu. Les coordonnées GPS servent au site et sont stockées séparément.</p>
+<p>Le manifest déclare : <code>schema_version</code>, <code>scene_version</code>, <code>parking_id</code>, <code>level_id</code>, unités, source d’échelle, précision connue, niveau de fidélité, dates de relevé/revue, fichiers, caméra initiale, volumes de clipping, géométrie de sélection et observations. Chaque place référence UUID et nom de mesh unique. Les références de titre/lot non destinées au public ne sont pas incluses dans le manifest.</p>
+<p>Asset final : GLB glTF 2.0 pour l’affichage ; manifest JSON séparé pour relations et preuves publiques ; plan 2D JSON assaini, avec aperçu PNG/WebP, généré par le pipeline interne. Les SVG utilisateur ne sont jamais affichés directement. Le modèle peut être seulement paramétrique JSON pour les parkings simples : le contrat des unités et identifiants reste identique.</p>
+<p>Les fichiers GLB sont locaux au stockage contrôlé, pas des URL quelconques fournies par le vendeur. Refuser les références externes, scripts, chemins hors dossier, géométries démesurées et textures surdimensionnées. Le téléchargement source privé reste distinct de l’asset public assaini.</p>
+<h2 id="chapitre-4-titre-8">7. Fidélité à l’état réel</h2>
+<p>Les défauts visibles sont des observations, pas seulement une texture esthétique. Chaque défaut a une localisation, une catégorie, une description, une date et des preuves. Des fissures peuvent être visibles sans diagnostic de gravité. Une humidité non relevée ne doit pas être classée « absente ».</p>
+<p>Les halos violets/dorés de sélection restent fins et désactivables. Leur opacité ne doit pas cacher l’état du sol. Pas de filtre qui blanchit ou nettoie la place sélectionnée. Exposer « Afficher l’état réel » comme mode par défaut ; les annotations peuvent être masquées, les preuves restent dans la fiche.</p>
+<p>Voitures de gabarit : option désactivée par défaut, mention « Illustration de gabarit, véhicule non inclus ». Un outil de compatibilité véhicule n’est pas V1 : la largeur d’une place ne suffit pas à garantir une manœuvre ou l’ouverture des portes.</p>
+<h2 id="chapitre-4-titre-9">8. Comportement interactif</h2>
+<p>Sélection d’une unité met en surbrillance son contour et ouvre l’annonce ; un lot surligne toutes ses unités. Clic d’une place sans annonce : « Place non proposée à la vente sur la plateforme ». Changement d’étage conserve le contexte du parking ; retour ville conserve les filtres. Une seule source d’état pour sélection dans liste/carte/plan.</p>
+<p>Prix et disponibilité sont chargés depuis l’API après les droits, jamais figés dans le GLB. Le degré de documentation est affiché par unité : une scène géométrique mesurée ne prouve pas que l’état de toutes ses places est documenté. Le statut revu précise son périmètre d’unités/champs ; aucune unité sans preuves propres n’obtient une qualité documentée implicite. Vendu ou retiré pendant la visite : mise à jour du panneau et désactivation du contact, même si la géométrie est encore en cache. Liste HTML des unités pour lecteur d’écran, clavier et recherche interne.</p>
+<h2 id="chapitre-4-titre-10">9. Budgets de performance proposés</h2>
+<p>Objectifs à mesurer au développement, non résultats acquis : scène initiale GLB ≤ 8 Mo compressés par niveau, total après chargement différé ≤ 20 Mo, textures au plus 2 048 px sans raison documentée, ≤ 200 000 triangles visibles, ≤ 150 draw calls sur le pilote. Ajuster d’après appareils réels plutôt que dégrader la lisibilité ou retirer un obstacle important.</p>
+<p>Charger un niveau à la fois, un seul canvas 3D lourd actif ; la mini-carte peut être un aperçu léger lorsque le plan est actif. Repli si WebGL manque, contexte perdu, mémoire faible ou réseau insuffisant : plan 2D + photos. Cibles de fluidité : 30 images/s sur mobile de référence, 50–60 sur ordinateur de référence, sans garantir tous les appareils.</p>
+<h2 id="chapitre-4-titre-11">10. Kit à demander pour chaque parking pilote</h2>
+<ul>
+<li>Adresse et précision publique souhaitée ; attestation de droits de publication des documents/images.</li>
+<li>Plan de chaque niveau, échelle, orientation et repère d’origine ; deux distances de contrôle.</li>
+<li>Numéros des places, références de lot distinctes et annonce/ensemble auquel elles appartiennent.</li>
+<li>Longueur, largeur, hauteur aux points limitants ; murs/poteaux/portes/rampes/allées.</li>
+<li>Photos propres à chaque place, accès, manœuvre et état ; date du relevé.</li>
+<li>Liste des défauts et informations non connues, sans inventer une réponse.</li>
+<li>Relecture du vendeur puis validation administrative ; statut de fidélité final.</li>
+</ul>
+<h2 id="chapitre-4-titre-12">11. Entretien</h2>
+<p>Les photos/observations peuvent être actualisées sans changer l’identité physique des places. Un changement structurel impose une nouvelle scène et une nouvelle revue. Un signalement de mauvaise correspondance place/photo masque la scène concernée si nécessaire, sans effacer l’historique. Garder un journal des versions et pouvoir restaurer modèle + manifest + mapping ensemble.</p>
+</article><article id="chapitre-5"><h1 id="chapitre-5-titre-1">05 — Architecture, modèle de données et contrats serveur</h1>
+<h2 id="chapitre-5-titre-2">1. Stack retenue pour réduire le nombre de systèmes</h2>
+<table>
+<thead>
+<tr>
+<th>Couche</th>
+<th>Choix</th>
+<th>Responsabilité</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Application</td>
+<td>Next.js App Router, React, TypeScript strict</td>
+<td>Pages publiques indexables, espace compte, administration, API</td>
+</tr>
+<tr>
+<td>UI</td>
+<td>CSS variables issues des tokens + Tailwind ; primitives accessibles réutilisables</td>
+<td>Respect de la charte, composants communs</td>
+</tr>
+<tr>
+<td>Formulaires</td>
+<td>React Hook Form + Zod</td>
+<td>Champs, étapes, schémas partagés ; validations finales côté serveur</td>
+</tr>
+<tr>
+<td>Données et identité</td>
+<td>Supabase : PostgreSQL, Auth, Storage</td>
+<td>Une base relationnelle, sessions et fichiers</td>
+</tr>
+<tr>
+<td>Géographie</td>
+<td>PostGIS</td>
+<td>Index géographiques et recherches de zone <a href="https://supabase.com/docs/guides/database/extensions/postgis">documentation</a></td>
+</tr>
+<tr>
+<td>Carte ville</td>
+<td>MapLibre GL JS + OpenFreeMap</td>
+<td>Carte vectorielle et volumes de bâtiments</td>
+</tr>
+<tr>
+<td>Scène intérieure</td>
+<td>Three.js + React Three Fiber, glTF/JSON</td>
+<td>Niveau, sélection d’unités et annotations</td>
+</tr>
+<tr>
+<td>Courriels</td>
+<td>SMTP transactionnel configurable, fournisseur arrêté au lancement</td>
+<td>Vérification email et notifications ; jamais de serveur email artisanal</td>
+</tr>
+<tr>
+<td>Jobs</td>
+<td>Table de jobs + worker applicatif séparé et planificateur</td>
+<td>Images, courriels, nettoyage, expiration et publication d’assets</td>
+</tr>
+<tr>
+<td>V2 facturation</td>
+<td>Stripe Billing + Checkout abonnement + Customer Portal</td>
+<td>Mensualités, statut, gestion et factures</td>
+</tr>
+<tr>
+<td>Vérification</td>
+<td>Vitest, Testing Library, Playwright, contrôles d’accessibilité</td>
+<td>Logique métier, permissions et parcours</td>
+</tr>
+</tbody></table>
+<p>Choisir au démarrage les versions stables compatibles, puis les verrouiller dans un lockfile et consigner leurs numéros. Ne pas installer arbitrairement « latest » à chaque déploiement. Le dossier n’invente pas de versions actuellement installées : aucun projet applicatif n’est initialisé.</p>
+<p>Next peut être hébergé sur un service compatible Node ; PostgreSQL/Storage dans une région UE adaptée au projet. Hébergeur et offre commerciale à choisir avec les coûts réels. Pas de microservices, Elasticsearch, Redis ni application mobile native en V1 sans besoin mesuré.</p>
+<h2 id="chapitre-5-titre-3">2. Modules et dépendances</h2>
+<pre><code class="language-text">app public / compte / admin
+          ↓
+domain : identity, listings, catalog, geography, parking-scenes,
+         quality, conversations, moderation, entitlements
+          ↓
+services : database, object-storage, mail, jobs, map-provider
+          ↓
+PostgreSQL + Auth + Storage
+
+V2 billing → entitlements
+</code></pre>
+<p>Les scènes ne calculent aucun droit de publication. La facturation ne modifie pas les plans d’un parking. La carte reçoit des objets publics minimaux, pas les lignes privées de la base. Les validations métier ne sont pas dupliquées dans les composants.</p>
+<h2 id="chapitre-5-titre-4">3. Arborescence cible du futur code</h2>
+<pre><code class="language-text">src/app/(public)/explorer, annonces, parkings, comparer
+src/app/(auth)/connexion, inscription, reinitialiser
+src/app/(account)/compte
+src/app/(admin)/admin
+src/app/api/v1
+src/components/ui/                # primitives communes
+src/features/{identity,listings,catalog,map,parking3d,quality,messages,admin,billing}
+src/domain/{schemas,policies,types}
+src/lib/{supabase,storage,mail,observability}
+src/styles/tokens.css             # généré depuis les tokens
+supabase/migrations/              # schéma, fonctions, RLS, index
+workers/                         # jobs et traitement des médias
+tests/{unit,integration,e2e,fixtures}
+public/brand, public/fonts
+</code></pre>
+<p>Cette structure est une spécification, pas un dossier déjà créé ou déployé. Une feature n’importe pas directement le code interne d’une autre : utiliser ses contrats métier.</p>
+<h2 id="chapitre-5-titre-5">4. Entités principales</h2>
+<p>Conventions : UUID pour identifiants, horodatages UTC <code>timestamptz</code>, argent en centimes entiers EUR, longueurs en mm dans les fiches et en mètres dans la scène, surfaces en <code>numeric</code>, valeurs inconnues <code>NULL</code>. Affichage français via <code>Intl</code>. <code>created_at</code>, <code>updated_at</code>, <code>row_version</code> sur les objets modifiables. Contraintes et transitions validées en base ou dans une fonction transactionnelle.</p>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Champs structurants et règles</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>profiles</code></td>
+<td><code>user_id</code> = Auth, nom public, type particulier/professionnel, préférences ; aucune colonne de rôle auto-modifiable</td>
+</tr>
+<tr>
+<td><code>account_statuses</code></td>
+<td>user_id, active/suspended/deletion_pending/deleted ; modifiable seulement par procédure contrôlée</td>
+</tr>
+<tr>
+<td><code>app_roles</code></td>
+<td>user_id, member/moderator/admin, accordé par, date ; aucun write client</td>
+</tr>
+<tr>
+<td><code>private_contacts</code></td>
+<td>user_id, téléphone, coordonnées et préférences ; jamais dans un select public</td>
+</tr>
+<tr>
+<td><code>seller_profiles</code></td>
+<td>user_id, type, raison sociale et identifiants utiles si professionnel ; statut de vérification distinct et périmètre précis</td>
+</tr>
+<tr>
+<td><code>parkings</code></td>
+<td>id, référence interne, métadonnées communes, public_name assaini ; le consentement de localisation publique reste porté par chaque révision d’annonce, pas globalement par le parking ; géométrie/nom non validés non publics</td>
+</tr>
+<tr>
+<td><code>parking_private_locations</code></td>
+<td>parking_id, adresse exacte, point exact PostGIS, documents ; accès très limité</td>
+</tr>
+<tr>
+<td><code>parking_contributors</code></td>
+<td>parking_id, user_id, périmètre accordé ; ne donne pas accès aux contacts ou unités d’un autre vendeur</td>
+</tr>
+<tr>
+<td><code>parking_levels</code></td>
+<td>id, parking_id, code, altitude locale, libellé, ordre</td>
+</tr>
+<tr>
+<td><code>spaces</code></td>
+<td>id stable, level_id, numéro de place, référence lot privée, dimensions physiques et source ; modifications canoniques administrées</td>
+</tr>
+<tr>
+<td><code>listings</code></td>
+<td>id, seller_id, lifecycle_state, current_published_revision_id nullable, disponibilité confirmée, dates de fin ; ne contient pas tout le contenu en clair public</td>
+</tr>
+<tr>
+<td><code>listing_revisions</code></td>
+<td>id, listing_id, revision_no, submission_state, titre, description, prix_total_cents, quantité, occupation, infos vendeur, localisation souhaitée ; snapshots commerciaux immuables après soumission</td>
+</tr>
+<tr>
+<td><code>revision_units</code></td>
+<td>revision_id, id local, space_id nullable, dimensions et références soumises, part du lot ; brouillon tant que non rapproché</td>
+</tr>
+<tr>
+<td><code>listing_space_links</code></td>
+<td>listing_id, revision_id, space_id ; lien approuvé avec le bon modèle ; ensemble de places explicitement couvert</td>
+</tr>
+<tr>
+<td><code>active_space_claims</code></td>
+<td>space_id UNIQUE, listing_id ; créé/libéré transactionnellement pour empêcher deux publications actives de la même unité canonique</td>
+</tr>
+<tr>
+<td><code>quality_observations</code></td>
+<td>parking/level/space/revision cible, catégorie, valeur structurée, source, date, auteur et photos ; périmètre déclaré/documenté/mesuré</td>
+</tr>
+<tr>
+<td><code>media_assets</code></td>
+<td>propriétaire, cible, visibilité, état quarantine/processing/ready/rejected, object_key, hash, mime réel, taille, variantes, date de prise connue</td>
+</tr>
+<tr>
+<td><code>revision_media</code></td>
+<td>revision_id, media_id, ordre, couverture, légende ; une couverture publique obligatoire</td>
+</tr>
+<tr>
+<td><code>media_space_links</code></td>
+<td>media_id + space_id, périmètre de preuve, légende ; photo de groupe possible sans duplication du fichier</td>
+</tr>
+<tr>
+<td><code>private_documents</code></td>
+<td>propriétaire et dossier, asset_id, finalité, échéance de rétention ; aucun lien public</td>
+</tr>
+<tr>
+<td><code>scene_versions</code></td>
+<td>parking_id, level_id, version, fidélité, statut, manifest_key, model_key, sources, revue et approbateur</td>
+</tr>
+<tr>
+<td><code>scene_space_links</code></td>
+<td>scene_version_id, space_id, mesh_name ; unique par version/space ; cardinalité vérifiée</td>
+</tr>
+<tr>
+<td><code>published_listings</code></td>
+<td>projection publique minimale, immutable par le client ; seulement champs autorisés, position publique, révision et médias approuvés</td>
+</tr>
+<tr>
+<td><code>favorites</code></td>
+<td>user_id + listing_id UNIQUE</td>
+</tr>
+<tr>
+<td><code>conversations</code></td>
+<td>id, listing_id, buyer_id, seller_id, état ; UNIQUE(listing_id,buyer_id,seller_id)</td>
+</tr>
+<tr>
+<td><code>messages</code></td>
+<td>id, conversation_id, sender_id, corps texte, created_at, client_request_id unique par émetteur ; pièces jointes hors V1</td>
+</tr>
+<tr>
+<td><code>visit_requests</code></td>
+<td>conversation_id, message_id, créneaux proposés facultatifs, requested/accepted/declined/canceled, row_version, horaire confirmé nullable et fuseau explicite ; ne crée pas de réservation immobilière</td>
+</tr>
+<tr>
+<td><code>reports</code></td>
+<td>auteur, cible, catégorie, détails, état, modérateur ; pas public</td>
+</tr>
+<tr>
+<td><code>moderation_cases</code></td>
+<td>objet/version, décision, motif, acteur, date ; journal non réécrit par le vendeur</td>
+</tr>
+<tr>
+<td><code>notifications</code></td>
+<td>user_id, catégorie, objet, lu, préférence ; contenu privé minimal</td>
+</tr>
+<tr>
+<td><code>notification_outbox</code></td>
+<td>type, payload minimal, destinataire, dedupe_key UNIQUE, essais, état ; assure envoi après transaction</td>
+</tr>
+<tr>
+<td><code>audit_events</code></td>
+<td>acteur, action, cible, avant/après redigé, timestamp, request_id ; accès restreint</td>
+</tr>
+<tr>
+<td><code>jobs</code></td>
+<td>type, cible, version, déduplication, état, tentatives, next_run_at ; prise en charge verrouillée</td>
+</tr>
+<tr>
+<td><code>plan_definitions</code>, <code>plan_entitlements</code></td>
+<td>droits configurables, V1 profil gratuit ; tarifs V2 séparés</td>
+</tr>
+<tr>
+<td><code>account_entitlement_overrides</code></td>
+<td>exceptions explicites et datées, motif, administrateur ; aucune exception cachée pour Mathis</td>
+</tr>
+</tbody></table>
+<p>V2 ajoute <code>billing_customers</code>, <code>subscriptions</code>, <code>subscription_items</code>, <code>billing_events</code>, <code>billing_price_versions</code>, <code>entitlement_snapshots</code>. Les noms et contrats sont prévus maintenant ; les secrets, endpoints de paiement et tables opérationnelles Stripe ne sont activés qu’en V2.</p>
+<h2 id="chapitre-5-titre-6">5. Projection publique et confidentialité</h2>
+<p>Ne pas exposer une table privée puis masquer des champs en CSS. <code>published_listings</code> est alimentée uniquement par une transaction de publication qui copie une liste blanche. Elle omet adresse exacte non consentie, documents, emails, coordonnées privées, notes de modération et références de titre privées.</p>
+<p>La géométrie publique est distincte du point exact. Le choix <code>area</code> utilise un point de secteur stable et un libellé explicite, pas un bruit aléatoire récupérable par moyennage. Aucune URL de modèle, métadonnée, image EXIF, API de clustering ou recherche par distance ne doit révéler le point exact caché. Un modèle intérieur public est assaini et ne contient aucun secret d’accès. En V1, les annonces <code>area</code> n’exposent pas de scène partagée ni de parking_id/level_id/space_id canoniques publics ; leurs DTO utilisent seulement des identifiants de présentation propres à l’annonce. Les routes publiques parking/niveau/scène n’acceptent que des contextes exact_opt_in approuvés et ne font aucun lien vers annonces area, même si le parking est partagé. Contrôler la même séparation dans géométries, manifestes, recherche et caches.</p>
+<h2 id="chapitre-5-titre-7">6. Index et cohérence</h2>
+<ul>
+<li>Index GiST sur position publique et, séparément, position privée restreinte ; recherche publique exclusivement sur la première.</li>
+<li>Index <code>(lifecycle_state,published_at,id)</code>, <code>(seller_id,updated_at)</code>, prix, type, quantité selon requêtes mesurées ; FTS français avec index GIN sur projection publique.</li>
+<li>FK strictes, contraintes d’unicité des favoris et conversations ; unicité des révisions par annonce ; une seule version de scène active par niveau.</li>
+<li>Suppression logique de publication, purge différée des données selon politiques ; <code>ON DELETE</code> explicitement choisi pour chaque relation.</li>
+<li>Contrôle optimiste <code>If-Match</code>/<code>row_version</code> sur brouillons ; conflit 409 au lieu d’un écrasement silencieux.</li>
+</ul>
+<h2 id="chapitre-5-titre-8">7. API V1</h2>
+<p>Préfixe <code>/api/v1</code>. Réponses JSON ; DTO publics/privés distincts ; erreurs <code>{error:{code,message,fields?,requestId}}</code>. Codes stables : <code>UNAUTHENTICATED</code>, <code>EMAIL_UNVERIFIED</code>, <code>FORBIDDEN</code>, <code>NOT_FOUND</code>, <code>VALIDATION_ERROR</code>, <code>VERSION_CONFLICT</code>, <code>QUOTA_EXCEEDED</code>, <code>PUBLICATION_NOT_AVAILABLE</code>, <code>RATE_LIMITED</code>, <code>SCENE_NOT_READY</code>. Jamais de stack SQL au client.</p>
+<table>
+<thead>
+<tr>
+<th>Méthode et route</th>
+<th>Usage</th>
+<th>Autorisation</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GET <code>/catalog/listings</code></td>
+<td>Filtres, tri, curseur ; champs publics</td>
+<td>Public</td>
+</tr>
+<tr>
+<td>GET <code>/catalog/map</code></td>
+<td>bbox validée, regroupements/points publics, précision annoncée</td>
+<td>Public</td>
+</tr>
+<tr>
+<td>GET <code>/catalog/listings/:id</code></td>
+<td>Fiche publiée et état courant</td>
+<td>Public</td>
+</tr>
+<tr>
+<td>GET <code>/catalog/parkings/:id/levels</code></td>
+<td>Niveaux et unités publics autorisés</td>
+<td>Public après contrôle de visibilité</td>
+</tr>
+<tr>
+<td>GET <code>/catalog/levels/:id/scene</code></td>
+<td>Manifest et asset assaini de version active</td>
+<td>Même contrôle ; pas de source privée</td>
+</tr>
+<tr>
+<td>GET <code>/me</code>, PATCH <code>/me/profile</code></td>
+<td>Profil autorisé ; whitelist de champs</td>
+<td>Membre actif</td>
+</tr>
+<tr>
+<td>POST <code>/listings</code></td>
+<td>Nouveau brouillon vide, seller_id imposé par session</td>
+<td>Membre actif</td>
+</tr>
+<tr>
+<td>GET <code>/me/listings</code>, GET <code>/listings/:id/draft</code></td>
+<td>Annonces personnelles et brouillons</td>
+<td>Propriétaire ou modérateur autorisé</td>
+</tr>
+<tr>
+<td>PATCH <code>/listings/:id/draft</code></td>
+<td>Sauvegarde avec row_version</td>
+<td>Propriétaire</td>
+</tr>
+<tr>
+<td>POST <code>/listings/:id/submit</code></td>
+<td>Contrôles complets et entrée en modération</td>
+<td>Propriétaire + email vérifié</td>
+</tr>
+<tr>
+<td>POST <code>/listings/:id/lifecycle</code></td>
+<td>pause/sold/withdraw et confirmations</td>
+<td>Propriétaire, transitions autorisées</td>
+</tr>
+<tr>
+<td>POST <code>/uploads/intents</code></td>
+<td>Jeton court de dépôt privé, type et taille bornés</td>
+<td>Propriétaire du dossier</td>
+</tr>
+<tr>
+<td>POST <code>/uploads/:id/complete</code></td>
+<td>Vérifier objet réel et lancer traitement ; idempotent</td>
+<td>Même propriétaire</td>
+</tr>
+<tr>
+<td>PUT / DELETE <code>/favorites/:listingId</code></td>
+<td>Ajouter/retirer sans doublon</td>
+<td>Membre actif</td>
+</tr>
+<tr>
+<td>POST <code>/conversations</code></td>
+<td>Créer/réutiliser conversation sur annonce publiée</td>
+<td>Acheteur actif vérifié, différent du vendeur</td>
+</tr>
+<tr>
+<td>GET <code>/conversations</code>, GET <code>/conversations/:id/messages</code></td>
+<td>Messages paginés</td>
+<td>Participants seulement</td>
+</tr>
+<tr>
+<td>POST <code>/conversations/:id/messages</code></td>
+<td>Texte + client_request_id</td>
+<td>Participant autorisé ; blocage/annonce contrôlés</td>
+</tr>
+<tr>
+<td>POST <code>/conversations/:id/visit-requests</code></td>
+<td>Message structuré de demande</td>
+<td>Acheteur participant</td>
+</tr>
+<tr>
+<td>POST <code>/visit-requests/:id/decision</code></td>
+<td>Accepter/refuser côté vendeur ; annuler côté participant ; expectedVersion et horaire confirmé facultatif validé</td>
+<td>Participants selon action, jamais un tiers</td>
+</tr>
+<tr>
+<td>POST <code>/reports</code></td>
+<td>Signalement borné et dédupliqué</td>
+<td>Membre ; support public anti-abus séparé</td>
+</tr>
+<tr>
+<td>POST <code>/admin/revisions/:id/decision</code></td>
+<td>approve/changes_requested/reject</td>
+<td>Modérateur habilité</td>
+</tr>
+<tr>
+<td>POST <code>/admin/scenes/:id/approve</code></td>
+<td>Contrat, preuves et mapping vérifiés</td>
+<td>Administrateur de scène</td>
+</tr>
+<tr>
+<td>POST <code>/me/export</code>, DELETE <code>/me</code></td>
+<td>Démarrer export/suppression, réauthentification sensible</td>
+<td>Propriétaire</td>
+</tr>
+</tbody></table>
+<h2 id="chapitre-5-titre-9">8. Exemples de contrats</h2>
+<pre><code class="language-json">{
+  &quot;id&quot;: &quot;listing_uuid&quot;,
+  &quot;revision&quot;: 3,
+  &quot;title&quot;: &quot;Deux places couvertes&quot;,
+  &quot;saleMode&quot;: &quot;bundle&quot;,
+  &quot;spaceCount&quot;: 2,
+  &quot;totalPriceCents&quot;: 3100000,
+  &quot;currency&quot;: &quot;EUR&quot;,
+  &quot;location&quot;: {&quot;city&quot;:&quot;Lyon&quot;,&quot;precision&quot;:&quot;area&quot;,&quot;coordinates&quot;:[4.86,45.76]},
+  &quot;areaPerSpaceM2&quot;: {&quot;min&quot;:null,&quot;max&quot;:null,&quot;knownCount&quot;:0,&quot;totalCount&quot;:2},
+  &quot;totalAreaM2&quot;: null,
+  &quot;scene&quot;: {&quot;available&quot;:false,&quot;fidelity&quot;:&quot;photos_only&quot;,&quot;reason&quot;:&quot;location_area&quot;},
+  &quot;availability&quot;:&quot;published&quot;,
+  &quot;isDemo&quot;:true
+}
+</code></pre>
+<p>La position ci-dessus est un exemple de secteur et non l’adresse d’un bien réel. Réponse de liste : <code>{items,nextCursor,totalEstimate,filtersApplied}</code> ; <code>totalEstimate</code> explicitement estimé si applicable. Curseur opaque et stable fondé sur la clé de tri + id ; bornes de pagination validées.</p>
+<h2 id="chapitre-5-titre-10">9. Transactions et situations concurrentes</h2>
+<p><strong>Publication</strong> : verrouiller annonce et révision → vérifier état compte/droits → vérifier unités, conflits et quota → approuver médias et mapping → écrire claims et projection publique → basculer révision courante → événement outbox → commit. Si une étape échoue, rien n’est partiellement publié.</p>
+<p><strong>Mise à jour</strong> : créer/éditer un brouillon distinct ; la soumission fige son contenu. En cas de correction, nouvelle révision ou réouverture contrôlée sans modifier une version auditée. Une décision portant sur une vieille version échoue en conflit.</p>
+<p><strong>Vendu/retrait</strong> : retirer immédiatement de la recherche, libérer les claims appropriés, conserver les références minimales des conversations, invalider les caches ; ne pas supprimer les messages de l’acheteur. La scène géométrique peut rester pour d’autres unités, mais l’ancien prix n’est plus actif.</p>
+<p><strong>Upload</strong> : l’asset public n’existe qu’après traitement/revue ; un callback répétitif ne crée pas plusieurs variantes. Les brouillons abandonnés et objets orphelins sont nettoyés par un job à échéance documentée.</p>
+<h2 id="chapitre-5-titre-11">10. Sessions, clés et migrations</h2>
+<p>Utiliser le modèle SSR officiel de Supabase, clients serveur et navigateur séparés, sessions vérifiées côté serveur ; ne pas faire confiance à un objet session non validé pour autoriser une mutation. <a href="https://supabase.com/docs/guides/auth/server-side/creating-a-client?framework=nextjs">Guide SSR</a>.</p>
+<p>Clé publiable côté navigateur seulement avec RLS correctement activée. Secret service-role, SMTP et futurs secrets Stripe : serveur/worker uniquement. Rôle modérateur lu dans une source serveur contrôlée, jamais dans des métadonnées utilisateur éditables.</p>
+<p>Migrations SQL numérotées, relues, appliquées d’abord en local puis staging. Sauvegarde avant opération à risque ; migration de données testée sur copie. Types TypeScript générés depuis le schéma. Les endpoints côté navigateur n’obtiennent pas un accès administratif générique pour contourner la RLS.</p>
+</article><article id="chapitre-6"><h1 id="chapitre-6-titre-1">06 — Comptes, autorisations, modération et confidentialité</h1>
+<h2 id="chapitre-6-titre-2">1. Inscription et session</h2>
+<p>V1 : email + mot de passe, confirmation de l’adresse et récupération par lien temporaire. Le mot de passe est traité par Supabase Auth, jamais stocké ni journalisé par l’application. Politique produit : minimum 12 caractères, maximum compatible avec le fournisseur, coller/autoremplir autorisés ; mesure anti-abus sur inscription, connexion et récupération.</p>
+<p>Email non vérifié : consulter, préparer un brouillon et gérer son profil ; pas de soumission/publication ni de nouveau message. Le compte ne devient pas « vendeur vérifié » à la validation de l’email. Avant une action sensible : revérifier la session et, pour changement d’email/mot de passe, suppression ou facturation, demander la réauthentification requise par le fournisseur.</p>
+<p>Réponses de récupération/inscription ne révèlent pas si une adresse appartient déjà à un membre. Liens de redirection limités aux origines et chemins autorisés. Cookie, actualisation de session et contrôle serveur conformes au guide Supabase SSR ; ne pas supposer qu’un cookie lisible côté navigateur peut simplement être déclaré HttpOnly sans vérifier le fonctionnement choisi.</p>
+<p>Administrateurs : MFA requis avant accès de production. Membre : MFA facultative si prise en charge. Suspension contrôlée côté serveur à chaque mutation sensible, même si le JWT d’origine reste valide.</p>
+<h2 id="chapitre-6-titre-3">2. Matrice d’accès</h2>
+<table>
+<thead>
+<tr>
+<th>Objet</th>
+<th>Anonyme</th>
+<th>Propriétaire / participant</th>
+<th>Autre membre</th>
+<th>Modérateur / admin</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Annonce publiée assainie</td>
+<td>Lire</td>
+<td>Lire</td>
+<td>Lire</td>
+<td>Lire et action métier autorisée</td>
+</tr>
+<tr>
+<td>Brouillon / révision non publique</td>
+<td>Rien</td>
+<td>Lire/éditer dans les états autorisés</td>
+<td>Rien</td>
+<td>Lire pour dossier, décision tracée</td>
+</tr>
+<tr>
+<td>Adresse exacte masquée</td>
+<td>Rien</td>
+<td>Lire son information</td>
+<td>Rien</td>
+<td>Selon besoin de revue, tracé</td>
+</tr>
+<tr>
+<td>Photos publiques approuvées</td>
+<td>Lire</td>
+<td>Lire</td>
+<td>Lire</td>
+<td>Retirer via procédure</td>
+</tr>
+<tr>
+<td>Sources, plans et justificatifs privés</td>
+<td>Rien</td>
+<td>Ses fichiers/dossiers autorisés</td>
+<td>Rien</td>
+<td>Selon habilitation et dossier</td>
+</tr>
+<tr>
+<td>Profil public</td>
+<td>Champs publics</td>
+<td>Modifier ses champs autorisés</td>
+<td>Lire champs publics</td>
+<td>Modérer</td>
+</tr>
+<tr>
+<td>Email / téléphone privés</td>
+<td>Rien</td>
+<td>Ses informations</td>
+<td>Rien</td>
+<td>Accès limité justifié</td>
+</tr>
+<tr>
+<td>Conversation et messages</td>
+<td>Rien</td>
+<td>Participants</td>
+<td>Rien</td>
+<td>Accès lié à signalement/dossier ; pas d’exploration générale</td>
+</tr>
+<tr>
+<td>Favoris</td>
+<td>Rien</td>
+<td>Les siens</td>
+<td>Rien</td>
+<td>Pas d’accès d’interface par défaut</td>
+</tr>
+<tr>
+<td>Rôles et suspension</td>
+<td>Rien</td>
+<td>Lire ses droits résultants, aucun write</td>
+<td>Rien</td>
+<td>Administrateur habilité</td>
+</tr>
+<tr>
+<td>Scène publiée assainie</td>
+<td>Lire si contexte public</td>
+<td>Lire ; soumettre des sources</td>
+<td>Lire contexte public</td>
+<td>Importer, revoir et publier</td>
+</tr>
+<tr>
+<td>Droits et futur abonnement</td>
+<td>Rien</td>
+<td>Lire les siens</td>
+<td>Rien</td>
+<td>Support borné, changements tracés</td>
+</tr>
+</tbody></table>
+<p>Cette matrice s’applique aux API, tables, vues, RPC et objets Storage, pas seulement à l’affichage. RLS sur toutes les tables exposées ; politiques testées avec plusieurs comptes. Les clés de service contourneraient ces politiques : usage strictement serveur dans des opérations à autorisation explicite. <a href="https://supabase.com/docs/guides/database/postgres/row-level-security">RLS Supabase</a>, <a href="https://supabase.com/docs/guides/storage/security/access-control">Storage</a>.</p>
+<h2 id="chapitre-6-titre-4">3. Publication et modération</h2>
+<p>Toutes les premières annonces et leurs modifications publiques passent en revue V1. Le forfait payant futur n’accorde pas de publication sans contrôle. Pas de mise en avant payante déguisée en qualité ni de badge réservé aux abonnés donnant l’impression d’une propriété vérifiée.</p>
+<p>File : date de soumission, vendeur, type, lieu public, changements, prix/quantité, cohérence photos, champs d’état, demandes de 3D et signalements. Actions : approuver, demander une correction motivée, refuser avec motif, suspendre une publication existante. Chaque décision vise une version et conserve date/auteur/motif.</p>
+<p>Vérifications : droit déclaré de publier ; correspondance place/photo ; prix total ; quantité ; présence de défauts documentés ; pas de données sensibles publiques ; duplication ; références de lot/place cohérentes ; documents sources privés ; statut exact des mesures. Un contrôle de cohérence n’est pas une expertise technique ou une validation de propriété : le libellé doit l’indiquer.</p>
+<p>Signalement : annonce trompeuse, mauvais emplacement, mauvaise place/photo, contenu indésirable, fraude suspectée, données personnelles, autre. Accusé d’enregistrement sans promesse de délai non tenu ; priorité pour divulgation de secrets ou risque concret. Motifs, traitement et recours/contact d’opérateur doivent être documentés selon le cadre applicable à la plateforme.</p>
+<h2 id="chapitre-6-titre-5">4. Médias et fichiers</h2>
+<p>Deux zones Storage : <code>private-uploads</code> et <code>public-approved</code>. Un dépôt utilisateur reste privé, même s’il est destiné à devenir une photo publique. URLs signées courtes et liées au bon dossier. Fichiers sources privés jamais placés dans un bucket public. L’original retiré d’une annonce n’est pas encore une preuve de purge des variantes ou du CDN : procédure d’invalidation et de nettoyage explicite.</p>
+<p>Pipeline : autoriser un intent borné → déposer → vérifier taille/MIME réels → analyse et décodage → supprimer EXIF → générer variantes → revue si nécessaire → copier version assainie approuvée → journaliser. PDF traité sans exécuter de contenu actif ; télécharger dans un environnement isolé ou produire une prévisualisation sûre. Rejets et échecs n’entraînent pas l’affichage du fichier brut comme solution de secours.</p>
+<p>GLB/manifest : contrôle de schéma, quotas de ressources, aucun lien externe arbitraire, chemins et identifiants bornés. Prix, données privées et codes de portail absents des assets publics. Les ressources supplémentaires accessibles via un modèle sont contrôlées au même titre que le modèle.</p>
+<h2 id="chapitre-6-titre-6">5. Messagerie et demandes de visite</h2>
+<p>V1 texte simple de 1 à 4 000 caractères, liens traités comme texte sûr, pas de HTML. Pas de pièces jointes. Message idempotent par <code>client_request_id</code>, pagination, états envoyé/échec/lu si ce dernier est effectivement implémenté. Une notification email annonce un nouveau message sans recopier l’adresse privée ou l’intégralité de l’échange.</p>
+<p>Une conversation est liée à une annonce et ses participants. L’acheteur ne peut pas choisir arbitrairement seller_id. Interdire l’auto-contact. Blocage et signalement disponibles ; limiter les nouveaux contacts. Après vente/retrait : historique accessible aux participants, nouveaux contacts désactivés. Les échanges existants peuvent continuer pour organiser une visite déjà demandée tant que les comptes et la conversation restent autorisés.</p>
+<p>Demande de visite = message structuré, pas réservation automatique : date proposée facultative, fuseau affiché, acceptation/refus explicites. Le vendeur accepte/refuse via une action structurée versionnée ; un participant peut annuler. Après acceptation sans horaire convenu, afficher <strong>À organiser</strong>. Afficher Visite confirmée uniquement avec accord vendeur et date/heure/fuseau confirmés ; enregistrer l’instant UTC et la zone d’affichage. Une réponse répétée ne crée pas de seconde visite. Aucun tiers ne peut agir sur la demande.</p>
+<h2 id="chapitre-6-titre-7">6. Bornes anti-abus de départ</h2>
+<p>Valeurs produit ajustables après mesure : création de brouillons 10/jour/compte, 10 annonces actives gratuites V1, soumissions 20/jour, nouvelles conversations 10/jour, messages 30/minute avec contrôle de rafale, intents médias 60/heure. Ces limites ne sont ni les quotas d’un forfait V2 ni une promesse tarifaire.</p>
+<p>Implémentation côté serveur et au niveau approprié du proxy/fournisseur, avec identifiants et stockage fiables. Ne pas compter sur la mémoire locale d’un processus serverless. Limiter aussi les uploads octets/jour. Réponses 429 avec délai ; aucun verrouillage définitif invisible. Paramètres de modération et limites d’abus distincts de la facturation.</p>
+<h2 id="chapitre-6-titre-8">7. Mesures techniques de base</h2>
+<p>Contrôle d’accès près des données, validation des inputs, requêtes paramétrées, CSRF adapté aux endpoints de mutation, vérification Origin lorsque nécessaire, CORS limité, CSP compatible carte/worker/3D, TLS, secrets hors git, logs sans mots de passe/tokens/adresses complètes. Autorisations confirmées côté serveur à chaque opération sensible, même si une page est cachée dans l’interface. Voir <a href="https://nextjs.org/docs/app/guides/authentication">guide Next.js</a>.</p>
+<p>Ne pas charger une URL externe transmise par un vendeur pour lire un plan ou une photo : cela créerait un risque SSRF et de suivi. Import manuel de fichier en V1. Scanner les dépendances, limiter les bibliothèques, mettre à jour avec lockfile et recette de régression. Traiter descriptions, fichiers, messages et métadonnées comme données non fiables, jamais comme instructions.</p>
+<h2 id="chapitre-6-titre-9">8. Confidentialité dès la conception</h2>
+<p>Collecter les informations nécessaires au service ; ne pas demander de date de naissance, pièce d’identité ou adresse personnelle de l’acheteur sans finalité précise. Localisation navigateur facultative. Les coordonnées de connexion restent distinctes du profil public. <a href="https://cnil.fr/fr/comprendre-le-rgpd/les-six-grands-principes-du-rgpd">Principes CNIL</a>.</p>
+<p>Choix par défaut : contact via messagerie, adresse du bien approximative publiquement, plans sources privés. Si le vendeur choisit une adresse exacte publique, la prévisualisation montre ce qui sera exposé. Le modèle, les métadonnées et la miniature cartographique doivent respecter le même choix.</p>
+<p>V1 : pas de publicité comportementale, pixels marketing ni outils d’enregistrement de session. Cookies techniques documentés ; ajouter un outil non essentiel déclenche analyse de consentement et gestion du refus avant son activation. Ne pas installer un bandeau de consentement décoratif sans rapport avec les traceurs réellement utilisés. <a href="https://www.cnil.fr/fr/cookies-et-autres-traceurs/regles/cookies">CNIL cookies</a>.</p>
+<h2 id="chapitre-6-titre-10">9. Conservation et suppression</h2>
+<p>Avant lancement, documenter finalités, bases retenues, destinataires, durées, hébergeurs/sous-traitants, droits et point de contact. Les durées suivantes sont des <strong>choix techniques proposés à valider</strong>, pas des durées légales universelles : brouillon inactif 180 jours après rappels, upload orphelin 7 jours, export privé 7 jours, journaux applicatifs non sensibles 30 jours. Les conversations, signalements et factures nécessitent leur propre calendrier motivé ; aucune conservation indéfinie par défaut. <a href="https://www.cnil.fr/fr/passer-laction/les-durees-de-conservation-des-donnees">Guide CNIL</a>.</p>
+<p>Suppression de compte : réauthentifier → confirmer les effets → désactiver publications et nouveaux contacts → mettre en file suppression/anonymisation des données autorisées → conserver à part uniquement les éléments dont une obligation justifiée impose la conservation → confirmer l’achèvement. V2 : gérer résiliation et documents de facturation avant fermeture. Ne jamais promettre une suppression instantanée des sauvegardes : leurs rotations et restrictions sont documentées.</p>
+<h2 id="chapitre-6-titre-11">10. Pages et validations d’exploitation</h2>
+<p>Fournir les mentions de l’éditeur et de l’hébergeur adaptées à l’opérateur réel, la politique de confidentialité, les règles de dépôt/modération et les conditions du service. V2 : conditions des forfaits, prix présentés correctement, factures, résiliation et cadre consommateur/professionnel applicables. Les règles des plateformes et de l’intermédiation immobilière doivent être qualifiées selon l’activité réellement retenue avant ouverture commerciale ; aucun texte automatique ne prétend régler cette qualification.</p>
+<p>Sources officielles de cadrage : <a href="https://www.economie.gouv.fr/entreprises/developper-son-entreprise/innover-et-numeriser-son-entreprise/mentions-sur-votre-site-internet-les-obligations-respecter">mentions de site professionnel</a>. Le dossier décrit les besoins de réalisation, pas des CGU/CGV juridiquement finalisées.</p>
+</article><article id="chapitre-7"><h1 id="chapitre-7-titre-1">07 — V2 : forfaits mensuels récurrents</h1>
+<h2 id="chapitre-7-titre-2">1. Décision ferme</h2>
+<p><strong>Abonnement mensuel, pas paiement à chaque annonce.</strong> V1 gratuite. La plateforme ne vend ni n’encaisse les places immobilières : l’abonnement finance l’accès à des fonctions ou capacités de publication. L’acheteur continue de chercher et contacter sans abonnement.</p>
+<p>« 5 €/mois » est un exemple donné par Mathis. Les montants, taxes, nombre de forfaits et quotas restent à décider ; aucun tarif de ce dossier n’est activé ou présenté comme validé. Les prix d’exploitation des fournisseurs ne sont pas confondus avec le tarif payé par les annonceurs.</p>
+<h2 id="chapitre-7-titre-3">2. Structure d’offre proposée, non validée</h2>
+<table>
+<thead>
+<tr>
+<th>Code interne</th>
+<th>Exemple de fonction</th>
+<th>Prix / quota de travail</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>launch_free</code></td>
+<td>V1 gratuite pour tous les annonceurs actifs</td>
+<td>0 ; limite de sécurité 10 annonces actives, indépendante d’un forfait payant</td>
+</tr>
+<tr>
+<td><code>buyer_free</code></td>
+<td>V2 consultation, favoris, messagerie, éventuellement une capacité de découverte annonceur</td>
+<td>Gratuit ; capacité de dépôt à décider</td>
+</tr>
+<tr>
+<td><code>starter_monthly</code></td>
+<td>Petit annonceur, capacité mensuelle de publication</td>
+<td>Exemple 5 €/mois ; proposition 5 annonces actives, à valider</td>
+</tr>
+<tr>
+<td><code>pro_monthly</code></td>
+<td>Plus de biens et fonctions professionnelles utiles</td>
+<td>Prix non fixé ; proposition 25 annonces actives, à valider</td>
+</tr>
+</tbody></table>
+<p>Ne pas implémenter ces chiffres en dur. Les droits sont paramétrés et versionnés. Une offre doit être économiquement évaluée avec frais de paiement, taxes applicables, stockage, emails, support et modélisation. Une scène intérieure réalisée manuellement n’est pas promise « illimitée incluse à 5 € » : son coût doit être traité séparément avant une telle offre.</p>
+<h2 id="chapitre-7-titre-4">3. Un moteur de droits dès la V1</h2>
+<p>Fonction métier serveur : <code>getEffectiveEntitlements(userId, now)</code>. Résultat typé : <code>planCode</code>, <code>canPublish</code>, <code>maxConcurrentListings</code>, <code>maxPhotosPerListing</code>, <code>canRequest3D</code>, <code>canAccessProTools</code>, <code>effectiveUntil</code>, <code>reason</code>, <code>sourceVersion</code>.</p>
+<p>V1 : ce moteur lit <code>launch_free</code> et les exceptions administratives datées ; pas d’appel Stripe. V2 : le même moteur compose statut du compte, abonnement effectivement payé, période couverte, tolérance éventuelle, quotas et overrides explicites. Le paiement ne réactive pas un compte suspendu ni une annonce modérée.</p>
+<p>« Annonces actives » = annonces publiées + soumissions en attente ayant réservé un emplacement. Brouillon, refusé, vendu, retiré et pause hors quota de publication. Compter les <strong>listing_id distincts</strong> : une révision en attente d’une annonce déjà publiée réutilise son emplacement, sans double consommation. Une première soumission réserve une capacité, libérée à son refus/retrait et convertie à l’approbation sans seconde consommation. Transaction et verrou sur le quota pour éviter deux soumissions simultanées au-delà de la limite. Un lot compte comme une annonce, mais ses N places restent visibles ; limite d’abus sur taille du lot distincte. Revoir ce principe avant tarification pour éviter un contournement commercial involontaire.</p>
+<h2 id="chapitre-7-titre-5">4. Architecture Stripe V2</h2>
+<p>Stripe Billing pour les abonnements, Checkout en mode <code>subscription</code>, Customer Portal pour gérer moyen de paiement et résiliation. Prix Stripe définis côté serveur ; le navigateur envoie un code de forfait autorisé, jamais un montant libre ou un price_id arbitraire. Relation unique entre compte plateforme et client Stripe, sans lier des comptes sur le seul email.</p>
+<p>Endpoints réservés : POST <code>/api/v1/billing/checkout</code>, POST <code>/api/v1/billing/portal</code>, GET <code>/api/v1/billing/status</code>, POST <code>/api/v1/billing/webhook</code>. Authentifier les trois premiers ; vérifier la signature Stripe du quatrième sur le corps brut. Les pages de retour Checkout n’accordent aucun droit : elles affichent « Confirmation en cours » tant que l’état serveur n’est pas établi.</p>
+<p>Sources : <a href="https://docs.stripe.com/billing/subscriptions/webhooks">webhooks d’abonnement</a>, <a href="https://docs.stripe.com/customer-management">portail client</a>, <a href="https://docs.stripe.com/webhooks">réception et signature des événements</a>.</p>
+<h2 id="chapitre-7-titre-6">5. États et droits</h2>
+<table>
+<thead>
+<tr>
+<th>Situation réelle</th>
+<th>Effet produit proposé</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Aucun abonnement en V1</td>
+<td>Droits gratuits de lancement</td>
+</tr>
+<tr>
+<td>Checkout ouvert, paiement non confirmé</td>
+<td>Aucun nouveau droit payant</td>
+</tr>
+<tr>
+<td>Paiement initial validé et période active confirmée</td>
+<td>Appliquer le forfait serveur</td>
+</tr>
+<tr>
+<td><code>incomplete</code> / <code>incomplete_expired</code></td>
+<td>Aucun droit payant, permettre une nouvelle tentative sûre</td>
+</tr>
+<tr>
+<td><code>trialing</code></td>
+<td>Seulement si un essai a été explicitement configuré ; aucun essai par défaut</td>
+</tr>
+<tr>
+<td><code>active</code></td>
+<td>Droits de la période couverte ; garder le compte et la modération prioritaires</td>
+</tr>
+<tr>
+<td>Échec d’un renouvellement (<code>past_due</code>)</td>
+<td>Proposition : 7 jours de tolérance sur une période auparavant payée ; avertissement et régularisation, pas de nouvel essai gratuit permanent</td>
+</tr>
+<tr>
+<td><code>unpaid</code>, <code>paused</code>, fin effective ou expiration de tolérance</td>
+<td>Retour aux droits gratuits V2 validés ; lecture des messages et gestion des brouillons préservées</td>
+</tr>
+<tr>
+<td>Résiliation à fin de période</td>
+<td>Droits jusqu’à la fin de couverture payée ; afficher date exacte et action d’annulation du changement si disponible</td>
+</tr>
+<tr>
+<td>Remboursement/litige/chargeback</td>
+<td>Examen selon politique commerciale ; synchroniser situation réelle, sans effacer les dossiers ni inventer un droit</td>
+</tr>
+<tr>
+<td>Compte suspendu</td>
+<td>Aucun droit de publier, quel que soit le paiement</td>
+</tr>
+</tbody></table>
+<p>Ces choix de tolérance et d’offre devront être validés au lancement V2 et cohérents avec ses conditions. Le moteur ne transforme pas mécaniquement n’importe quel statut en accès ; il vérifie périodes, factures et état canonique selon la configuration.</p>
+<h2 id="chapitre-7-titre-7">6. Événements et robustesse</h2>
+<p>Événements à gérer selon l’intégration choisie : <code>checkout.session.completed</code>, <code>customer.subscription.created/updated/deleted</code>, <code>invoice.paid</code>, <code>invoice.payment_failed</code>, et expiration/essai si activés. Un événement Checkout n’est pas à lui seul la preuve d’une facture payée.</p>
+<p>Enregistrer l’ID d’événement unique avant traitement ; doublon = réponse réussie sans second effet. Ne pas supposer l’ordre des événements. Récupérer l’état canonique Stripe de l’abonnement et de sa période/facture quand nécessaire, puis recalculer le snapshot de droits dans une transaction. Job de réconciliation périodique pour événements manquants/échecs. Essais avec backoff, alertes, dead-letter consultable ; aucun remboursement ou email doublé sur retry.</p>
+<p>Séparer strictement test et production, clients/prices/secrets/webhooks. Ne pas figer un champ de période propre à une ancienne version API : verrouiller la version choisie et tester son contrat. Les logs ne stockent pas les coordonnées bancaires ; Stripe les traite.</p>
+<h2 id="chapitre-7-titre-8">7. Changement de forfait et dépassement</h2>
+<p>V2 initiale : simplifier. Upgrade appliqué lorsque la facturation correspondante est confirmée. Downgrade à la prochaine échéance par défaut, montant et date expliqués. Pas de proration improvisée dans le code : choisir la politique Stripe et le texte commercial avant activation.</p>
+<p>Si trop d’annonces pour le nouveau quota, demander au vendeur lesquelles garder. Laisser le délai annoncé ; à la date effective, mettre en pause l’excédent selon son choix, puis à défaut selon une règle visible et déterministe. Ne jamais supprimer les biens, documents ou messages pour un impayé. Une remise en ligne revérifie droits, disponibilité et modération.</p>
+<h2 id="chapitre-7-titre-9">8. Passage V1 gratuite → V2</h2>
+<p>Ne pas activer un prélèvement sur les comptes existants et ne pas convertir automatiquement les utilisateurs en abonnés. Définir offre gratuite V2 et règles des anciens comptes ; informer avant le changement, montrer conséquences et date, prévoir un délai de transition produit proposé de 30 jours à valider. Le vendeur choisit librement un forfait et son moyen de paiement.</p>
+<p>Mathis peut bénéficier d’un compte interne/exemption si voulu, enregistré comme override administrateur avec motif et échéance, pas une condition cachée dans le frontend. Aucune migration commerciale sans recette technique et validation de l’offre.</p>
+<h2 id="chapitre-7-titre-10">9. Recette spécifique</h2>
+<p>Paiement initial accepté/refusé/abandonné ; retour avant webhook ; webhook dupliqué ; événements inversés ; signature incorrecte ; renouvellement réussi/échoué ; résiliation fin de période ; régularisation pendant et après tolérance ; upgrade/downgrade ; dépassement de quota ; compte suspendu pourtant payé ; suppression de compte ; indisponibilité Stripe ; double clic de création Checkout ; réconciliation après panne.</p>
+<h2 id="chapitre-7-titre-11">10. Ce que la V1 doit préparer, sans construire la facturation</h2>
+<p>Préparer moteur de droits, limites transactionnelles, code de forfait gratuit, feature flag serveur <code>billing_enabled=false</code>, écrans de compte modulaires et schéma futur documenté. Ne pas créer Stripe, collecter des cartes, afficher des boutons payants, installer des secrets de production ou envoyer des factures dès maintenant.</p>
+</article><article id="chapitre-8"><h1 id="chapitre-8-titre-1">08 — Ordre de développement, recette et exploitation</h1>
+<h2 id="chapitre-8-titre-2">1. Méthode de construction</h2>
+<p>Construire par tranches utilisables et relues, avec des critères de fin. Aucune étape n’est « terminée » parce qu’un écran statique ressemble à la maquette. Les fixtures sont explicitement fictives ; le vrai inventaire de Mathis est importé après rapprochement, sans inventer adresses, prix, état ou disponibilité.</p>
+<p>Le backlog détaillé et trié est dans <code>specs/backlog.csv</code>. Les tailles S/M/L indiquent une complexité relative, pas un devis ni une date garantie. La production d’une scène réaliste dépend aussi de l’obtention des plans et photos.</p>
+<h2 id="chapitre-8-titre-3">2. Jalons et dépendances</h2>
+<table>
+<thead>
+<tr>
+<th>Jalon</th>
+<th>Livrable et travail</th>
+<th>Critère de passage</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>M0 — Contrats et pilote</td>
+<td>Références, tokens, composants de base, schémas, données fictives ; collecte d’un parking réel</td>
+<td>Aucune ambiguïté sur prix total, rôles, qualité et source du modèle</td>
+</tr>
+<tr>
+<td>M1 — Fondations</td>
+<td>Next/TypeScript, environnements isolés, migrations, RLS, Auth, profil, moteur de droits gratuit</td>
+<td>Compte A ne peut lire/modifier les données privées de B</td>
+</tr>
+<tr>
+<td>M2 — Publication complète</td>
+<td>Assistant, sauvegarde, médias privés puis assainis, administration, révisions et projection publique</td>
+<td>Inscription → brouillon → modération → publication fonctionne réellement</td>
+</tr>
+<tr>
+<td>M3 — Recherche publique</td>
+<td>Fiche indexable, filtres, pagination, favoris, comparaison, carte ville et repli</td>
+<td>Liste/carte/fiche affichent les mêmes données et états</td>
+</tr>
+<tr>
+<td>M4 — Parking intérieur</td>
+<td>Pipeline scène, modèle pilote, niveaux, sélection de place/lot, observations d’état, repli 2D</td>
+<td>Plan ↔ modèle ↔ photo ↔ numéro vérifiés sur le pilote réel</td>
+</tr>
+<tr>
+<td>M5 — Mise en relation</td>
+<td>Conversations privées, demande de visite, notifications fiables, signalements</td>
+<td>Acheteur et vendeur échangent, aucun tiers n’y accède</td>
+</tr>
+<tr>
+<td>M6 — Ouverture V1</td>
+<td>Mobile, accessibilité, sécurité, performances, légales, exploitation et restauration</td>
+<td>Recette de lancement réussie et responsable opérationnel identifié</td>
+</tr>
+<tr>
+<td>M7 — Facturation V2</td>
+<td>Offre validée, moteur de droits relié à Stripe, portail et migration des anciens comptes</td>
+<td>Recette de facturation en test puis validation commerciale avant activation</td>
+</tr>
+</tbody></table>
+<p>M3 peut être préparé sur la projection contractuelle pendant M2. M4 démarre seulement sur une scène contrôlée ; ne pas retarder tous les parcours pour attendre une modélisation de chaque annonce. M5 peut suivre le catalogue sans attendre l’intégralité du parc de scènes. M7 n’est pas un prérequis V1.</p>
+<h2 id="chapitre-8-titre-4">3. Données de recette minimales</h2>
+<p>Créer en environnement de test : visiteur, vendeur A, vendeur B, acheteur C, modérateur, administrateur ; compte non vérifié, suspendu et en suppression. Aucune donnée de connexion dans le dépôt.</p>
+<p>Inventaire : place couverte individuelle, box, place extérieure, lot de 2 unités, lot sur plusieurs niveaux d’un seul parking, bien occupé, dimension inconnue, défaut d’humidité documenté, poteau contraignant, annonce sans scène, plan schématique, modèle mesuré, modèle revu, annonce vendue, suspendue, brouillon, révision en attente et correction refusée. Au moins deux annonces sur un même parking, dont une d’un autre vendeur, pour tester le partage sans fuite.</p>
+<p>Médias : photo valide, fausse extension, fichier trop grand, EXIF avec coordonnées à supprimer, PDF non autorisé au public, asset orphelin, GLB à référence externe, mauvais mapping de place. Ne jamais utiliser un fichier malveillant actif sur le poste utilisateur ; fixtures inertes et contrôlées.</p>
+<h2 id="chapitre-8-titre-5">4. Recette fonctionnelle</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Cas</th>
+<th>Résultat attendu</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>F01</td>
+<td>Inscription puis email non confirmé</td>
+<td>Consultation et brouillon possibles, soumission/contact bloqués explicitement</td>
+</tr>
+<tr>
+<td>F02</td>
+<td>Retour après fermeture du formulaire</td>
+<td>Dernière version enregistrée restaurée, aucun média perdu silencieusement</td>
+</tr>
+<tr>
+<td>F03</td>
+<td>Deux onglets modifient un brouillon</td>
+<td>Conflit détecté, pas d’écrasement silencieux</td>
+</tr>
+<tr>
+<td>F04</td>
+<td>Lot de 2 places à 31 000 €</td>
+<td>Prix total partout, sélection des deux unités, aucun prix unitaire trompeur</td>
+</tr>
+<tr>
+<td>F05</td>
+<td>Modérateur demande correction</td>
+<td>Motif lisible, nouvelle soumission, historique conservé</td>
+</tr>
+<tr>
+<td>F06</td>
+<td>Révision d’annonce publiée refusée</td>
+<td>Ancienne version valide conservée sauf suspension explicite</td>
+</tr>
+<tr>
+<td>F07</td>
+<td>Vendeur marque vendu depuis autre onglet</td>
+<td>Recherche, fiche, carte et scène cessent de proposer le contact actif</td>
+</tr>
+<tr>
+<td>F08</td>
+<td>Recherche avec plusieurs filtres et curseur</td>
+<td>Filtres avant pagination, ordre stable, aucun doublon de page</td>
+</tr>
+<tr>
+<td>F09</td>
+<td>Retour depuis fiche ou niveau intérieur</td>
+<td>Filtres, sélection et position de liste restaurés</td>
+</tr>
+<tr>
+<td>F10</td>
+<td>Favori d’une annonce retirée</td>
+<td>Favori retrouvé avec état indisponible, pas de page d’erreur opaque</td>
+</tr>
+<tr>
+<td>F11</td>
+<td>Double clic sur envoyer</td>
+<td>Un seul message et une seule demande de visite</td>
+</tr>
+<tr>
+<td>F12</td>
+<td>Demande de visite sans réponse</td>
+<td>État demandée, jamais confirmée automatiquement</td>
+</tr>
+<tr>
+<td>F13</td>
+<td>Absence de WebGL ou tuiles indisponibles</td>
+<td>Liste, fiche, photos et plan de repli utilisables</td>
+</tr>
+<tr>
+<td>F14</td>
+<td>Changement d’un prix</td>
+<td>Même prix serveur dans liste, inspecteur, fiche, comparaison et plan</td>
+</tr>
+<tr>
+<td>F16</td>
+<td>Annonce area et annonce exacte de deux vendeurs dans le même parking</td>
+<td>Aucun identifiant/scène public ne rattache l’annonce area au site exact</td>
+</tr>
+<tr>
+<td>F17</td>
+<td>Révision en attente d’une annonce publiée au quota maximal</td>
+<td>Aucun second emplacement consommé</td>
+</tr>
+<tr>
+<td>F18</td>
+<td>Comparaison de place et lot avec surface inconnue</td>
+<td>Plage par place et total distincts ; filtre actif exclut les inconnus</td>
+</tr>
+<tr>
+<td>F19</td>
+<td>Visite acceptée sans horaire puis planifiée</td>
+<td>À organiser puis confirmée ; version, participants et annulation contrôlés</td>
+</tr>
+<tr>
+<td>F20</td>
+<td>Lot partiellement couvert en photos</td>
+<td>Vue commune étiquetée, aucune qualité documentée attribuée aux unités sans preuves</td>
+</tr>
+<tr>
+<td>F15</td>
+<td>Vente partielle d’un lot</td>
+<td>Révision et nouveau prix total demandés ; pas de prorata automatique</td>
+</tr>
+</tbody></table>
+<h2 id="chapitre-8-titre-6">5. Recette de fidélité du pilote 3D</h2>
+<p>Contrôle sur les pièces du vrai parking, et pas seulement sur une image générée :</p>
+<ul>
+<li>Vérifier au moins deux distances indépendantes et la cohérence d’échelle ; écart cible proposé ≤ 5 cm pour une mesure source de qualité suffisante. Si cette précision ne peut être tenue, déclarer la précision réelle et rester au statut approprié.</li>
+<li>Vérifier chaque numéro, <code>space_id</code>, niveau, photo et rattachement d’annonce. Une erreur d’identifiant bloque la publication de la scène.</li>
+<li>Vérifier poteaux, murs, portes, rampes et points limitant hauteur/manœuvre. Aucune suppression visuelle d’un obstacle pour embellir.</li>
+<li>Comparer état du sol, traces et éclairage aux photos datées ; afficher les inconnus. Les lumières du rendu ne sont pas une mesure photométrique.</li>
+<li>Activer/masquer la sélection pour vérifier qu’elle ne couvre pas le défaut à montrer.</li>
+<li>Vérifier le contexte commun du parking et les particularités de chaque place, y compris lot de plusieurs places et place sans annonce.</li>
+<li>Faire relire au vendeur et approuver la version par l’administration ; enregistrer périmètre, date et preuves du contrôle.</li>
+</ul>
+<h2 id="chapitre-8-titre-7">6. Recette d’accès et de sécurité</h2>
+<p>Tests d’intégration avec de vraies identités de test et appels directs : A ne peut accéder au brouillon, fichier privé, adresse masquée ou conversation de B ; changer un UUID dans une URL ne change pas les droits ; anonyme ne peut publier ; membre ne peut s’octroyer moderator/admin ; compte suspendu ne peut muter avec un ancien token ; plan privé jamais récupérable par URL publique.</p>
+<p>Tester aussi RPC et Storage, pas uniquement les pages. Un simple endpoint protégé ne prouve pas la RLS. Vérifier les réponses publiques et leurs caches pour absence d’email, coordonnées privées, point GPS exact caché, références privées dans GLB ou EXIF. Vérifier rollback de publication, état concurrent et contraintes de claims/quota.</p>
+<h2 id="chapitre-8-titre-8">7. Recette visuelle et accessibilité</h2>
+<p>Référence côte à côte, même largeur et même état : exploration ville et parking intérieur, puis dépôt et compte appliquant les mêmes tokens. Vérifier réellement police chargée, sept tailles, graisses, alignements, contrastes, photos non étirées, contenu non coupé et états focus/erreur.</p>
+<p>390/768/1 024/1 440 px, zoom 200 %, clavier seul, lecteur d’écran sur le parcours principal, réduction des mouvements, chargement lent, texte long et erreur réseau. Le canvas propose une alternative sémantique ; aucun piège de focus. Les attributs et messages d’erreur des champs sont annoncés.</p>
+<h2 id="chapitre-8-titre-9">8. Performance et référencement</h2>
+<p>Cibles terrain à vérifier : LCP ≤ 2,5 s, INP ≤ 200 ms et CLS ≤ 0,1 au 75e percentile lorsque des mesures réelles sont disponibles. Ce sont des objectifs de qualité, pas des résultats déjà atteints. <a href="https://web.dev/articles/vitals">Référence Web Vitals</a>. Carte et viewer chargés à la demande ; images dimensionnées, vignettes adaptées, fonte WOFF2 locale, pas de chargement de deux scènes lourdes en parallèle.</p>
+<p>Pages annonce rendues avec contenu HTML utile, titre/meta et URL canonique stable. Les filtres arbitraires n’engendrent pas des milliers de pages indexables ; indexer seulement des pages ville utiles et autorisées. Sitemap des annonces publiques actives ; compte/admin/brouillons et staging en noindex. Une annonce retirée garde un état explicite ou une réponse appropriée selon sa visibilité ; pas de soft-404 mensonger. Données structurées seulement si elles décrivent réellement le contenu visible et le format choisi est adapté, sans étoiles ou prix inventés.</p>
+<h2 id="chapitre-8-titre-10">9. Configuration et secrets</h2>
+<p>Environnements séparés : local, staging, production. Base et buckets distincts. Variables : URL publique du site, URL/clé publiable Supabase, secrets serveur dans le gestionnaire d’environnement, paramètres SMTP, style/fournisseur de carte, feature flag facturation. V2 : secrets/prices/webhook Stripe par environnement. Aucun vrai secret dans les exemples <code>.env.example</code>.</p>
+<p>Local/staging utilisent des fixtures et des destinations email de test ; aucun envoi accidentel aux utilisateurs réels. Les logs portent un request_id, type d’action et résultat, pas le corps des messages ni documents privés.</p>
+<h2 id="chapitre-8-titre-11">10. CI et livraison</h2>
+<p>À chaque changement : format/lint, TypeScript, schémas et migrations valides, tests métier pertinents, tests des droits et parcours affectés. Les vues réutilisables ont des cas d’états, pas des snapshots de chaque pixel sans intention.</p>
+<p>Avant mise en ligne : déployer staging → migrer → charger fixtures → recette réelle navigateur → vérifier les flux email et suppression/export → contrôler absence de paiement V1 et données de démonstration en production → sauvegarde → déploiement production → smoke tests anonymes et membres. « Local », « staging » et « production » restent des états distincts dans le compte rendu.</p>
+<p>Retour arrière : ancienne version applicative compatible, migrations additives privilégiées, export/version des scènes et assets. Une migration destructive attend la transition et une procédure documentée ; jamais un rollback qui perd les annonces récentes.</p>
+<h2 id="chapitre-8-titre-12">11. Exploitation et sauvegardes</h2>
+<p>Responsables à nommer : modération quotidienne, support, récupération des incidents et production des scènes. Alertes : erreurs serveur, échec jobs de médias/emails, fuite ou accès refusé anormal, tuiles indisponibles, croissance stockage ; V2 : webhook et réconciliation d’abonnement.</p>
+<p>Sauvegarder <strong>base et fichiers</strong>, avec versions de scènes et manifestes ; une sauvegarde PostgreSQL seule ne restaure pas les photos. Objectifs proposés : RPO 24 h et RTO 8 h au lancement, à adapter à l’offre et tester. Test mensuel de restauration sur environnement isolé avec contrôle d’une annonce, sa galerie et sa scène. Accès aux sauvegardes limité, clés et rotation documentées.</p>
+<p>Purge : jobs idempotents, politique de conservation et dry-run de sélection avant suppression massive ; vérifier objets, variantes, caches et références. Ne pas effacer les fichiers d’un autre vendeur lors du retrait d’une scène partagée.</p>
+<h2 id="chapitre-8-titre-13">12. Mesures d’usage utiles</h2>
+<p>Compter avec minimisation : recherches sans résultat, ouverture de fiche, début/abandon d’étape de dépôt, soumission, délai de modération, premier contact, consultation de 3D, erreurs de correspondance et retrait vendu déclaré. Pas de chiffre d’affaires immobilier supposé d’après un clic ; pas de taux « vente réussie » sans confirmation réelle.</p>
+<p>V2 : abonnements actifs effectivement payés, churn, échecs de renouvellement, coût support/stockage par compte. Les définitions et exclusions sont documentées ; anonymiser/agréger lorsque possible.</p>
+<h2 id="chapitre-8-titre-14">13. Coûts et capacité : feuille de calcul avant achat</h2>
+<p>Postes : domaine, application Node, PostgreSQL/Auth, stockage originaux/variantes, trafic CDN, emails, sauvegardes et observabilité ; travail manuel de modélisation et de modération. V2 : frais du prestataire de paiement et traitement des abonnements, à vérifier au tarif et à la situation réelle. Pas de promesse « tout gratuit » fondée sur la seule carte.</p>
+<p>Exemple de capacité, non devis : 1 000 annonces × 12 photos × 3 variantes. Calculer le poids réellement mesuré après compression, puis multiplier par les consultations de galerie ; ajouter plans privés et modèles par niveau, pas par annonce lorsque partagés. Remplir les prix unitaires à partir des fournisseurs choisis au moment de provisionner ; aucun chiffre d’abonnement fournisseur périmé dans le code.</p>
+<h2 id="chapitre-8-titre-15">14. Liste de lancement V1</h2>
+<p>Critères bloquants : droits réels testés, projection publique assainie, publication/modération transactionnelles, brouillons et médias fiables, contact fonctionnel, exactitude du pilote, repli sans 3D, mobile et clavier utilisables, textes et opérateur renseignés, sauvegarde/restauration testée, supervision minimale, domaine et marque validés pour l’usage retenu, aucun Stripe actif, aucune annonce fictive présentée comme réelle.</p>
+<p>Ce dossier n’affirme pas que ces tests ont été exécutés : le site reste à développer. Le contrôle du livrable porte seulement sur ses fichiers, références, tokens et contrats.</p>
+</article><article id="chapitre-9"><h1 id="chapitre-9-titre-1">09 — Décisions, limites et sources</h1>
+<h2 id="chapitre-9-titre-2">1. Registre des décisions</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Décision</th>
+<th>Statut</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>D01</td>
+<td>Vente de parkings/box ; annonceurs Mathis et autres utilisateurs</td>
+<td>Demandé par Mathis</td>
+</tr>
+<tr>
+<td>D02</td>
+<td>Identité claire blanche/violette ; derniers ajustements : place dorée douce, filtre actif champagne pâle</td>
+<td>Demandé explicitement, remplace essais noir/or</td>
+</tr>
+<tr>
+<td>D03</td>
+<td>Carte ville 3D + parking intérieur ; état réel visible</td>
+<td>Demandé explicitement</td>
+</tr>
+<tr>
+<td>D04</td>
+<td>Comptes, interface de dépôt et gestion des annonces</td>
+<td>Demandé explicitement</td>
+</tr>
+<tr>
+<td>D05</td>
+<td>Gratuit en V1 ; forfaits mensuels en V2 ; pas de paiement par annonce</td>
+<td>Correction explicite de Mathis</td>
+</tr>
+<tr>
+<td>D06</td>
+<td>5 €/mois exemple de forfait, sans tarif/quota final</td>
+<td>Exemple, non prix validé</td>
+</tr>
+<tr>
+<td>D07</td>
+<td>Une police Inter, sept tailles, tokens et composants communs</td>
+<td>Choix de réalisation en réponse à la demande de charte</td>
+</tr>
+<tr>
+<td>D08</td>
+<td>Monogramme G devant P, même dessin ; préférence la plus récente pour le premier G doré avec P violet</td>
+<td>Validé visuellement sur le fichier joint ; disponibilité non vérifiée</td>
+</tr>
+<tr>
+<td>D09</td>
+<td>Or limité au G et à la sélection ; filtre actif très pâle, CTA et structure blancs/violets conservés</td>
+<td>Périmètre de la modification du G</td>
+</tr>
+<tr>
+<td>D10</td>
+<td>Next/TypeScript + Supabase ; MapLibre/OpenFreeMap ; Three/R3F</td>
+<td>Architecture proposée prête à implémenter</td>
+</tr>
+<tr>
+<td>D11</td>
+<td>Publication gratuite modérée, révisions, inconnus explicites et modèle partagé par niveau</td>
+<td>Règles V1 proposées pour une réalisation cohérente</td>
+</tr>
+<tr>
+<td>D12</td>
+<td>Contact/messagerie ; aucun encaissement du prix immobilier</td>
+<td>Périmètre du site de petites annonces</td>
+</tr>
+<tr>
+<td>D13</td>
+<td>Pas de génération IA d’un parking réel à partir d’une seule photo</td>
+<td>Limite de fidélité et choix de production</td>
+</tr>
+</tbody></table>
+<h2 id="chapitre-9-titre-3">2. Points à confirmer sans empêcher la préparation technique</h2>
+<table>
+<thead>
+<tr>
+<th>Sujet</th>
+<th>Hypothèse de travail</th>
+<th>À décider avant</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Nom commercial et domaine</td>
+<td>« GP » interne ; « park. » issu des maquettes, non adopté comme marque disponible</td>
+<td>Publication de la marque et réservation définitive</td>
+</tr>
+<tr>
+<td>Logo</td>
+<td>Fichier exact joint conservé : G doré initial / P violet, géométrie figée ; piste raster avant SVG final</td>
+<td>Intégration de production</td>
+</tr>
+<tr>
+<td>Opérateur de la plateforme</td>
+<td>Entité et contact légal à renseigner</td>
+<td>Ouverture au public</td>
+</tr>
+<tr>
+<td>Territoire</td>
+<td>France, interface FR, EUR</td>
+<td>Déploiement des règles locales et textes</td>
+</tr>
+<tr>
+<td>Inventaire réel</td>
+<td>Aucune adresse/prix/photo des maquettes n’est une donnée réelle</td>
+<td>Import des annonces et premier pilote</td>
+</tr>
+<tr>
+<td>Plans et dimensions</td>
+<td>Un parking pilote à collecter ; scènes fictives étiquetées pour développer</td>
+<td>Déclaration d’une scène fidèle</td>
+</tr>
+<tr>
+<td>Hébergement et région</td>
+<td>Services compatibles Node/Supabase, région UE à sélectionner</td>
+<td>Création de comptes/facturation fournisseur</td>
+</tr>
+<tr>
+<td>Publication externe</td>
+<td>Autres vendeurs en V1 gratuite modérée, pas uniquement stock de Mathis</td>
+<td>Paramétrage de l’ouverture des inscriptions</td>
+</tr>
+<tr>
+<td>Quotas gratuits et reconfirmation</td>
+<td>10 actives et 90 jours proposés comme règles produit</td>
+<td>Recette métier de lancement</td>
+</tr>
+<tr>
+<td>Forfaits V2</td>
+<td>Mensuels ; montant/quota/avantages non arrêtés</td>
+<td>Activation commerciale V2</td>
+</tr>
+<tr>
+<td>Priorité des scènes</td>
+<td>Production manuelle assistée sur parkings documentés</td>
+<td>Offre promise aux annonceurs</td>
+</tr>
+<tr>
+<td>Textes et durées</td>
+<td>Finalités et calendriers adaptés à l’activité réelle</td>
+<td>Lancement et activation V2</td>
+</tr>
+</tbody></table>
+<p>Il n’est pas nécessaire de bloquer la rédaction ou les premières fondations sur ces réponses. En revanche, ne pas publier un nom « disponible », une scène « vérifiée » ou un tarif « définitif » sans la validation correspondante.</p>
+<h2 id="chapitre-9-titre-4">3. Logo : recherche de ressemblance et statut honnête</h2>
+<p>La proposition n’est pas accompagnée d’une certification de disponibilité. Une recherche web générale autour de GP/parking a été consultée pour cadrer le sujet, mais ne constitue ni recherche figurative exhaustive ni contrôle de droits antérieurs. Aucun rapport INPI/TMview sur ce signe précis n’a été obtenu et aucun dépôt n’a été réalisé.</p>
+<p>Avant adoption : conserver le fichier final, choisir le nom et les territoires/services visés, effectuer recherches à l’identique puis de similitude sur nom et signe, examiner résultats figuratifs et droits antérieurs pertinents, contrôler domaine/présence commerciale, et consigner les conclusions. Les classes et l’analyse doivent suivre l’activité réelle, pas un nombre arbitraire du dossier.</p>
+<p>L’INPI distingue la recherche à l’identique et la recherche par similarité ; EUIPO présente TMview et DesignView comme bases de recherche. Une marque générée n’échappe pas à ce contrôle. <a href="https://www.inpi.fr/disponibilite-dune-marque-dun-logo-dun-nom-de-societe-dun-nom-de-domaine">INPI disponibilité</a>, <a href="https://www.euipo.europa.eu/search-ip">EUIPO recherches</a>.</p>
+<p>Les PNG joints sont des essais. Le rendu satiné/lumineux ne doit pas être pris pour le SVG simplifié final. Tester sa lisibilité sur blanc à 24/32 px et produire une version sans halo pour les petits formats. La demande d’un G doré ne transforme pas les boutons ou textes du site en doré.</p>
+<h2 id="chapitre-9-titre-5">4. Corrections issues des relectures spécialisées</h2>
+<p>V1 un parking par annonce ; confidentialité area sans scène partagée/identifiants canoniques publics ; quotas par listing_id distinct ; chemins d’assets sans traversée et extensions par rôle ; navigation visible vers dépôt/compte ; surface par unité distincte du total ; décisions de visite structurées ; galeries propres aux unités et couverture partielle explicitée. Ces corrections portent sur les contrats, pas sur une application déployée.</p>
+<h2 id="chapitre-9-titre-6">5. Sources officielles consultées</h2>
+<p>Consultation pour ce dossier : 20 octobre 2026. Les règles produit, limites de poids, objectifs de performance et quotas sont nos spécifications proposées ; les pages ci-dessous justifient capacités et principes techniques, pas ces paramètres propres au projet. Revérifier tarifs/conditions et versions au moment de provisionner.</p>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Usage et portée</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="https://openfreemap.org/">OpenFreeMap</a></td>
+<td>Instance publique gratuite annoncée, usage commercial, attribution, absence de SLA</td>
+</tr>
+<tr>
+<td><a href="https://openfreemap.org/quick_start/">Guide OpenFreeMap</a></td>
+<td>Intégration MapLibre et personnalisation des styles</td>
+</tr>
+<tr>
+<td><a href="https://maplibre.org/maplibre-gl-js/docs/examples/display-buildings-in-3d/">MapLibre : bâtiments 3D</a></td>
+<td>Volumes extrudés à partir des données de bâtiments ; pas intérieurs privés</td>
+</tr>
+<tr>
+<td><a href="https://r3f.docs.pmnd.rs/getting-started/introduction">React Three Fiber</a></td>
+<td>Rendu React pour Three.js ; viewer intérieur</td>
+</tr>
+<tr>
+<td><a href="https://threejs.org/docs/">Three.js</a></td>
+<td>Objets, rendu et chargement des scènes ; formats à valider dans la version retenue</td>
+</tr>
+<tr>
+<td><a href="https://nextjs.org/docs/app/guides/authentication">Next.js Auth</a></td>
+<td>Autorisation au plus près des données, séparation de session et droits</td>
+</tr>
+<tr>
+<td><a href="https://nextjs.org/docs/app/getting-started/fonts">Next.js fontes</a></td>
+<td>Gestion et optimisation des polices ; fonte locale privilégiée</td>
+</tr>
+<tr>
+<td><a href="https://supabase.com/docs/guides/auth/server-side/creating-a-client?framework=nextjs">Supabase SSR</a></td>
+<td>Clients et session vérifiée serveur ; ne pas autoriser via session non validée</td>
+</tr>
+<tr>
+<td><a href="https://supabase.com/docs/guides/database/postgres/row-level-security">Supabase RLS</a></td>
+<td>Contrôle au niveau des lignes de base</td>
+</tr>
+<tr>
+<td><a href="https://supabase.com/docs/guides/storage/security/access-control">Supabase Storage</a></td>
+<td>Politiques d’accès aux fichiers</td>
+</tr>
+<tr>
+<td><a href="https://supabase.com/docs/guides/database/extensions/postgis">Supabase PostGIS</a></td>
+<td>Requêtes et index géographiques</td>
+</tr>
+<tr>
+<td><a href="https://docs.stripe.com/billing/subscriptions/webhooks">Stripe abonnements/webhooks</a></td>
+<td>Événements, renouvellement et états pour la future V2</td>
+</tr>
+<tr>
+<td><a href="https://docs.stripe.com/customer-management">Stripe Customer Portal</a></td>
+<td>Gestion de l’abonnement et du moyen de paiement</td>
+</tr>
+<tr>
+<td><a href="https://docs.stripe.com/webhooks">Stripe webhooks</a></td>
+<td>Signature, réception et robustesse des événements</td>
+</tr>
+<tr>
+<td><a href="https://rsms.me/inter/">Inter</a></td>
+<td>Famille retenue et téléchargement officiel ; licence fournie dans assets</td>
+</tr>
+<tr>
+<td><a href="https://web.dev/articles/vitals">Web Vitals</a></td>
+<td>Cibles LCP, INP et CLS de la future recette</td>
+</tr>
+<tr>
+<td><a href="https://www.w3.org/WAI/WCAG22/quickref/">W3C WCAG 2.2</a></td>
+<td>Contraste, clavier et accessibilité ; objectifs à tester</td>
+</tr>
+<tr>
+<td><a href="https://cnil.fr/fr/comprendre-le-rgpd/les-six-grands-principes-du-rgpd">CNIL principes RGPD</a></td>
+<td>Minimisation, finalités, information, sécurité</td>
+</tr>
+<tr>
+<td><a href="https://www.cnil.fr/fr/cookies-et-autres-traceurs/regles/cookies">CNIL cookies</a></td>
+<td>Analyse des traceurs et consentement selon usage réel</td>
+</tr>
+<tr>
+<td><a href="https://www.cnil.fr/fr/passer-laction/les-durees-de-conservation-des-donnees">CNIL conservation</a></td>
+<td>Calendrier de conservation motivé, pas de durée universelle inventée</td>
+</tr>
+<tr>
+<td><a href="https://www.economie.gouv.fr/entreprises/developper-son-entreprise/innover-et-numeriser-son-entreprise/mentions-sur-votre-site-internet-les-obligations-respecter">Ministère de l’Économie</a></td>
+<td>Mentions et information de l’éditeur professionnel</td>
+</tr>
+<tr>
+<td><a href="https://www.inpi.fr/disponibilite-dune-marque-dun-logo-dun-nom-de-societe-dun-nom-de-domaine">INPI disponibilité</a></td>
+<td>Limites d’une recherche à l’identique et recherche de similarité</td>
+</tr>
+<tr>
+<td><a href="https://www.euipo.europa.eu/search-ip">EUIPO recherches</a></td>
+<td>Accès aux bases de marques et dessins</td>
+</tr>
+</tbody></table>
+<h2 id="chapitre-9-titre-7">6. Équipe et relectures</h2>
+<p>Trois missions réellement déléguées : organisation de 18 rôles, revue architecture/contrats, revue produit/recette. Huit précisions intégrées puis contrôle ciblé des quatre corrections d’architecture. Les 18 briefs sont préparés pour le futur développement ; aucun site n’a été codé par ces agents.</p>
+<h2 id="chapitre-9-titre-8">7. Provenance des actifs joints</h2>
+<p><code>reference-ville.png</code> et <code>reference-parking.png</code> : maquettes générées dans cette conversation, choisies par Mathis pour le style et le parcours. Elles ne sont pas des informations d’inventaire.</p>
+<p><code>logo-gp-or-initial-proposition.png</code> : premier G doré, préféré ensuite par Mathis, avec P violet. <code>logo-gp-champagne-proposition.png</code> conserve l’essai plus pâle/rosé et <code>logo-gp-violet-proposition.png</code> une première piste. <code>logo-gp-proposition.png</code> reprend le logo de référence renvoyé par Mathis : couleur du premier G doré, P violet. Les essais suivants de métal brossé et d’or plus désaturé ont été écartés pour décalage de matière ou perte du caractère doré. La dernière vue parking intègre le GP et applique le doré doux sur la place et très pâle sur le filtre. Ces actifs viennent de l’outil ImageGen intégré et restent des propositions raster, pas un SVG de production ni une marque validée. Les prompts exacts sont dans <code>assets/LOGO_PROMPTS.md</code>.</p>
+<p><code>InterVariable.woff2</code> et <code>Inter-LICENSE.txt</code> : dépôt officiel Inter, fichiers téléchargés sans installation globale. Leur présence facilite une charte locale fidèle ; les contrôles de fichiers sont consignés dans <code>VERIFICATION.md</code>.</p>
+</article><article id="chapitre-10"><h1 id="chapitre-10-titre-1">10 — Équipe d’agents spécialisés et plan de délégation</h1>
+<h2 id="chapitre-10-titre-2">1. Organisation retenue</h2>
+<p>Préparer <strong>18 rôles spécialisés</strong>, coordinateur compris, plutôt que 30 rôles qui se recouvriraient. Chaque rôle a un brief prêt à transmettre dans <a href="agents/README.md">agents/</a>, un propriétaire de fichiers, des dépendances, un livrable et une recette. Un même rôle peut être réutilisé dans plusieurs missions courtes ; ce ne sont pas 18 conversations à ouvrir immédiatement.</p>
+<p><strong>Limite de cette session : quatre agents simultanés au total, donc un coordinateur et trois spécialistes au maximum.</strong> Les 18 rôles sont une organisation du travail à venir. Les effectifs peuvent être inférieurs lorsque les tâches dépendent les unes des autres. Aucun lancement de 30 agents en parallèle n’est promis.</p>
+<p>Pour préparer le dossier, le coordinateur a effectivement délégué trois missions : organisation de l’équipe, revue de l’architecture et revue produit/recette. Ces travaux relisent le plan ; ils ne constituent pas le développement du site.</p>
+<h2 id="chapitre-10-titre-3">2. Règles communes à toutes les missions</h2>
+<p>Lire le <a href="#chapitre-0">README</a>, le <a href="#chapitre-9">registre de décisions</a>, la <a href="#chapitre-2">charte</a>, les <a href="specs/design-tokens.json">tokens</a> et le brief du rôle. Les références de ville et de parking sont des cibles visuelles ; leurs dimensions et biens sont fictifs.</p>
+<ul>
+<li>V1 gratuite ; les futurs forfaits sont mensuels en V2. Pas de paiement à l’annonce ni d’encaissement du prix immobilier.</li>
+<li>Interface claire, blanc/violet, GP avec G doré initial et P violet validés : forme et couleurs figées ; sélection de place dorée douce et filtres champagne très pâle. Ne pas modifier le logo ni la palette sans nouvelle demande humaine explicite.</li>
+<li>Une police <strong>Inter</strong>, sept tailles <strong>12/14/16/20/24/32/48 px</strong>, tokens et composants communs. Aucun spécialiste n’invente sa propre charte.</li>
+<li>Une annonce V1 peut couvrir plusieurs places et niveaux d’un seul parking/site ; le prix affiché est son prix total. Les ensembles multi-sites sont hors V1. La place physique et l’annonce restent des objets distincts.</li>
+<li>Pour les lots, les surfaces sont décrites par unité (min–max) ; un total distinct n’est affiché que si toutes sont connues. Un filtre <code>areaMin</code> actif s’applique à chaque unité et exclut les inconnus.</li>
+<li>Un état inconnu reste inconnu. Les scènes doivent refléter les sources et défauts réels ; pas de parking amélioré artificiellement ou de dimensions inférées comme certaines. Une unité sans preuve propre reste à couverture partielle, pas pleinement documentée/reviewed.</li>
+<li>Aucun prix, statut, rôle ou droit de publication n’est autorisé uniquement par le navigateur. Les accès publics et privés sont séparés jusqu’au stockage et aux assets 3D. En V1, les annonces <code>area</code> ne publient ni scène ni IDs canoniques ; les scènes partagées utilisent une projection dédiée réservée aux unités/annonces consenties <code>exact_opt_in</code>, sans lien aux annonces <code>area</code>.</li>
+<li>Ne modifier que le périmètre explicitement attribué. Préserver les modifications de l’utilisateur et des autres agents ; pas de reset, suppression globale ni <code>git add .</code>.</li>
+<li>Aucun compte externe, achat, abonnement, envoi à des tiers ou déploiement public n’est autorisé par un brief de planification. Une mission d’exécution ultérieure doit préciser ses autorisations ; ne pas les redemander lorsqu’elles existent déjà.</li>
+</ul>
+<h2 id="chapitre-10-titre-4">3. Les 18 rôles</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Rôle</th>
+<th>Responsabilité principale</th>
+<th>Brief</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A00</td>
+<td>Coordinateur / intégrateur</td>
+<td>Arbitrage, contrats, répartition et intégration finale</td>
+<td><a href="agents/A00_COORDINATEUR.md">Mission</a></td>
+</tr>
+<tr>
+<td>A01</td>
+<td>Design system et typographie</td>
+<td>Tokens, composants, fidélité et logo d’interface</td>
+<td><a href="agents/A01_DESIGN_SYSTEM.md">Mission</a></td>
+</tr>
+<tr>
+<td>A02</td>
+<td>Architecture, base et contrats</td>
+<td>Schéma SQL, DTO, migrations, index et conventions</td>
+<td><a href="agents/A02_DONNEES_CONTRATS.md">Mission</a></td>
+</tr>
+<tr>
+<td>A03</td>
+<td>Identité, autorisations et sécurité</td>
+<td>Auth, RLS, Storage, rôles et contrôles d’accès</td>
+<td><a href="agents/A03_IDENTITE_SECURITE.md">Mission</a></td>
+</tr>
+<tr>
+<td>A04</td>
+<td>Backend annonces et catalogue</td>
+<td>Révisions, publication atomique, recherche et disponibilité</td>
+<td><a href="agents/A04_BACKEND_ANNONCES.md">Mission</a></td>
+</tr>
+<tr>
+<td>A05</td>
+<td>Front public et découverte</td>
+<td>Catalogue, fiche, favoris, comparaison et état de navigation</td>
+<td><a href="agents/A05_FRONT_PUBLIC.md">Mission</a></td>
+</tr>
+<tr>
+<td>A06</td>
+<td>Compte et dépôt vendeur</td>
+<td>Formulaires, brouillons, espace annonceur et interface Auth</td>
+<td><a href="agents/A06_COMPTE_DEPOT.md">Mission</a></td>
+</tr>
+<tr>
+<td>A07</td>
+<td>Médias et documents</td>
+<td>Upload privé, traitement, variantes, diffusion assainie</td>
+<td><a href="agents/A07_MEDIAS.md">Mission</a></td>
+</tr>
+<tr>
+<td>A08</td>
+<td>Cartographie urbaine</td>
+<td>MapLibre/OpenFreeMap, bâtiments et synchronisation carte/liste</td>
+<td><a href="agents/A08_CARTE_VILLE.md">Mission</a></td>
+</tr>
+<tr>
+<td>A09</td>
+<td>Reconstruction des parkings 3D</td>
+<td>Plans, mesures, géométrie, unités et modèles versionnés</td>
+<td><a href="agents/A09_RECONSTRUCTION_3D.md">Mission</a></td>
+</tr>
+<tr>
+<td>A10</td>
+<td>Viewer intérieur et interactions 3D</td>
+<td>Rendu, niveaux, sélection, repli et performance</td>
+<td><a href="agents/A10_VIEWER_3D.md">Mission</a></td>
+</tr>
+<tr>
+<td>A11</td>
+<td>Qualité réelle et preuves</td>
+<td>Grille d’état, provenance, observations et cohérence photo</td>
+<td><a href="agents/A11_QUALITE_REELLE.md">Mission</a></td>
+</tr>
+<tr>
+<td>A12</td>
+<td>Messagerie, visites et notifications</td>
+<td>Échanges privés, demandes et outbox</td>
+<td><a href="agents/A12_MESSAGES_NOTIFICATIONS.md">Mission</a></td>
+</tr>
+<tr>
+<td>A13</td>
+<td>Administration et modération</td>
+<td>Files, décisions versionnées, signalements et revue de scène</td>
+<td><a href="agents/A13_ADMIN_MODERATION.md">Mission</a></td>
+</tr>
+<tr>
+<td>A14</td>
+<td>SEO et accessibilité</td>
+<td>Indexation utile, contenu sémantique, clavier et alternatives</td>
+<td><a href="agents/A14_SEO_ACCESSIBILITE.md">Mission</a></td>
+</tr>
+<tr>
+<td>A15</td>
+<td>QA et recette de bout en bout</td>
+<td>Tests indépendants, preuves, régressions et verdict</td>
+<td><a href="agents/A15_QA_RECETTE.md">Mission</a></td>
+</tr>
+<tr>
+<td>A16</td>
+<td>Fondations, DevOps et performance</td>
+<td>Environnements, CI, jobs, supervision et restauration</td>
+<td><a href="agents/A16_DEVOPS_PERFORMANCE.md">Mission</a></td>
+</tr>
+<tr>
+<td>A17</td>
+<td>Droits et abonnements</td>
+<td>Moteur gratuit V1, quota en DISTINCT listing_id, puis forfaits récurrents V2</td>
+<td><a href="agents/A17_DROITS_ABONNEMENTS.md">Mission</a></td>
+</tr>
+</tbody></table>
+<p>Le juridique de l’opérateur, la disponibilité de marque, le tarif final et la validation des droits sur les plans restent des décisions humaines documentées. A00 rassemble les pièces et prépare les vérifications ; un agent ne s’attribue pas une certification juridique ou immobilière.</p>
+<h2 id="chapitre-10-titre-5">4. Autorité sur les fichiers et les contrats</h2>
+<p>Les chemins ci-dessous concernent le <strong>futur code</strong>. Ils ne signifient pas que l’application existe déjà. Une mission déclare ses fichiers exacts au départ ; les globes ci-dessous sont des frontières de responsabilité, pas une autorisation d’écrire tout le dépôt.</p>
+<table>
+<thead>
+<tr>
+<th>Ressource partagée</th>
+<th>Propriétaire / règle</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Architecture, décisions, manifeste de versions, contrats communs et intégration</td>
+<td>A00 arbitre ; A02 prépare les contrats techniques</td>
+</tr>
+<tr>
+<td><code>package.json</code>, lockfile, configuration Next/TypeScript, variables exemple</td>
+<td>A16 prépare une proposition ; A00 intègre, un seul écrivain à la fois</td>
+</tr>
+<tr>
+<td>Tokens, <code>src/styles/tokens.css</code>, primitives <code>src/components/ui/**</code></td>
+<td>A01 ; autres rôles demandent une évolution au lieu de copier</td>
+</tr>
+<tr>
+<td>Tables, FK, index, types générés, migrations de structure</td>
+<td>A02 ; numéros de migration réservés dans le registre central</td>
+</tr>
+<tr>
+<td>Migrations RLS/Storage et helpers d’accès</td>
+<td>A03, dans des fichiers de migration distincts réservés par A00</td>
+</tr>
+<tr>
+<td>Fonctions SQL métier publication/recherche</td>
+<td>A04 les prépare ; A02 relit structure/index ; intégration sous verrou de migration</td>
+</tr>
+<tr>
+<td>Routes publiques</td>
+<td>A05 ; A08/A10 livrent leurs composants ; A14 propose les ajustements sémantiques via A05</td>
+</tr>
+<tr>
+<td>Routes compte</td>
+<td>A06, sauf <code>/compte/messages/**</code> pour A12 et future <code>/compte/abonnement/**</code> pour A17</td>
+</tr>
+<tr>
+<td>Dossiers de production des scènes</td>
+<td>A09, versions immuables ; A10 ne corrige pas une géométrie à la volée dans le viewer</td>
+</tr>
+<tr>
+<td>Contrôle de publication d’une scène</td>
+<td>A13 ; A09 fournit sources et revue, A03 vérifie la diffusion privée/publique</td>
+</tr>
+<tr>
+<td>Moteur des droits gratuits et payants</td>
+<td>A17 ; A03 contrôle identité et suspension, A04 appelle le contrat sans le recopier</td>
+</tr>
+<tr>
+<td>Recette indépendante</td>
+<td>A15 ; ne corrige pas les tests pour masquer une défaillance du produit</td>
+</tr>
+</tbody></table>
+<p><strong>Contrats à figer avant travail parallèle :</strong> DTO public d’annonce et de carte ; commande de soumission et schéma des erreurs ; manifest d’un niveau ; sélection commune <code>listingId/parkingId/levelId/spaceId</code> ; règles de révision et publication ; résultat du moteur de droits ; contrat d’événement/outbox.</p>
+<p>Un changement de contrat est une proposition avec : problème, avant/après, impacts, migration, compatibilité et tests. A00 l’accepte puis avertit tous les consommateurs. Pas de renommage local d’un identifiant partagé ou d’ajout furtif d’un champ privé à une réponse publique.</p>
+<h2 id="chapitre-10-titre-6">5. Vagues de travail</h2>
+<p>Chaque ligne décrit une vague logique. Les spécialistes ne démarrent que lorsque leurs entrées sont disponibles. Les sous-étapes dépendantes restent séquentielles ; il n’est pas nécessaire de remplir les trois places à tout instant.</p>
+<table>
+<thead>
+<tr>
+<th>Vague</th>
+<th>Spécialistes possibles, trois au maximum</th>
+<th>Condition et résultat</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>W0 — Cadrage</td>
+<td>A01 design, A02 contrats, A09 collecte pilote</td>
+<td>Tokens et interfaces figés ; liste des sources réelles manquantes</td>
+</tr>
+<tr>
+<td>W1 — Socle</td>
+<td>A16 fondations, puis A02 structure ; A15 fixtures indépendantes</td>
+<td>Projet local, migrations réservées et jeux de test ; schéma appliqué avant politiques</td>
+</tr>
+<tr>
+<td>W2 — Accès et fichiers</td>
+<td>A03 Auth/RLS, A07 médias, A17 droits gratuits</td>
+<td>Clients et contrats d’accès convenus ; mutations et stockage testés A/B</td>
+</tr>
+<tr>
+<td>W3 — Offre vendeur</td>
+<td>A04 backend, A06 dépôt, A11 qualité réelle</td>
+<td>Contrats partagés ; brouillon, sources et révisions prêts pour revue</td>
+</tr>
+<tr>
+<td>W4 — Publication</td>
+<td>A13 modération, A15 recette transactionnelle, A09 modèle pilote</td>
+<td>Backend stabilisé ; approbation/publication et correspondance des unités validées</td>
+</tr>
+<tr>
+<td>W5 — Découverte et contact</td>
+<td>A05 front public, A08 carte, A12 messagerie</td>
+<td>Projection publique et accès établis ; catalogue et contact complet</td>
+</tr>
+<tr>
+<td>W6 — Intérieur et sens</td>
+<td>A10 viewer, A09 ajustements du modèle, A14 SEO/accessibilité</td>
+<td>Viewer sur version immuable ; changements de modèle livrés en nouvelle version</td>
+</tr>
+<tr>
+<td>W7 — Recette finale</td>
+<td>A14 revue finale, A15 bout en bout, A16 staging/restauration</td>
+<td>Toutes les tranches intégrées ; écarts visibles et fonctionnels résolus</td>
+</tr>
+<tr>
+<td>W8 — Forfaits futurs</td>
+<td>A17 V2, A03 revue d’accès, A15 recette facturation</td>
+<td>Offre et conditions décidées ; Stripe en test, aucun tarif inventé</td>
+</tr>
+<tr>
+<td>W9 — Livraison V2</td>
+<td>A16 livraison, A15 vérification, A00 coordination</td>
+<td>Activation seulement dans le périmètre effectivement autorisé</td>
+</tr>
+</tbody></table>
+<p>A00 est présent dans chaque vague et compte dans les quatre places. Il intègre et maintient les verrous. Ces rôles ne remplacent ni les plans réels du parking ni la validation de l’opérateur.</p>
+<h2 id="chapitre-10-titre-7">6. Attribution des 35 tâches existantes</h2>
+<table>
+<thead>
+<tr>
+<th>Backlog</th>
+<th>Responsable</th>
+<th>Relecteur / soutien</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>P001 références/tokens</td>
+<td>A01</td>
+<td>A00</td>
+</tr>
+<tr>
+<td>P002 données de démonstration</td>
+<td>A15</td>
+<td>A02, A11</td>
+</tr>
+<tr>
+<td>P003 collecte pilote</td>
+<td>A09</td>
+<td>A11, propriétaire du parking</td>
+</tr>
+<tr>
+<td>P010 application/environnements</td>
+<td>A16</td>
+<td>A00</td>
+</tr>
+<tr>
+<td>P011 schéma et RLS</td>
+<td>A02 structure ; A03 policies</td>
+<td>A15, intégration séquentielle</td>
+</tr>
+<tr>
+<td>P012 comptes et récupération</td>
+<td>A03 serveur, A06 interface</td>
+<td>A15</td>
+</tr>
+<tr>
+<td>P013 droits gratuits</td>
+<td>A17</td>
+<td>A03, A04</td>
+</tr>
+<tr>
+<td>P014 composants</td>
+<td>A01</td>
+<td>A14</td>
+</tr>
+<tr>
+<td>P020 dépôt</td>
+<td>A06</td>
+<td>A04, A15</td>
+</tr>
+<tr>
+<td>P021 médias privés/publics</td>
+<td>A07</td>
+<td>A03</td>
+</tr>
+<tr>
+<td>P022 qualité/provenance</td>
+<td>A11</td>
+<td>A09, A06</td>
+</tr>
+<tr>
+<td>P023 modération/révisions</td>
+<td>A13</td>
+<td>A04, A03</td>
+</tr>
+<tr>
+<td>P024 publication atomique</td>
+<td>A04</td>
+<td>A02, A03, A15</td>
+</tr>
+<tr>
+<td>P030 fiche indexable</td>
+<td>A05</td>
+<td>A14</td>
+</tr>
+<tr>
+<td>P031 recherche/pagination</td>
+<td>A04 serveur, A05 interface</td>
+<td>A15</td>
+</tr>
+<tr>
+<td>P032 carte ville</td>
+<td>A08</td>
+<td>A05, A03</td>
+</tr>
+<tr>
+<td>P033 favoris/comparaison</td>
+<td>A05</td>
+<td>A04, A15</td>
+</tr>
+<tr>
+<td>P040 modèle/manifest pilote</td>
+<td>A09</td>
+<td>A11, A13</td>
+</tr>
+<tr>
+<td>P041 viewer/niveaux/sélection</td>
+<td>A10</td>
+<td>A09, A05</td>
+</tr>
+<tr>
+<td>P042 revue des scènes</td>
+<td>A13</td>
+<td>A09, A03</td>
+</tr>
+<tr>
+<td>P043 repli/performance 3D</td>
+<td>A10</td>
+<td>A14, A16</td>
+</tr>
+<tr>
+<td>P050 messagerie</td>
+<td>A12</td>
+<td>A03, A15</td>
+</tr>
+<tr>
+<td>P051 visites</td>
+<td>A12</td>
+<td>A05, A15</td>
+</tr>
+<tr>
+<td>P052 notifications/outbox</td>
+<td>A12</td>
+<td>A16</td>
+</tr>
+<tr>
+<td>P053 signalements</td>
+<td>A13</td>
+<td>A12, A03</td>
+</tr>
+<tr>
+<td>P060 responsive/accessibilité</td>
+<td>A14</td>
+<td>A01, A05, A06, A10, A15</td>
+</tr>
+<tr>
+<td>P061 audit des accès/fichiers</td>
+<td>A03</td>
+<td>A15, relecture indépendante</td>
+</tr>
+<tr>
+<td>P062 opérateur/marque/textes</td>
+<td>A00 prépare</td>
+<td>Validation humaine adaptée, A14 pour affichage</td>
+</tr>
+<tr>
+<td>P063 sauvegarde/restauration</td>
+<td>A16</td>
+<td>A15</td>
+</tr>
+<tr>
+<td>P064 staging/lancement V1</td>
+<td>A00 coordonne, A16 exécute si autorisé</td>
+<td>A15 verdict</td>
+</tr>
+<tr>
+<td>P070 validation de l’offre</td>
+<td>A00 prépare avec A17</td>
+<td>Décision commerciale humaine</td>
+</tr>
+<tr>
+<td>P071 Billing/Checkout/portail</td>
+<td>A17</td>
+<td>A03</td>
+</tr>
+<tr>
+<td>P072 webhooks/réconciliation</td>
+<td>A17</td>
+<td>A16, A15</td>
+</tr>
+<tr>
+<td>P073 droits/cycle de vie</td>
+<td>A17</td>
+<td>A03, A04</td>
+</tr>
+<tr>
+<td>P074 anciens comptes/recette V2</td>
+<td>A17</td>
+<td>A15, A00</td>
+</tr>
+</tbody></table>
+<h2 id="chapitre-10-titre-8">7. Une mission concrète à la fois</h2>
+<p>Le coordinateur transmet le brief du rôle accompagné du bloc suivant, rempli pour la tâche réelle :</p>
+<pre><code class="language-text">Mission : [ID de backlog, résultat observable]
+Version des contrats/tokens : [références verrouillées]
+Entrées disponibles : [API, fixtures, plans autorisés]
+Périmètre exact d’écriture : [fichiers/dossiers attribués]
+Fichiers réservés à d’autres agents : [liste]
+Dépendances terminées : [preuves ou versions]
+Critères de fin : [parcours et contrôles attendus]
+Autorisations d’exécution : [local uniquement, staging explicite, etc.]
+Rapport demandé : format commun de la section 9
+</code></pre>
+<p>Un agent ne reçoit pas « fais toute l’auth et le design comme tu veux ». Il reçoit une tâche et un contrat. Si une dépendance manque, il avance sur une partie indépendante ou une fixture explicitement fictive et le signale ; il ne prétend pas avoir intégré une API ou vérifié un parking inexistant.</p>
+<h2 id="chapitre-10-titre-9">8. Registre des verrous et intégration</h2>
+<p>A00 maintient un registre contenant rôle, tâche, fichiers exacts, contrat consommé, état, prochaine dépendance, référence du résultat et responsable de relecture. Le fichier est attribué à un seul écrivain à la fois. Deux agents peuvent lire et proposer, mais ne modifient pas simultanément le même contrat, migration, token ou route.</p>
+<p>Après chaque mission : diff ciblé → contrôles adaptés → revue du contrat et des données → intégration centrale → recette de la tranche réelle. Une branche ou un worktree peut isoler une mission lorsque le contexte le justifie ; ce n’est pas une autorisation de déplacer, réinitialiser ou écraser le travail existant.</p>
+<p>Les livraisons sont nommées précisément : spécification, code local, intégré, testé sur staging, déployé et vérifié. Le résultat d’une simulation ou d’un test local n’est pas présenté comme une preuve de production.</p>
+<h2 id="chapitre-10-titre-10">9. Rapport obligatoire des agents</h2>
+<pre><code class="language-text">Rôle et tâche :
+Résultat obtenu :
+Fichiers modifiés :
+Contrats consommés / proposés :
+Contrôles exécutés et résultats :
+Non testé / limites :
+Dépendance ou décision encore attendue :
+État exact : spécifié | local | intégré | staging vérifié | production vérifiée
+Prochaine transmission : [rôle + entrée prête]
+</code></pre>
+<p>Un contrôle qui échoue reste visible. Pas de « tout est prêt » sans préciser quoi. A15 peut refuser une recette ; A00 réaffecte la correction au propriétaire de la feature, puis demande une nouvelle vérification ciblée.</p>
+<h2 id="chapitre-10-titre-11">10. Quand ajouter un rôle</h2>
+<p>Ajouter un spécialiste uniquement s’il a un livrable indépendant, une expertise utile et un périmètre sans recouvrement : par exemple scan terrain d’un gros parking, import volumineux de données réelles, localisation d’un nouveau pays ou expertise réglementaire qualifiée. Il reçoit le même type de brief et passe par les mêmes contrats.</p>
+<p>Trente rôles restent possibles dans une organisation élargie, mais le nombre n’est pas un critère de qualité. Pour le périmètre V1/V2 présent, les 18 rôles couvrent les responsabilités ; la qualité dépend de leurs interfaces, des preuves et de l’intégration.</p>
+</article></main></div><footer>Dossier local de spécification. Aucun site fonctionnel ni abonnement n’est déployé par ces pages.</footer></body></html>
