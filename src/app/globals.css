@@ -811,7 +811,7 @@ small {
 .compare-floating {
   position: absolute;
   left: 24px;
-  bottom: 24px;
+  bottom: 72px;
   background: white;
   box-shadow: var(--shadow);
   z-index: 6;

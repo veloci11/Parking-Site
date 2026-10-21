@@ -1,6 +1,6 @@
 {
-  "checkedAt": "2026-10-21T17:23:53Z",
-  "assessment": "Targeted advisors, not a complete application security certification",
+  "checkedAt": "2026-10-21T17:51:22.576Z",
+  "assessment": "Reviewed intentional deny-all tables and guarded public RPCs; not an application security certification.",
   "result": {
     "lints": [
       {
@@ -22,7 +22,7 @@
               "type": "table",
               "schema": "gp_private"
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Table \\`public.active_space_claims\\` has RLS enabled, but no policies exist",
@@ -31,7 +31,7 @@
               "type": "table",
               "schema": "public"
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Table \\`public.audit_events\\` has RLS enabled, but no policies exist",
@@ -40,7 +40,7 @@
               "type": "table",
               "schema": "public"
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Table \\`public.notification_outbox\\` has RLS enabled, but no policies exist",
@@ -49,7 +49,7 @@
               "type": "table",
               "schema": "public"
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Table \\`public.rate_limits\\` has RLS enabled, but no policies exist",
@@ -58,7 +58,7 @@
               "type": "table",
               "schema": "public"
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
           }
         ]
       },
@@ -83,7 +83,7 @@
               "arguments": "p_listing_id uuid, p_level integer",
               "security_definer": true
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
           }
         ]
       },
@@ -97,7 +97,7 @@
         ],
         "description": "Detects `SECURITY DEFINER` functions that are callable by signed-in users. Revoke `EXECUTE`, switch the function to `SECURITY INVOKER`, or move it out of your exposed API schema if signed-in users should not call it.",
         "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable",
-        "count": 21,
+        "count": 24,
         "findings": [
           {
             "detail": "Function `public.gp_active()` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_active`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
@@ -108,7 +108,7 @@
               "arguments": "",
               "security_definer": true
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Function `public.gp_contact(p_listing_id uuid)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_contact`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
@@ -119,7 +119,18 @@
               "arguments": "p_listing_id uuid",
               "security_definer": true
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
+          },
+          {
+            "detail": "Function `public.gp_conversation_block_state(p_conversation_id uuid)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_conversation_block_state`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "gp_conversation_block_state",
+              "schema": "public",
+              "language": "plpgsql",
+              "arguments": "p_conversation_id uuid",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Function `public.gp_conversations()` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_conversations`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
@@ -130,7 +141,7 @@
               "arguments": "",
               "security_definer": true
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Function `public.gp_delete_account()` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_delete_account`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
@@ -141,7 +152,7 @@
               "arguments": "",
               "security_definer": true
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Function `public.gp_listing(p_id uuid, p_action text, p_payload jsonb, p_version integer)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_listing`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
@@ -152,7 +163,7 @@
               "arguments": "p_id uuid, p_action text, p_payload jsonb, p_version integer",
               "security_definer": true
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Function `public.gp_message(p_conversation_id uuid, p_body text, p_request_id text)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_message`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
@@ -163,7 +174,7 @@
               "arguments": "p_conversation_id uuid, p_body text, p_request_id text",
               "security_definer": true
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Function `public.gp_messages_read(p_conversation_id uuid)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_messages_read`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
@@ -174,7 +185,7 @@
               "arguments": "p_conversation_id uuid",
               "security_definer": true
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Function `public.gp_mfa_required()` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_mfa_required`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
@@ -185,7 +196,7 @@
               "arguments": "",
               "security_definer": true
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Function `public.gp_moderate(p_id uuid, p_decision text, p_version integer, p_reason text)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_moderate`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
@@ -196,7 +207,7 @@
               "arguments": "p_id uuid, p_decision text, p_version integer, p_reason text",
               "security_definer": true
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Function `public.gp_moderation_allowed()` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_moderation_allowed`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
@@ -207,7 +218,7 @@
               "arguments": "",
               "security_definer": true
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Function `public.gp_notifications_read(p_ids uuid[])` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_notifications_read`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
@@ -218,7 +229,7 @@
               "arguments": "p_ids uuid[]",
               "security_definer": true
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Function `public.gp_report_decision(p_id uuid, p_status text, p_reason text, p_version integer)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_report_decision`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
@@ -229,7 +240,7 @@
               "arguments": "p_id uuid, p_status text, p_reason text, p_version integer",
               "security_definer": true
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Function `public.gp_role()` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_role`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
@@ -240,7 +251,7 @@
               "arguments": "",
               "security_definer": true
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Function `public.gp_scene_create(p_listing_id uuid, p_manifest jsonb, p_evidence_ids uuid[], p_rights_attested boolean)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_scene_create`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
@@ -251,7 +262,7 @@
               "arguments": "p_listing_id uuid, p_manifest jsonb, p_evidence_ids uuid[], p_rights_attested boolean",
               "security_definer": true
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Function `public.gp_scene_public(p_listing_id uuid, p_level integer)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_scene_public`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
@@ -262,7 +273,7 @@
               "arguments": "p_listing_id uuid, p_level integer",
               "security_definer": true
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Function `public.gp_scene_review(p_id uuid, p_version integer, p_decision text, p_checks jsonb, p_reason text)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_scene_review`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
@@ -273,7 +284,7 @@
               "arguments": "p_id uuid, p_version integer, p_decision text, p_checks jsonb, p_reason text",
               "security_definer": true
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Function `public.gp_scene_source_can_cleanup(p_object_key text)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_scene_source_can_cleanup`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
@@ -284,7 +295,18 @@
               "arguments": "p_object_key text",
               "security_definer": true
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
+          },
+          {
+            "detail": "Function `public.gp_set_conversation_block(p_conversation_id uuid, p_blocked boolean)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_set_conversation_block`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "gp_set_conversation_block",
+              "schema": "public",
+              "language": "plpgsql",
+              "arguments": "p_conversation_id uuid, p_blocked boolean",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Function `public.gp_storage_allowed(p_name text)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_storage_allowed`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
@@ -295,7 +317,18 @@
               "arguments": "p_name text",
               "security_definer": true
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
+          },
+          {
+            "detail": "Function `public.gp_suspend_publication(p_id uuid, p_version integer, p_reason text)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_suspend_publication`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "gp_suspend_publication",
+              "schema": "public",
+              "language": "plpgsql",
+              "arguments": "p_id uuid, p_version integer, p_reason text",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Function `public.gp_verified()` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_verified`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
@@ -306,7 +339,7 @@
               "arguments": "",
               "security_definer": true
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Function `public.gp_visit(p_conversation_id uuid, p_request_id text, p_proposed_at timestamp with time zone)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_visit`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
@@ -317,7 +350,7 @@
               "arguments": "p_conversation_id uuid, p_request_id text, p_proposed_at timestamp with time zone",
               "security_definer": true
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
+            "observed_at": "2026-10-21T17:51:21.077Z"
           },
           {
             "detail": "Function `public.gp_visit_decision(p_id uuid, p_action text, p_version integer, p_confirmed_at timestamp with time zone)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/gp_visit_decision`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
@@ -328,28 +361,7 @@
               "arguments": "p_id uuid, p_action text, p_version integer, p_confirmed_at timestamp with time zone",
               "security_definer": true
             },
-            "observed_at": "2026-10-21T17:23:52.995Z"
-          }
-        ]
-      },
-      {
-        "name": "auth_leaked_password_protection",
-        "title": "Leaked Password Protection Disabled",
-        "level": "WARN",
-        "facing": "EXTERNAL",
-        "categories": [
-          "SECURITY"
-        ],
-        "description": "Leaked password protection is currently disabled.",
-        "remediation": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection",
-        "count": 1,
-        "findings": [
-          {
-            "detail": "Supabase Auth prevents the use of compromised passwords by checking against HaveIBeenPwned.org. Enable this feature to enhance security.",
-            "metadata": {
-              "type": "auth",
-              "entity": "Auth"
-            }
+            "observed_at": "2026-10-21T17:51:21.077Z"
           }
         ]
       }

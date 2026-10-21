@@ -88,8 +88,6 @@ export default function CityMap({
         localMap.addControl(
           new maplibre.AttributionControl({
             compact: true,
-            customAttribution:
-              "Données © OpenStreetMap · © OpenMapTiles · OpenFreeMap",
           }),
           "bottom-left",
         );
