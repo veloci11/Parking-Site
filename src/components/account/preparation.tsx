@@ -1,4 +1,5 @@
 "use client";
+import FilterSelect from "../FilterSelect";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { typeLabels, type ParkingType } from "@/lib/types";
@@ -63,6 +64,21 @@ export default function PreparationForm() {
       ) : null}
       <fieldset disabled={!ready}>
         <div className="form-grid">
+          <div className="field">
+            <span>Type d’offre</span>
+            <FilterSelect
+              label="Type d’offre"
+              variant="field"
+              value={value.transactionType || "sale"}
+              options={[
+                { value: "sale", label: "À vendre" },
+                { value: "rent", label: "À louer" },
+              ]}
+              onChange={(transactionType) =>
+                change({ transactionType: transactionType as "sale" | "rent" })
+              }
+            />
+          </div>
           <label className="field">
             Titre provisoire
             <input
@@ -81,22 +97,25 @@ export default function PreparationForm() {
               onChange={(e) => change({ city: e.target.value })}
             />
           </label>
-          <label className="field">
-            Type
-            <select
-              className="input"
+          <div className="field">
+            <span>{"Type"}</span>
+            <FilterSelect
+              label={"Type"}
+              variant="field"
               value={value.type}
-              onChange={(e) => change({ type: e.target.value as ParkingType })}
-            >
-              {Object.entries(typeLabels).map(([type, label]) => (
-                <option key={type} value={type}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
+              onChange={(selectedValue) =>
+                change({ type: selectedValue as ParkingType })
+              }
+              options={[
+                ...Object.entries(typeLabels).map(([type, label]) => ({
+                  value: type,
+                  label: label,
+                })),
+              ]}
+            />
+          </div>
           <label className="field">
-            Nombre de places vendues ensemble
+            Nombre de places proposées ensemble
             <input
               className="input"
               type="number"

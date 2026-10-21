@@ -1,4 +1,5 @@
 "use client";
+import { listingPrice, offerLabel } from "@/lib/listing-price";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -112,11 +113,13 @@ function DashboardContent({ user }: { user: User }) {
               </div>
               <div>
                 <span className={`badge account-status-${l.status}`}>
-                  {statusLabels[l.status] || l.status}
+                  {l.status === "sold" && l.transactionType === "rent"
+                    ? "Louée"
+                    : statusLabels[l.status] || l.status}
                 </span>
                 <h3>{l.title || "Annonce sans titre"}</h3>
                 <p className="muted">
-                  {l.city || "Ville à préciser"} · {money(l.priceCents)}
+                  {l.city || "Ville à préciser"} · {listingPrice(l)}
                 </p>
               </div>
               <ArrowRight size={20} />

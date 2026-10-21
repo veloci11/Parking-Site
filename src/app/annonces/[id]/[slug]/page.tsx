@@ -25,7 +25,7 @@ export default async function ListingPage({ params }: Props) {
     permanentRedirect(`/annonces/${listing.id}/${listing.slug}`);
   return (
     <>
-      <ListingDetail listing={listing} />
+      <ListingDetail key={listing.id} listing={listing} />
       <Footer />
     </>
   );

@@ -1,4 +1,5 @@
 "use client";
+import { listingPrice, offerLabel } from "@/lib/listing-price";
 import Image from "./SafePhoto";
 import { Heart, Layers3, ScanEye } from "lucide-react";
 import { areaLabel, money, typeLabels, type Listing } from "@/lib/types";
@@ -61,7 +62,7 @@ export default function ListingCard({
         <span className="listing-title">
           {listing.city} · {listing.district}
         </span>
-        <strong className="listing-price">{money(listing.priceCents)}</strong>
+        <strong className="listing-price">{listingPrice(listing)}</strong>
         <span className="listing-meta">
           {typeLabels[listing.type]} · {areaLabel(listing.spaces)}
         </span>
@@ -69,7 +70,7 @@ export default function ListingCard({
       <div className="listing-card-footer">
         <span className="subtle-label">
           {listing.spaces.length > 1
-            ? `${listing.spaces.length} places · prix du lot`
+            ? `${listing.spaces.length} places · ${listing.transactionType === "rent" ? "loyer mensuel du lot" : "prix du lot"}`
             : "1 place"}
         </span>
         {onCompare ? (

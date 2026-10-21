@@ -1,4 +1,5 @@
 "use client";
+import { listingPrice } from "@/lib/listing-price";
 import { useEffect, useState } from "react";
 import type { Listing } from "@/lib/types";
 import { money } from "@/lib/types";
@@ -103,7 +104,7 @@ export default function Publications() {
                   {item.city} · version {item.version}
                 </span>
               </span>
-              <span>{money(item.priceCents)} · Examiner</span>
+              <span>{listingPrice(item)} · Examiner</span>
             </button>
           ))}
         </div>
@@ -114,8 +115,8 @@ export default function Publications() {
         <form className="card account-review-detail" onSubmit={suspend}>
           <h3>Suspendre « {selected.title} »</h3>
           <p>
-            {selected.city} · {selected.district} · {money(selected.priceCents)}{" "}
-            · version {selected.version}
+            {selected.city} · {selected.district} · {listingPrice(selected)} ·
+            version {selected.version}
           </p>
           <p className="notice">
             L’annonce, sa scène et ses médias publics seront masqués. Le vendeur

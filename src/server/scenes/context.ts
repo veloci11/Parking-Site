@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { supabaseConfigured } from "../supabase";
+import { diagnosticBackendHeaders } from "../request-context";
 import {
   assertLocal,
   assertSameOrigin,
@@ -21,6 +22,7 @@ export function sceneContext(request: Request) {
         (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)!,
         {
+          global: { headers: diagnosticBackendHeaders() },
           cookies: {
             getAll() {
               return (request.headers.get("cookie") || "")
@@ -111,8 +113,19 @@ export function sceneContext(request: Request) {
   }
   return { remote, client, headers, user, moderator };
 }
-export function sceneError(error: { message: string; code?: string } | null) {
+export function sceneError(
+  error: { message: string; code?: string; details?: string } | null,
+) {
   if (!error) return;
+  if (error.message.includes("RATE_LIMITED"))
+    throw new ApiError(
+      429,
+      "Limite atteinte. Réessayez plus tard.",
+      "RATE_LIMITED",
+      Number(
+        (error.details || error.message).match(/retryAfter=(\d+)/)?.[1] || 60,
+      ),
+    );
   for (const code of [
     "VERSION_CONFLICT",
     "FORBIDDEN",

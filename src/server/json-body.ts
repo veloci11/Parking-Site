@@ -36,3 +36,12 @@ export async function readBoundedJson(
     throw new ApiError(400, "Données JSON invalides.");
   }
 }
+
+/** Larger bound only for versioned listing forms; auth/admin/message JSON stays at 128 KiB. */
+export function readApiJson(request: Request) {
+  const path = new URL(request.url).pathname;
+  const listingForm =
+    (request.method === "POST" && path === "/api/listings") ||
+    (request.method === "PATCH" && /^\/api\/listings\/[^/]+$/.test(path));
+  return readBoundedJson(request, listingForm ? 16 * 1024 * 1024 : 128 * 1024);
+}

@@ -1,5 +1,12 @@
+import {
+  QaStrongSession,
+  qaTotp,
+  confirmQaLocation,
+  linkQaPublication,
+  type QaAdmin,
+} from "./qa-publication-contract";
 /**
- * Targeted connected-service QA, only for the four coordinator-created identities.
+ * Targeted connected-service QA, only for the five coordinator-created identities.
  * Wait for the coordinator's migration/setup approval, then run:
  *   npx tsx scripts/verify-account-features.ts --run
  * Reads ignored .data/supabase-qa.json. Never signs up users, sends emails,
@@ -8,17 +15,26 @@
  * RFC 6238 TOTP is computed ONLY for a factor this script enrolls on the QA moderator.
  */
 import assert from "node:assert/strict";
-import { createHmac, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import sharp from "sharp";
+import { createClient } from "@supabase/supabase-js";
 type Persona = "seller" | "buyer" | "outsider" | "moderator";
 type Config = {
   origin: string;
   supabaseUrl: string;
   publishableKey: string;
-  users: Record<Persona, { id: string; email: string; password: string }>;
+  users: Record<Persona, { id: string; email: string; password: string }> & {
+    admin?: QaAdmin;
+  };
 };
-type Reply = { status: number; data: any; code?: string; raw: any };
+type Reply = {
+  status: number;
+  data: any;
+  code?: string;
+  raw?: any;
+  retryAfter?: string | null;
+};
 type Check = {
   name: string;
   passed: boolean;
@@ -34,7 +50,7 @@ const context = {
   totpFactorRevoked: false,
   emailsSent: false,
   verificationAttempts: 0,
-  fixtureScope: "four coordinator-created QA identities only",
+  fixtureScope: "five coordinator-created QA identities only",
 };
 let inventory: any = null;
 function check(name: string, value: unknown, r?: Reply) {
@@ -92,7 +108,13 @@ class Client {
       else this.cookies.delete(first.slice(0, i));
     }
     const raw = await r.json().catch(() => null);
-    return { status: r.status, data: raw?.data, code: raw?.code, raw };
+    return {
+      status: r.status,
+      data: raw?.data,
+      code: raw?.code,
+      raw,
+      retryAfter: r.headers.get("retry-after"),
+    };
   }
   async media(path: string) {
     return fetch(`${config.origin}${path}`, {
@@ -106,24 +128,6 @@ class Client {
       signal: AbortSignal.timeout(40000),
     });
   }
-}
-function totp(secret: string, time = Date.now(), digits = 6) {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  let bits = "";
-  for (const char of secret.toUpperCase().replace(/=+$/, "")) {
-    const index = alphabet.indexOf(char);
-    if (index < 0) throw new Error("totp_invalid_private_encoding");
-    bits += index.toString(2).padStart(5, "0");
-  }
-  const bytes = Buffer.alloc(Math.floor(bits.length / 8));
-  for (let i = 0; i < bytes.length; i++)
-    bytes[i] = parseInt(bits.slice(i * 8, i * 8 + 8), 2);
-  const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(time / 30000)));
-  const digest = createHmac("sha1", bytes).update(counter).digest();
-  const offset = digest[digest.length - 1] & 15;
-  const value = digest.readUInt32BE(offset) & 0x7fffffff;
-  return String(value % 10 ** digits).padStart(digits, "0");
 }
 async function main() {
   if (!process.argv.includes("--run")) {
@@ -139,10 +143,14 @@ async function main() {
       moderator: new Client(),
     },
     guest = new Client();
-  let factorId: string | null = null,
-    factorCleanupAttempted = false;
+  let moderatorMfa: QaStrongSession | undefined,
+    adminMfa: QaStrongSession | undefined;
   try {
     config = JSON.parse(await readFile(".data/supabase-qa.json", "utf8"));
+    assert.ok(
+      config.users.admin?.id,
+      "Current019 recipe needs a separately provisioned dedicated QA admin identity",
+    );
     assert.match(config.origin, /^http:\/\/(127\.0\.0\.1|localhost):\d+$/);
     config.origin = config.origin.replace(/\/$/, "");
     assert.ok(
@@ -171,7 +179,7 @@ async function main() {
     await saveInventory();
     check(
       "totp_rfc6238_known_test_vector",
-      totp("GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", 59000, 8) === "94287082",
+      qaTotp("GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", 59000, 8) === "94287082",
     );
     const mode = await guest.api("session");
     status("connected_session_http", mode, 200);
@@ -196,48 +204,18 @@ async function main() {
         await clients.moderator.api("admin/revisions"),
         403,
       );
-    const enrolled = await clients.moderator.api("mfa/enroll", "POST", {});
-    status("mfa_factor_enrolled", enrolled, 200);
-    factorId = enrolled.data.factorId;
-    check(
-      "mfa_private_qr_contract",
-      typeof enrolled.data.qrCode === "string" &&
-        enrolled.data.qrCode.length > 20,
+    moderatorMfa = new QaStrongSession(
+      clients.moderator.api.bind(clients.moderator),
+      config.users.moderator,
+      "moderator",
+      async (kind, value) => {
+        append(kind, value);
+        await saveInventory();
+      },
+      check,
     );
-    check(
-      "mfa_private_secret_contract",
-      typeof enrolled.data.secret === "string" &&
-        enrolled.data.secret.length >= 16,
-    );
-    append("mfaFactorIds", factorId);
-    await saveInventory();
-    let verified: Reply | undefined;
-    for (let attempt = 0; attempt < 2; attempt++) {
-      const challenge = await clients.moderator.api("mfa/challenge", "POST", {
-        factorId,
-      });
-      status(`mfa_challenge_${attempt + 1}`, challenge, 200);
-      const code = totp(enrolled.data.secret);
-      verified = await clients.moderator.api("mfa/verify", "POST", {
-        factorId,
-        challengeId: challenge.data.challengeId,
-        code,
-      });
-      context.verificationAttempts++;
-      if (verified.status === 200) break;
-      if (verified.code !== "MFA_INVALID" || attempt === 1) break;
-      await new Promise((r) => setTimeout(r, 1100));
-    }
-    status("mfa_code_verified", verified!, 200);
-    const strong = await clients.moderator.api("mfa");
-    status("mfa_assurance_after_verify", strong, 200);
-    check("mfa_session_is_aal2", strong.data.currentLevel === "aal2");
-    check(
-      "mfa_factor_confirmed",
-      strong.data.factors.some(
-        (f: any) => f.id === factorId && f.status === "verified",
-      ),
-    );
+    await moderatorMfa.establish("moderator");
+    context.verificationAttempts = moderatorMfa.verificationAttempts;
     status(
       "moderation_access_after_mfa",
       await clients.moderator.api("admin/revisions"),
@@ -288,7 +266,8 @@ async function main() {
         "Recette technique du rattachement des photos aux places. Les quatre images sont des fixtures inertes, sans représentation d’un parking réel. Ce dossier doit être retiré à la fin des contrôles.",
       city: "Lyon",
       district: "Recette des galeries",
-      priceCents: 3100000,
+      priceCents: 12500,
+      transactionType: "rent",
       type: "covered",
       spaces: [firstSpace, secondSpace],
       photos: urls.slice(0, 3),
@@ -335,20 +314,180 @@ async function main() {
       }),
       200,
     );
+    saved.data = await confirmQaLocation(
+      clients.seller.api.bind(clients.seller),
+      saved.data,
+    );
     const submitted = await clients.seller.api(
       `listings/${id}/submit`,
       "POST",
       { version: saved.data.version, ownershipAttested: true },
     );
     status("gallery_listing_submitted", submitted, 200);
+    const qaAdmin = new Client();
+    adminMfa = new QaStrongSession(
+      qaAdmin.api.bind(qaAdmin),
+      config.users.admin!,
+      "admin",
+      async (kind, value) => {
+        append(kind, value);
+        await saveInventory();
+      },
+      check,
+    );
+    await adminMfa.establish("admin");
+    const quotaBefore = await clients.seller.api("entitlements");
+    status("real_storage_usage_readable", quotaBefore, 200);
+    check(
+      "real_storage_objects_charged_once",
+      quotaBefore.data.usage.uploads.used >= 4 &&
+        quotaBefore.data.usage.uploadBytes.used > 0,
+    );
+    const quotaUser = config.users.outsider.id;
+    const beforeOverride = await qaAdmin.api(
+      `admin/entitlements?userId=${quotaUser}`,
+    );
+    status("admin_read_qa_override", beforeOverride, 200);
+    check(
+      "qa_override_not_preexisting_active",
+      !beforeOverride.data.user.override?.active,
+    );
+    const quotaDraft = await clients.outsider.api("listings", "POST", {});
+    status("quota_fixture_draft_created", quotaDraft, 201);
+    append("listingIds", quotaDraft.data.id);
+    await saveInventory();
+    const overridden = await qaAdmin.api("admin/entitlements", "POST", {
+      action: "set_user_override",
+      userId: quotaUser,
+      version: beforeOverride.data.user.override?.version ?? 0,
+      limits: { uploadsPerHour: 0, uploadBytesPerDay: 0 },
+      expiresAt: new Date(Date.now() + 600000).toISOString(),
+      reason:
+        "Recette limitée au compte fictif : refus Storage sans modifier le forfait gratuit.",
+    });
+    status("qa_only_zero_upload_override", overridden, 200);
+    const quotaForm = new FormData();
+    quotaForm.set("listingId", quotaDraft.data.id);
+    const quotaBytes = await sharp({
+      create: { width: 16, height: 16, channels: 3, background: "#999999" },
+    })
+      .png()
+      .toBuffer();
+    quotaForm.set(
+      "file",
+      new Blob([new Uint8Array(quotaBytes)], { type: "image/png" }),
+      "quota-inert.png",
+    );
+    try {
+      const refused = await clients.outsider.api("uploads", "POST", quotaForm);
+      status("real_storage_quota_http_refused", refused, 429);
+      check("real_storage_quota_code", refused.code === "RATE_LIMITED");
+      check("real_storage_retry_after", Number(refused.retryAfter) > 0);
+      const directStorage = createClient(
+        config.supabaseUrl,
+        config.publishableKey,
+        { auth: { persistSession: false, autoRefreshToken: false } },
+      );
+      const authenticated = await directStorage.auth.signInWithPassword({
+        email: config.users.outsider.email,
+        password: config.users.outsider.password,
+      });
+      check("direct_storage_fixture_login", !authenticated.error);
+      const objectKey = `${quotaUser}/${quotaDraft.data.id}/${randomUUID()}.webp`;
+      const allowedPath = await directStorage.rpc("gp_storage_allowed", {
+        p_name: objectKey,
+      });
+      check(
+        "direct_storage_path_authorized_before_quota",
+        !allowedPath.error && allowedPath.data === true,
+      );
+      const directUpload = await directStorage.storage
+        .from("private-uploads")
+        .upload(objectKey, await sharp(quotaBytes).webp().toBuffer(), {
+          contentType: "image/webp",
+          upsert: false,
+        });
+      if (!directUpload.error) {
+        inventory.media ||= [];
+        inventory.media.push({
+          listingId: quotaDraft.data.id,
+          objectKey,
+          unexpectedQuotaBypass: true,
+        });
+        await saveInventory();
+        await directStorage.storage.from("private-uploads").remove([objectKey]);
+      }
+      check("direct_storage_trigger_refused", !!directUpload.error);
+      const missing = await directStorage.storage
+        .from("private-uploads")
+        .download(objectKey);
+      check(
+        "direct_storage_rejected_object_absent",
+        !!missing.error && !missing.data,
+      );
+      await directStorage.auth.signOut({ scope: "local" });
+      const usage = await clients.outsider.api("entitlements");
+      check(
+        "rejected_upload_not_charged",
+        usage.data.usage.uploads.used === 0 &&
+          usage.data.usage.uploadBytes.used === 0,
+      );
+    } finally {
+      const cleared = await qaAdmin.api("admin/entitlements", "POST", {
+        action: "clear_user_override",
+        userId: quotaUser,
+        version: overridden.data.user.override.version,
+        reason: "Fin de recette du refus de dépôt sur le compte fictif dédié.",
+      });
+      status("qa_upload_override_cleared", cleared, 200);
+      check(
+        "qa_upload_override_inactive",
+        cleared.data.user.override.active === false,
+      );
+    }
+    status(
+      "quota_fixture_withdrawn",
+      await clients.outsider.api(
+        `listings/${quotaDraft.data.id}/lifecycle`,
+        "POST",
+        { version: quotaDraft.data.version, action: "withdraw" },
+      ),
+      200,
+    );
+    const registryVersion = await linkQaPublication(
+      qaAdmin.api.bind(qaAdmin),
+      config.users.admin,
+      submitted.data,
+      append,
+    );
+    await saveInventory();
     const approved = await clients.moderator.api(
       `admin/revisions/${id}/decision`,
       "POST",
-      { version: submitted.data.version, decision: "approve" },
+      { version: registryVersion, decision: "approve" },
     );
     status("gallery_listing_approved", approved, 200);
     const published = await guest.api(`listings/${id}`);
     status("gallery_public_listing", published, 200);
+    check(
+      "rent_published_monthly_amount",
+      published.data.transactionType === "rent" &&
+        published.data.priceCents === 12500,
+    );
+    const rents = await guest.api("listings?transactionType=rent&limit=50");
+    status("rent_catalog_filter", rents, 200);
+    check(
+      "rent_catalog_includes_fixture",
+      rents.data.some((l: any) => l.id === id) &&
+        rents.data.every((l: any) => l.transactionType === "rent"),
+    );
+    const sales = await guest.api("listings?transactionType=sale&limit=50");
+    status("sale_catalog_filter", sales, 200);
+    check(
+      "sale_catalog_excludes_rent",
+      !sales.data.some((l: any) => l.id === id) &&
+        sales.data.every((l: any) => l.transactionType === "sale"),
+    );
     check(
       "unit_photos_present_in_public_projection",
       Object.keys(published.data.spacePhotos || {}).length === 2,
@@ -513,19 +652,9 @@ async function main() {
       "withdrawn_unit_photo_no_longer_public",
       [401, 403, 404].includes(hiddenUnit.status),
     );
-    factorCleanupAttempted = true;
-    const removed = await clients.moderator.api("mfa/unenroll", "POST", {
-      factorId,
-      password: config.users.moderator.password,
-    });
-    status("qa_mfa_factor_removed_after_reauthentication", removed, 200);
-    context.totpFactorRevoked = true;
-    const factors = await clients.moderator.api("mfa");
-    status("mfa_state_after_removal", factors, 200);
-    check(
-      "qa_factor_absent_after_removal",
-      !factors.data.factors.some((f: any) => f.id === factorId),
-    );
+    await moderatorMfa.cleanup();
+    context.totpFactorRevoked = moderatorMfa.factorRevoked;
+    await adminMfa.cleanup();
     inventory.featureStatus = "passed";
   } catch (error) {
     failure =
@@ -534,18 +663,15 @@ async function main() {
         : "configuration_or_transport_failure";
     if (inventory) inventory.featureStatus = "failed";
   }
-  if (factorId && !context.totpFactorRevoked && !factorCleanupAttempted) {
-    factorCleanupAttempted = true;
+  for (const strong of [moderatorMfa, adminMfa]) {
     try {
-      const cleanup = await clients.moderator.api("mfa/unenroll", "POST", {
-        factorId,
-        password: config.users.moderator.password,
-      });
-      context.totpFactorRevoked = cleanup.status === 200;
+      await strong?.cleanup();
     } catch {
-      /* Coordinator can remove the exact QA factor from the ignored inventory. */
+      failure ||= "qa_factor_cleanup_failed";
+      if (inventory) inventory.featureStatus = "failed";
     }
   }
+  context.totpFactorRevoked = moderatorMfa?.factorRevoked ?? false;
   // No global logout or account deletion: another specialist may use a distinct QA session.
   await saveInventory();
   await mkdir("docs/qa", { recursive: true });
@@ -559,10 +685,11 @@ async function main() {
     credentialsIncluded: false,
     qrSecretOrTotpIncluded: false,
     cleanupInventory: ".data/supabase-qa-result.json",
+    adminFactorRevoked: adminMfa?.factorRevoked ?? false,
     limitations: [
       "Email delivery not exercised",
       "No global MFA policy toggle",
-      "Administrator mandatory-MFA gate asserted only when configured as required",
+      "Administrator/moderator AAL2 established through real TOTP; AAL1 gate asserted when configured as required",
       "No real parking or production deployment",
     ],
     sources: [

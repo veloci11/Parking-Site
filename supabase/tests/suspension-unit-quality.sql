@@ -17,6 +17,7 @@ select set_config('request.jwt.claim.sub','f1000000-0000-4000-8000-000000000001'
 select 1/((select count(*)=0 from listings where id='f2000000-0000-4000-8000-000000000001')::int) as private_draft_rls;
 do $$ begin begin perform gp_moderate('f2000000-0000-4000-8000-000000000001','approve',3,null);raise exception 'Expected FORBIDDEN';exception when others then if sqlerrm not in ('FORBIDDEN','MFA_OR_PERMISSION_REQUIRED') then raise;end if;end;end;$$;
 select set_config('request.jwt.claim.sub','f1000000-0000-4000-8000-000000000003',true);
+select set_config('request.jwt.claims','{"sub":"f1000000-0000-4000-8000-000000000003","role":"authenticated","aal":"aal2"}',true);
 do $$begin begin perform gp_moderate('f2000000-0000-4000-8000-000000000001','approve',null,null);raise exception 'Expected VERSION_CONFLICT';exception when others then if sqlerrm<>'VERSION_CONFLICT' then raise;end if;end;end;$$;
 select gp_moderate('f2000000-0000-4000-8000-000000000001','approve',3,null);
 select 1/((select payload->'spacePhotos' ? (id::text||':unit:1') and not(payload->'spacePhotos' ? 'f3000000-0000-4000-8000-000000000001') and not(payload?'address') and not(payload?'sellerId') and payload->>'sceneAvailable'='false' and payload->'coordinates'='[4.86,45.76]'::jsonb from published_listings where id='f2000000-0000-4000-8000-000000000001')::int) as public_privacy;
@@ -27,6 +28,7 @@ select set_config('gp.qa_conversation',gp_contact('f2000000-0000-4000-8000-00000
 select gp_message(current_setting('gp.qa_conversation')::uuid,'Historique à conserver après suspension','suspension-message-test');
 do $$begin begin perform gp_suspend_publication('f2000000-0000-4000-8000-000000000001',4,'Motif de suspension documenté');raise exception 'Expected role refusal';exception when others then if sqlerrm<>'MFA_OR_PERMISSION_REQUIRED' then raise;end if;end;end;$$;
 select set_config('request.jwt.claim.sub','f1000000-0000-4000-8000-000000000003',true);
+select set_config('request.jwt.claims','{"sub":"f1000000-0000-4000-8000-000000000003","role":"authenticated","aal":"aal2"}',true);
 do $$begin begin perform gp_suspend_publication('f2000000-0000-4000-8000-000000000001',null,'Motif de suspension documenté');raise exception 'Expected version refusal';exception when others then if sqlerrm<>'VERSION_CONFLICT' then raise;end if;end;begin perform gp_suspend_publication('f2000000-0000-4000-8000-000000000001',4,null);raise exception 'Expected reason refusal';exception when others then if sqlerrm<>'VALIDATION_ERROR' then raise;end if;end;end;$$;
 select gp_suspend_publication('f2000000-0000-4000-8000-000000000001',4,'Infiltration constatée, vérification requise');
 select 1/((select lifecycle_state='suspended' and row_version=5 and last_published is null from listings where id='f2000000-0000-4000-8000-000000000001')::int) as suspended_versioned;
@@ -37,6 +39,7 @@ select gp_listing('f2000000-0000-4000-8000-000000000001','update','{"title":"Pla
 do $$begin begin perform gp_listing('f2000000-0000-4000-8000-000000000001','pause','{}',6);raise exception 'Expected pause bypass refusal';exception when others then if sqlerrm<>'NOT_PUBLISHED' then raise;end if;end;end;$$;
 select gp_listing('f2000000-0000-4000-8000-000000000001','submit','{"ownershipAttested":true}',6);
 select set_config('request.jwt.claim.sub','f1000000-0000-4000-8000-000000000003',true);
+select set_config('request.jwt.claims','{"sub":"f1000000-0000-4000-8000-000000000003","role":"authenticated","aal":"aal2"}',true);
 select gp_moderate('f2000000-0000-4000-8000-000000000001','approve',7,null);
 select 1/((select count(*)=1 from published_listings where id='f2000000-0000-4000-8000-000000000001')::int) as only_moderation_republishes;
 select set_config('request.jwt.claim.sub','f1000000-0000-4000-8000-000000000001',true);

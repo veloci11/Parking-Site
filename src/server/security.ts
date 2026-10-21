@@ -7,11 +7,14 @@ import {
 } from "node:crypto";
 import { db, userDTO } from "./db";
 import type { User } from "@/lib/types";
+import { currentRequestId } from "./request-context";
+import { localQuota } from "./entitlement-store";
 export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
     public code = "VALIDATION_ERROR",
+    public retryAfter?: number,
   ) {
     super(message);
   }
@@ -139,28 +142,69 @@ export function endSession(request: Request) {
     db().prepare("DELETE FROM sessions WHERE token_hash=?").run(hash(token));
   return "gp_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0";
 }
-export function rateLimit(bucket: string, limit: number, seconds: number) {
+export function rateLimit(
+  bucket: string,
+  limit: number,
+  seconds: number,
+  amount = 1,
+) {
   const now = Date.now();
-  const row = db()
-    .prepare("SELECT * FROM rate_limits WHERE bucket=?")
-    .get(bucket);
-  if (!row || Number(row.reset_at) <= now) {
+  const separator = bucket.indexOf(":"),
+    kind = bucket.slice(0, separator),
+    userId = bucket.slice(separator + 1);
+  const configured = separator > 0 ? localQuota(kind, userId) : null;
+  const rules = [
+    {
+      bucket,
+      limit: configured?.limit ?? limit,
+      seconds: configured?.seconds ?? seconds,
+      amount,
+    },
+  ];
+  if (kind === "message" && configured) {
+    const burst = localQuota("message_burst", userId)!;
+    rules.push({ bucket: "message_burst:" + userId, ...burst, amount: 1 });
+  }
+  const writes = rules.map((rule) => {
+    const row = db()
+      .prepare("SELECT * FROM rate_limits WHERE bucket=?")
+      .get(rule.bucket);
+    const live = !!row && Number(row.reset_at) > now;
+    const used = live ? Number(row.count) : 0,
+      resetAt = live ? Number(row.reset_at) : now + rule.seconds * 1000;
+    if (
+      !Number.isSafeInteger(rule.amount) ||
+      rule.amount <= 0 ||
+      used + rule.amount > rule.limit
+    )
+      throw new ApiError(
+        429,
+        "Limite d’usage atteinte. Réessayez après sa remise à zéro.",
+        "RATE_LIMITED",
+        Math.max(1, Math.ceil((resetAt - now) / 1000)),
+      );
+    return { bucket: rule.bucket, count: used + rule.amount, resetAt };
+  });
+  for (const write of writes)
     db()
       .prepare(
-        "INSERT INTO rate_limits(bucket,count,reset_at) VALUES(?,1,?) ON CONFLICT(bucket) DO UPDATE SET count=1,reset_at=excluded.reset_at",
+        "INSERT INTO rate_limits(bucket,count,reset_at) VALUES(?,?,?) ON CONFLICT(bucket) DO UPDATE SET count=excluded.count,reset_at=excluded.reset_at",
       )
-      .run(bucket, now + seconds * 1000);
-    return;
+      .run(write.bucket, write.count, write.resetAt);
+}
+/** Count accepted private source bytes and uploads together, also inside an existing transaction. */
+export function localConsumeUpload(userId: string, bytes: number) {
+  const sql = db();
+  sql.exec("SAVEPOINT gp_upload_quota");
+  try {
+    rateLimit("upload:" + userId, 60, 3600);
+    rateLimit("upload_bytes:" + userId, 262144000, 86400, bytes);
+    sql.exec("RELEASE gp_upload_quota");
+  } catch (error) {
+    sql.exec("ROLLBACK TO gp_upload_quota");
+    sql.exec("RELEASE gp_upload_quota");
+    throw error;
   }
-  if (Number(row.count) >= limit)
-    throw new ApiError(
-      429,
-      "Trop de demandes. Réessayez dans quelques instants.",
-      "RATE_LIMITED",
-    );
-  db()
-    .prepare("UPDATE rate_limits SET count=count+1 WHERE bucket=?")
-    .run(bucket);
 }
 export function audit(
   actorId: string,
@@ -169,7 +213,9 @@ export function audit(
   detail = "",
 ) {
   db()
-    .prepare("INSERT INTO audit VALUES(?,?,?,?,?,?)")
+    .prepare(
+      "INSERT INTO audit(id,actor_id,action,target_id,detail,created_at,request_id) VALUES(?,?,?,?,?,?,?)",
+    )
     .run(
       randomUUID(),
       actorId,
@@ -177,6 +223,7 @@ export function audit(
       targetId,
       detail,
       new Date().toISOString(),
+      currentRequestId() ?? null,
     );
 }
 export function queueNotice(userId: string, type: string, targetId: string) {

@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-10-21T20:36:06.616Z",
+  "scope": "isolated-local-production-build",
+  "origin": "http://127.0.0.1:3002",
+  "passed": 2,
+  "skipped": 0,
+  "exitCode": 0,
+  "externalEmailSent": false,
+  "supabaseTouched": false,
+  "disposableDatabaseRemoved": true
+}

@@ -90,7 +90,7 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid var(--brand);
+  outline: 2px solid #716978;
 }
 img {
   max-width: 100%;
@@ -1063,6 +1063,9 @@ small {
   grid-template-columns: minmax(0, 1fr) 340px;
   gap: 32px;
 }
+.detail-layout > div {
+  min-width: 0;
+}
 .detail-gallery {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1931,8 +1934,12 @@ small {
 }
 
 .location-search:has(input:focus-visible) {
-  outline: 2px solid var(--brand);
-  outline-offset: 4px;
+  outline: none;
+  border-color: #bcb5ce;
+  box-shadow: 0 4px 14px rgba(18, 20, 29, 0.04);
+}
+.location-search > input:focus-visible {
+  outline: none;
 }
 
 .parking-mobile-summary {
@@ -1964,4 +1971,49 @@ small {
   .map-panel .gp-viewer-footer {
     display: none;
   }
+}
+
+.explorer .filter-popover {
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(75vh, 740px);
+  overflow-y: auto;
+}
+.explorer-advanced-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+.explorer-geography {
+  border: 1px solid var(--border, #e4e4ec);
+  border-radius: 16px;
+  padding: 16px;
+  margin: 16px 0;
+}
+.explorer-geography .button {
+  margin-top: 12px;
+}
+@media (max-width: 540px) {
+  .explorer-advanced-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.detail-parking-section {
+  margin-top: 24px;
+}
+.detail-parking-section .detail-viewer {
+  height: auto;
+  min-height: 0;
+  margin: 0 0 16px;
+  background: #fafafd;
+  border-color: #eeedf3;
+}
+.detail-photo-fold {
+  padding: 16px 0 24px;
+}
+.detail-photo-fold > summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
 }

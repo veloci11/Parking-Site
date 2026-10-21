@@ -1,17 +1,23 @@
 "use client";
+import FilterSelect from "../FilterSelect";
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Download, LogOut, Save, ShieldCheck, Trash2 } from "lucide-react";
 import { AccountGate, AccountShell, api } from "./shared";
 import type { User } from "@/lib/types";
+import PrivacyExports from "./privacy-exports";
+import PasswordChange from "./password-change";
+import TermsStatus from "./terms-status";
 function Content({ user }: { user: User }) {
   const [name, setName] = useState(user.name),
+    [sellerType, setSellerType] = useState(user.sellerType || ""),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
     [showDelete, setShowDelete] = useState(false),
     [password, setPassword] = useState(""),
-    [confirmation, setConfirmation] = useState("");
+    [confirmation, setConfirmation] = useState(""),
+    [exportPassword, setExportPassword] = useState("");
   async function save(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -19,10 +25,10 @@ function Content({ user }: { user: User }) {
     try {
       await api("/api/me/profile", {
         method: "PATCH",
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, sellerType: sellerType || null }),
       });
       window.dispatchEvent(new Event("gp:session"));
-      setNotice("Votre nom public a été enregistré.");
+      setNotice("Votre profil public a été enregistré.");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -33,15 +39,21 @@ function Content({ user }: { user: User }) {
     setError("");
     setBusy(true);
     try {
-      const data = await api("/api/me/export");
+      const data = await api<{ data: unknown }>("/api/privacy/export", {
+        method: "POST",
+        body: JSON.stringify({ password: exportPassword }),
+      });
       const href = URL.createObjectURL(
-        new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
+        new Blob([JSON.stringify(data.data, null, 2)], {
+          type: "application/json",
+        }),
       );
       const link = document.createElement("a");
       link.href = href;
       link.download = "mes-donnees-gp.json";
       link.click();
       URL.revokeObjectURL(href);
+      setExportPassword("");
       setNotice(
         "Votre export a été préparé. Conservez ce fichier dans un emplacement privé.",
       );
@@ -56,12 +68,12 @@ function Content({ user }: { user: User }) {
     setBusy(true);
     setError("");
     try {
-      await api("/api/me/delete", {
+      await api("/api/privacy/delete", {
         method: "POST",
         body: JSON.stringify({ password, confirmation }),
       });
       window.dispatchEvent(new Event("gp:session"));
-      window.location.assign("/connexion?closed=1");
+      window.location.assign("/compte/suppression");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -86,7 +98,8 @@ function Content({ user }: { user: User }) {
       <section className="card account-settings-card">
         <h2>Profil public</h2>
         <p className="muted">
-          Seul votre nom public est présenté aux autres membres.
+          Votre nom et votre statut déclaré de particulier ou professionnel sont
+          destinés à votre présentation publique.
         </p>
         <form className="account-form" onSubmit={save}>
           <label className="field">
@@ -101,6 +114,26 @@ function Content({ user }: { user: User }) {
               autoComplete="name"
             />
           </label>
+          <div className="field">
+            <span>{"Vous publiez en tant que"}</span>
+            <FilterSelect
+              label={"Vous publiez en tant que"}
+              variant="field"
+              value={sellerType}
+              onChange={(selectedValue) => setSellerType(selectedValue)}
+              options={[
+                { value: "", label: "À préciser" },
+                { value: "private", label: "Particulier" },
+                { value: "professional", label: "Professionnel" },
+              ]}
+            />
+          </div>
+          <p className="muted">
+            Statut déclaré par vos soins ; il ne constitue pas une vérification
+            d’identité ou de propriété et n’accorde aucun accès administratif.
+            Les annonces déjà publiées conservent leur version relue jusqu’à une
+            nouvelle modération.
+          </p>
           <label className="field">
             Email de connexion
             <input className="input" value={user.email} disabled type="email" />
@@ -154,18 +187,35 @@ function Content({ user }: { user: User }) {
           Me déconnecter
         </button>
       </section>
+      <PasswordChange />
+      <TermsStatus />
+      <PrivacyExports />
       <section className="card account-settings-card">
         <h2>Mes données personnelles</h2>
         <p className="muted">
-          Récupérez les données de votre compte et de vos annonces.
+          Récupérez vos données de compte, annonces, échanges envoyés, visites,
+          favoris et documents (métadonnées). Les fichiers binaires et preuves
+          internes de modération ne sont pas intégrés.
         </p>
+        <label className="field">
+          Confirmez votre mot de passe pour l’export
+          <input
+            className="input"
+            type="password"
+            autoComplete="current-password"
+            maxLength={128}
+            value={exportPassword}
+            onChange={(e) => setExportPassword(e.target.value)}
+            disabled={busy}
+          />
+        </label>
         <button
           className="button button-secondary"
-          disabled={busy}
+          disabled={busy || !exportPassword}
           onClick={exportData}
         >
           <Download size={18} />
-          Exporter mes données
+          Télécharger le JSON des métadonnées
         </button>
         <div className="account-delete-zone">
           <h3>Fermer mon compte</h3>

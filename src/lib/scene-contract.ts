@@ -79,7 +79,7 @@ const dimensions = z
   .strict();
 export const sceneManifestSchema = z
   .object({
-    schemaVersion: z.literal("1.0"),
+    schemaVersion: z.enum(["1.0", "gp-parametric-1.1"]),
     unit: z.literal("m"),
     upAxis: z.literal("Y"),
     level: z.number().int().min(-20).max(20),
@@ -97,6 +97,9 @@ export const sceneManifestSchema = z
             displayNumber: z.string().trim().min(1).max(30),
             footprintXZ: footprint,
             dimensions,
+            source: z
+              .enum(["unknown", "schematic", "plan_derived", "measured"])
+              .optional(),
           })
           .strict(),
       )
@@ -135,12 +138,41 @@ export const sceneManifestSchema = z
           .max(10),
         observedAt: z.string().datetime({ offset: true }),
         publicSummary: z.string().trim().min(10).max(400),
+        geometrySource: z
+          .enum(["unknown", "plan_derived", "measured"])
+          .optional(),
+        geometryEvidenceIds: z
+          .array(z.string().uuid())
+          .max(20)
+          .refine((ids) => new Set(ids).size === ids.length)
+          .optional(),
       })
       .strict(),
     observations: z
       .array(
         z
           .object({
+            id: z.string().uuid().optional(),
+            spaceId: z.string().uuid().optional(),
+            source: z
+              .enum([
+                "unknown",
+                "seller_observation",
+                "photo_documented",
+                "provided_document",
+                "measured",
+              ])
+              .optional(),
+            observedAt: z
+              .string()
+              .datetime({ offset: true })
+              .nullable()
+              .optional(),
+            evidenceIds: z
+              .array(z.string().uuid())
+              .max(20)
+              .refine((ids) => new Set(ids).size === ids.length)
+              .optional(),
             positionXZ: pointXZ,
             category: z.enum([
               "floor",
@@ -217,6 +249,39 @@ export const sceneManifestSchema = z
           path: ["provenance", "controlDistances", i],
           message: "Les mesures de contrôle dépassent le sol déclaré.",
         });
+    const observationIds = value.observations.flatMap((note) =>
+      note.id ? [note.id] : [],
+    );
+    if (new Set(observationIds).size !== observationIds.length)
+      ctx.addIssue({
+        code: "custom",
+        path: ["observations"],
+        message: "Les observations doivent avoir des identifiants distincts.",
+      });
+    value.observations.forEach((note, index) => {
+      if (note.spaceId && !seen.has(note.spaceId))
+        ctx.addIssue({
+          code: "custom",
+          path: ["observations", index, "spaceId"],
+          message: "L’observation doit concerner une place du niveau.",
+        });
+      if (note.observedAt && Date.parse(note.observedAt) > Date.now() + 300000)
+        ctx.addIssue({
+          code: "custom",
+          path: ["observations", index, "observedAt"],
+          message: "La date ne peut pas être future.",
+        });
+      if (
+        ["photo_documented", "provided_document"].includes(note.source || "") &&
+        (!note.id || !note.observedAt || !note.evidenceIds?.length)
+      )
+        ctx.addIssue({
+          code: "custom",
+          path: ["observations", index],
+          message:
+            "Une observation documentée exige identité, date et preuves privées.",
+        });
+    });
     if (new Date(value.provenance.observedAt).getTime() > Date.now() + 300000)
       ctx.addIssue({
         code: "custom",
@@ -268,7 +333,20 @@ export const sceneSubmissionSchema = z
     evidenceIds: z.array(z.string().uuid()).min(1).max(20),
     rightsAttested: z.literal(true),
   })
-  .strict();
+  .strict()
+  .superRefine((value, ctx) => {
+    const proofIds = [
+      ...(value.manifest.provenance.geometryEvidenceIds || []),
+      ...value.manifest.observations.flatMap((note) => note.evidenceIds || []),
+    ];
+    if (proofIds.some((id) => !value.evidenceIds.includes(id)))
+      ctx.addIssue({
+        code: "custom",
+        path: ["manifest"],
+        message:
+          "Toute preuve doit appartenir aux sources privées jointes à cette scène.",
+      });
+  });
 export const sceneReviewSchema = z
   .object({
     version: z.number().int().positive(),
@@ -280,6 +358,7 @@ export const sceneReviewSchema = z
         numbersAndLevelChecked: z.literal(true),
         conditionMatchesPhotos: z.literal(true),
         locationConsentChecked: z.literal(true),
+        observationEvidenceChecked: z.boolean().optional(),
       })
       .strict()
       .optional(),
@@ -304,9 +383,26 @@ export interface PublicScene {
   id: string;
   listingId: string;
   version: number;
-  fidelity: "measured";
+  fidelity: "measured" | "reviewed";
+  runtimeContract?: "gp-parametric-level/1.1";
+  manifestHash?: string;
+  hashAlgorithm?: string;
+  isDemo?: boolean;
+  documentation?: {
+    geometrySource: string;
+    reviewedUnitIds: string[];
+    reviewedObservationIds?: string[];
+    scope?: string;
+    observationEvidenceChecked: boolean;
+  };
   reviewedAt: string;
-  manifest: Omit<SceneManifest, "spaces" | "provenance"> & {
+  manifest: Omit<SceneManifest, "spaces" | "provenance" | "observations"> & {
+    observations: Array<
+      Omit<
+        SceneManifest["observations"][number],
+        "id" | "spaceId" | "evidenceIds"
+      > & { id?: string; spaceId?: string; evidenceCount?: number }
+    >;
     spaces: Array<
       Omit<SceneManifest["spaces"][number], "spaceId"> & { id: string }
     >;
@@ -316,6 +412,8 @@ export interface PublicScene {
       controlDistancesCount: number;
       observedAt: string;
       publicSummary: string;
+      geometrySource?: string;
+      geometryEvidenceCount?: number;
     };
   };
 }
@@ -367,19 +465,76 @@ export function publicSceneProjection(
     version: number;
     reviewedAt: string;
     manifest: SceneManifest;
+    observationEvidenceChecked?: boolean;
   },
   listing: Listing,
 ): PublicScene {
   assertSceneMapping(input.manifest, listing, true);
   const { provenance, ...geometry } = input.manifest;
+  const reviewedNotes = input.observationEvidenceChecked
+    ? input.manifest.observations.flatMap((note, index) =>
+        note.id &&
+        note.observedAt &&
+        note.evidenceIds?.length &&
+        ["photo_documented", "provided_document", "measured"].includes(
+          note.source || "",
+        )
+          ? [{ note, index }]
+          : [],
+      )
+    : [];
+  const reviewedUnits = [
+    ...new Set(
+      reviewedNotes.flatMap(({ note }) =>
+        note.spaceId
+          ? [
+              `${listing.id}:unit:${listing.spaces.findIndex((unit) => unit.id === note.spaceId) + 1}`,
+            ]
+          : [],
+      ),
+    ),
+  ];
   return {
     id: input.id,
     listingId: input.listingId,
     version: input.version,
     reviewedAt: input.reviewedAt,
-    fidelity: "measured",
+    fidelity:
+      reviewedNotes.length &&
+      provenance.geometryEvidenceIds?.length &&
+      ["plan_derived", "measured"].includes(provenance.geometrySource || "")
+        ? "reviewed"
+        : "measured",
+    runtimeContract: "gp-parametric-level/1.1",
+    isDemo: listing.isDemo,
+    documentation: {
+      geometrySource: provenance.geometrySource || "unknown",
+      reviewedUnitIds: reviewedUnits,
+      reviewedObservationIds: reviewedNotes.map(
+        ({ index }) => `${input.id}:observation:${index + 1}`,
+      ),
+      scope: "geometry_and_listed_observations_only",
+      observationEvidenceChecked: !!input.observationEvidenceChecked,
+    },
     manifest: {
       ...geometry,
+      schemaVersion: "gp-parametric-1.1",
+      observations: input.manifest.observations.map((note, index) => {
+        const { id: privateId, spaceId, evidenceIds, ...safe } = note;
+        void privateId;
+        return {
+          ...safe,
+          id: `${input.id}:observation:${index + 1}`,
+          source: note.source || "unknown",
+          observedAt: note.observedAt || null,
+          evidenceCount: evidenceIds?.length || 0,
+          ...(spaceId
+            ? {
+                spaceId: `${listing.id}:unit:${listing.spaces.findIndex((unit) => unit.id === spaceId) + 1}`,
+              }
+            : {}),
+        };
+      }),
       spaces: input.manifest.spaces.map((space) => {
         const { spaceId, ...publicSpace } = space;
         return {
@@ -393,6 +548,8 @@ export function publicSceneProjection(
         controlDistancesCount: provenance.controlDistances.length,
         observedAt: provenance.observedAt,
         publicSummary: provenance.publicSummary,
+        geometrySource: provenance.geometrySource || "unknown",
+        geometryEvidenceCount: provenance.geometryEvidenceIds?.length || 0,
       },
     },
   };
@@ -403,7 +560,7 @@ export function exampleSceneManifest(listing: Listing): SceneManifest {
   );
   const width = Math.max(10, units.length * 3 + 2);
   return {
-    schemaVersion: "1.0",
+    schemaVersion: "gp-parametric-1.1",
     unit: "m",
     upAxis: "Y",
     level: listing.spaces[0]?.level ?? -1,
@@ -443,4 +600,132 @@ export function exampleSceneManifest(listing: Listing): SceneManifest {
     },
     observations: [],
   };
+}
+
+/** Dedicated runtime contract: this is not parking-level.schema.json 1.0. */
+const publicObservationSchema = z
+  .object({
+    id: z.string().max(120).optional(),
+    spaceId: z.string().max(100).optional(),
+    positionXZ: pointXZ,
+    category: z.enum([
+      "floor",
+      "humidity",
+      "lighting",
+      "access",
+      "obstacle",
+      "other",
+    ]),
+    description: z.string().min(3).max(500),
+    source: z
+      .enum([
+        "unknown",
+        "seller_observation",
+        "photo_documented",
+        "provided_document",
+        "measured",
+      ])
+      .optional(),
+    observedAt: z.string().datetime({ offset: true }).nullable().optional(),
+    evidenceCount: z.number().int().min(0).max(20).optional(),
+  })
+  .strict();
+export const publicSceneSchema = z
+  .object({
+    id: z.string().uuid(),
+    listingId: z.string().uuid(),
+    version: z.number().int().positive(),
+    fidelity: z.enum(["measured", "reviewed"]),
+    reviewedAt: z.string().datetime({ offset: true }),
+    runtimeContract: z.literal("gp-parametric-level/1.1").optional(),
+    manifestHash: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
+    hashAlgorithm: z.literal("sha256:gp-json-sort-v1").optional(),
+    isDemo: z.boolean().optional(),
+    documentation: z
+      .object({
+        geometrySource: z.string().max(30),
+        reviewedUnitIds: z.array(z.string().max(100)).max(500),
+        reviewedObservationIds: z
+          .array(z.string().max(120))
+          .max(100)
+          .optional(),
+        scope: z.literal("geometry_and_listed_observations_only").optional(),
+        observationEvidenceChecked: z.boolean(),
+      })
+      .strict()
+      .optional(),
+    manifest: z
+      .object({
+        schemaVersion: z.enum(["1.0", "gp-parametric-1.1"]),
+        unit: z.literal("m"),
+        upAxis: z.literal("Y"),
+        level: z.number().int().min(-20).max(20),
+        floor: z
+          .object({
+            footprintXZ: footprint,
+            thicknessM: z.number().min(0.05).max(1),
+          })
+          .strict(),
+        spaces: z
+          .array(
+            z
+              .object({
+                id: z.string().max(100),
+                displayNumber: z.string().min(1).max(30),
+                footprintXZ: footprint,
+                dimensions,
+                source: z
+                  .enum(["unknown", "schematic", "plan_derived", "measured"])
+                  .optional(),
+              })
+              .strict(),
+          )
+          .min(1)
+          .max(500),
+        contextSpaces: z
+          .array(z.object({ footprintXZ: footprint }).strict())
+          .max(500),
+        obstacles: z
+          .array(
+            z
+              .object({
+                kind: z.enum(["wall", "column", "ramp"]),
+                footprintXZ: footprint,
+                baseM: z.number().min(-5).max(15),
+                heightM: z.number().positive().max(15),
+                endHeightM: z.number().min(0).max(15).optional(),
+              })
+              .strict(),
+          )
+          .max(500),
+        provenance: z
+          .object({
+            calibrated: z.literal(true),
+            accuracyM: z.number().positive().max(0.5),
+            controlDistancesCount: z.number().int().min(2).max(10),
+            observedAt: z.string().datetime({ offset: true }),
+            publicSummary: z.string().min(10).max(400),
+            geometrySource: z.string().max(30).optional(),
+            geometryEvidenceCount: z.number().int().min(0).max(20).optional(),
+          })
+          .strict(),
+        observations: z.array(publicObservationSchema).max(100),
+      })
+      .strict(),
+  })
+  .strict();
+export function parsePublicScene(value: unknown): PublicScene | null {
+  const result = publicSceneSchema.safeParse(value);
+  if (!result.success) return null;
+  const scene = result.data;
+  if (
+    scene.manifest.spaces.some(
+      (space) => !space.id.startsWith(scene.listingId + ":unit:"),
+    )
+  )
+    return null;
+  return scene;
 }

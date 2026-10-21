@@ -1,3 +1,18 @@
+import { handlePrivacyCommands } from "./privacy-commands";
+import { localLimits } from "./entitlement-store";
+import {
+  localRegistryPrepareApproval,
+  localRegistryCompleteApproval,
+  localRegistryPrepareResume,
+} from "./parking-registry";
+import {
+  validateLocalCommercial,
+  stageLocalLocation,
+  locationHash,
+} from "./commercial";
+import { attributeLocalConditions, attributeLocalListing } from "./conditions";
+import { parseHistoryQuery, historyCursor } from "./history-pagination";
+import { adminUsers, decideAccount } from "./admin-accounts";
 import { mediaVariantWidth, resizeAuthorizedMedia } from "./media-variants";
 import {
   ensureConversationBlocks,
@@ -11,7 +26,7 @@ import { mkdir, writeFile, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import sharp from "sharp";
 import { boundedFormData } from "./uploads";
-import { readBoundedJson } from "./json-body";
+import { readApiJson } from "./json-body";
 import { parsePageQuery, localCatalogPage } from "./pagination";
 import { listingPhotoUrls, validatePhotoLinks } from "./media-links";
 import {
@@ -46,6 +61,7 @@ import {
   sessionCookie,
   endSession,
   rateLimit,
+  localConsumeUpload,
   audit,
   queueNotice,
 } from "./security";
@@ -58,7 +74,7 @@ const blankQuality = {
   maneuver: "Non renseignée",
   observations: "",
 };
-const body = readBoundedJson;
+const body = readApiJson;
 function parse<T>(schema: z.ZodType<T>, input: unknown): T {
   const result = schema.safeParse(input);
   if (!result.success)
@@ -239,6 +255,7 @@ export async function handleApi(request: Request): Promise<Response> {
           name: text.min(2).max(80),
           email: text.toLowerCase().email().max(254),
           password,
+          sellerType: z.enum(["private", "professional"]).nullable().optional(),
         }),
         await body(request),
       );
@@ -257,6 +274,9 @@ export async function handleApi(request: Request): Promise<Response> {
           "INSERT INTO users(id,name,email,password,created_at) VALUES(?,?,?,?,?)",
         )
         .run(id, input.name, input.email, passwordHash(input.password), now());
+      db()
+        .prepare("UPDATE users SET seller_type=? WHERE id=?")
+        .run(input.sellerType ?? null, id);
       const receipt = makeMail(id, "verify");
       cookie = sessionCookie(id);
       audit(id, "account.register", id);
@@ -411,45 +431,51 @@ export async function handleApi(request: Request): Promise<Response> {
     }
     if (path === "listings" && method === "POST") {
       const user = requireUser(request);
-      rateLimit(`draft:${user.id}`, 10, 86400);
       const input = parse(draftSchema, await body(request));
+      rateLimit(`draft:${user.id}`, 10, 86400);
       const id = randomUUID(),
         date = now();
-      const listing: Listing = {
-        id,
-        slug: "nouvelle-annonce",
-        title: "",
-        description: "",
-        city: "Lyon",
-        district: "",
-        priceCents: 0,
-        type: "covered",
-        spaces: [
-          {
-            id: randomUUID(),
-            number: "",
-            level: -1,
-            areaM2: null,
-            lengthM: null,
-            widthM: null,
-            clearanceM: null,
-          },
-        ],
-        photos: [],
-        quality: blankQuality,
-        locationPrecision: "area",
-        coordinates: [4.85, 45.76],
-        sceneAvailable: false,
-        isDemo: true,
-        status: "draft",
-        version: 1,
-        sellerName: user.name,
-        createdAt: date,
-        updatedAt: date,
-        ...input,
-      };
+      const listing = attributeLocalListing(
+        {
+          id,
+          slug: "nouvelle-annonce",
+          title: "",
+          description: "",
+          city: "Lyon",
+          district: "",
+          priceCents: 0,
+          transactionType: "sale",
+          type: "covered",
+          spaces: [
+            {
+              id: randomUUID(),
+              number: "",
+              level: -1,
+              areaM2: null,
+              lengthM: null,
+              widthM: null,
+              clearanceM: null,
+            },
+          ],
+          photos: [],
+          quality: blankQuality,
+          locationPrecision: "area",
+          coordinates: [4.85, 45.76],
+          sceneAvailable: false,
+          isDemo: true,
+          status: "draft",
+          version: 1,
+          sellerName: user.name,
+          createdAt: date,
+          updatedAt: date,
+          ...input,
+        },
+        user.id,
+      );
       listing.id = id;
       listing.version = 1;
+      listing.locationConfirmedAt = null;
+      validateLocalCommercial(listing, user.id);
       validatePhotoLinks(listing);
       validatePhotos(listingPhotoUrls(listing), user.id, id);
       db()
@@ -460,10 +486,15 @@ export async function handleApi(request: Request): Promise<Response> {
       return respond(listing, 201);
     }
     const listingMatch = path.match(
-      /^listings\/([^/]+)(?:\/(submit|lifecycle))?$/,
+      /^listings\/([^/]+)(?:\/(submit|lifecycle|preview))?$/,
     );
     if (listingMatch) {
       const [, id, action] = listingMatch;
+      if (method === "GET" && action === "preview") {
+        const u = requireUser(request);
+        const row = ownListing(id, u);
+        return respond(publicProjection(privateListing(row)));
+      }
       if (method === "GET" && !action) {
         const user = currentUser(request);
         const row = rowListing(id);
@@ -494,7 +525,18 @@ export async function handleApi(request: Request): Promise<Response> {
           );
         const patch = parse(draftSchema, input);
         const existing = privateListing(row);
-        const value = { ...existing, ...patch, id };
+        const value = attributeLocalListing(
+          { ...existing, ...patch, id },
+          user.id,
+          existing,
+        );
+        validateLocalCommercial(value, user.id);
+        const location = stageLocalLocation(
+          value,
+          existing,
+          patch,
+          row.location_confirmation_hash,
+        );
         validatePhotoLinks(value);
         validatePhotos(listingPhotoUrls(value), user.id, id);
         value.sceneAvailable = false;
@@ -504,7 +546,17 @@ export async function handleApi(request: Request): Promise<Response> {
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-")
           .slice(0, 100);
-        return respond(saveDraft(row, value, "draft"));
+        return respond(
+          transact(() => {
+            const saved = saveDraft(row, location.listing, "draft");
+            db()
+              .prepare(
+                "UPDATE listings SET location_confirmation_hash=? WHERE id=?",
+              )
+              .run(location.hash, id);
+            return saved;
+          }),
+        );
       }
       if (method === "POST" && action === "submit") {
         if (input.ownershipAttested !== true)
@@ -512,7 +564,6 @@ export async function handleApi(request: Request): Promise<Response> {
             400,
             "Confirmez votre droit à publier cette annonce.",
           );
-        rateLimit(`submit:${user.id}`, 20, 86400);
         const draft = privateListing(row);
         if (
           !["draft", "changes_requested", "rejected"].includes(
@@ -530,28 +581,49 @@ export async function handleApi(request: Request): Promise<Response> {
           !draft.district ||
           draft.priceCents <= 0 ||
           draft.photos.length < 3 ||
-          draft.spaces.some((s) => !s.number)
+          draft.spaces.length < 1
         )
           throw new ApiError(
             400,
             "Complétez le titre, la description, le lieu, le prix, les places et trois photos documentaires minimum.",
           );
+        draft.conditionObservations = attributeLocalConditions(
+          draft,
+          user.id,
+          draft,
+          true,
+        );
+        validateLocalCommercial(draft, user.id, true);
+        if (
+          !draft.locationConfirmedAt ||
+          row.location_confirmation_hash !== locationHash(draft)
+        )
+          throw new ApiError(
+            400,
+            "Confirmez la localisation publique après sa dernière modification.",
+            "LOCATION_CONFIRMATION_REQUIRED",
+          );
         validatePhotoLinks(draft);
         validatePhotos(listingPhotoUrls(draft), user.id, id);
         return respond(
           transact(() => {
+            rateLimit(`submit:${user.id}`, 20, 86400);
             const active = db()
               .prepare(
                 "SELECT COUNT(DISTINCT id) AS n FROM listings WHERE seller_id=? AND id<>? AND (public_json IS NOT NULL OR status='pending') AND status NOT IN ('sold','withdrawn')",
               )
               .get(user.id, id);
-            if (Number(active?.n) >= 10)
+            if (Number(active?.n) >= localLimits(user.id).limits.activeListings)
               throw new ApiError(
                 403,
-                "La limite de 10 annonces actives est atteinte.",
+                "La limite d’annonces actives est atteinte.",
                 "QUOTA_EXCEEDED",
               );
-            const saved = saveDraft(row, draft, "pending");
+            const saved = saveDraft(
+              row,
+              { ...draft, sellerTypeSnapshot: user.sellerType ?? null },
+              "pending",
+            );
             db()
               .prepare(
                 "INSERT INTO revisions(id,listing_id,version,snapshot_json,created_at) VALUES(?,?,?,?,?)",
@@ -599,6 +671,10 @@ export async function handleApi(request: Request): Promise<Response> {
         }[command.action] as Listing["status"];
         return respond(
           transact(() => {
+            if (command.action === "resume") {
+              const conflict = localRegistryPrepareResume(id, user.id);
+              if (conflict) return conflict;
+            }
             const saved = saveDraft(row, privateListing(row), status);
             if (command.action !== "resume")
               db().prepare("DELETE FROM claims WHERE listing_id=?").run(id);
@@ -606,6 +682,15 @@ export async function handleApi(request: Request): Promise<Response> {
               db()
                 .prepare("UPDATE listings SET published_at=? WHERE id=?")
                 .run(now(), id);
+            if (
+              command.action === "resume" &&
+              db()
+                .prepare(
+                  "SELECT 1 FROM registry_listing_units WHERE listing_id=?",
+                )
+                .get(id)
+            )
+              localRegistryCompleteApproval(id);
             audit(user.id, `listing.${command.action}`, id);
             return saved;
           }),
@@ -634,6 +719,65 @@ export async function handleApi(request: Request): Promise<Response> {
           .prepare("DELETE FROM favorites WHERE user_id=? AND listing_id=?")
           .run(user.id, favorite[1]);
       return respond({ saved: method === "PUT" });
+    }
+    if (
+      path === "admin/users" ||
+      path === "admin/audit" ||
+      /^admin\/users\/[^/]+\/decision$/.test(path)
+    ) {
+      const actor = requireUser(request, true);
+      if (actor.role !== "admin")
+        throw new ApiError(
+          403,
+          "Accès réservé aux administrateurs.",
+          "FORBIDDEN",
+        );
+      if (path === "admin/users" && method === "GET")
+        return respond(adminUsers());
+      const decision = path.match(/^admin\/users\/([^/]+)\/decision$/);
+      if (decision && method === "POST") {
+        const input = parse(
+          z
+            .object({
+              version: z.number().int().positive(),
+              status: z.enum(["active", "suspended"]).optional(),
+              role: z.enum(["member", "moderator", "admin"]).optional(),
+              reason: text.min(15).max(2000),
+            })
+            .strict()
+            .refine((x) => x.status !== undefined || x.role !== undefined),
+          await body(request),
+        );
+        return respond(decideAccount(actor, decision[1], input));
+      }
+      if (path === "admin/audit" && method === "GET") {
+        const { limit, after } = parseHistoryQuery(url, "admin:audit");
+        const rows = after
+          ? db()
+              .prepare(
+                "SELECT id,actor_id,action,target_id,created_at,request_id,before_json,after_json FROM audit WHERE created_at<? OR created_at=? AND id<? ORDER BY created_at DESC,id DESC LIMIT ?",
+              )
+              .all(after.createdAt, after.createdAt, after.id, limit + 1)
+          : db()
+              .prepare(
+                "SELECT id,actor_id,action,target_id,created_at,request_id,before_json,after_json FROM audit ORDER BY created_at DESC,id DESC LIMIT ?",
+              )
+              .all(limit + 1);
+        return respond(
+          rows.slice(0, limit).map((r) => ({
+            id: r.id,
+            actorId: r.actor_id,
+            requestId: r.request_id,
+            before: r.before_json ? JSON.parse(String(r.before_json)) : null,
+            after: r.after_json ? JSON.parse(String(r.after_json)) : null,
+            action: r.action,
+            targetId: r.target_id,
+            createdAt: r.created_at,
+          })),
+          200,
+          { nextCursor: historyCursor("admin:audit", rows as any, limit) },
+        );
+      }
     }
     if (path === "admin/publications" && method === "GET") {
       requireModerator(request);
@@ -753,8 +897,19 @@ export async function handleApi(request: Request): Promise<Response> {
               "SELECT COUNT(DISTINCT id) AS n FROM listings WHERE seller_id=? AND id<>? AND (public_json IS NOT NULL OR status='pending') AND status NOT IN ('sold','withdrawn')",
             )
             .get(String(row.seller_id), String(row.id));
-          if (input.decision === "approve" && Number(active?.n) >= 10)
+          if (
+            input.decision === "approve" &&
+            Number(active?.n) >=
+              localLimits(String(row.seller_id)).limits.activeListings
+          )
             throw new ApiError(403, "Quota actif atteint.", "QUOTA_EXCEEDED");
+          if (input.decision === "approve") {
+            const conflict = localRegistryPrepareApproval(
+              String(row.id),
+              user.id,
+            );
+            if (conflict) return conflict;
+          }
           const status =
             input.decision === "approve"
               ? "published"
@@ -791,6 +946,7 @@ export async function handleApi(request: Request): Promise<Response> {
                 "UPDATE listings SET public_json=?,published_at=COALESCE(published_at,?) WHERE id=?",
               )
               .run(JSON.stringify(projected), now(), draft.id);
+            localRegistryCompleteApproval(draft.id, saved);
           }
           db()
             .prepare(
@@ -896,15 +1052,35 @@ export async function handleApi(request: Request): Promise<Response> {
       const user = requireUser(request, true),
         conversation = conversationRow(messages[1], user);
       if (method === "GET") {
-        markConversationRead(user.id, messages[1]);
-        return respond(
-          db()
-            .prepare(
-              "SELECT * FROM messages WHERE conversation_id=? ORDER BY created_at,id LIMIT 500",
-            )
-            .all(messages[1])
-            .map(messageDTO),
+        const { limit, after } = parseHistoryQuery(
+          url,
+          `messages:${messages[1]}`,
         );
+        const rows = after
+          ? db()
+              .prepare(
+                "SELECT * FROM messages WHERE conversation_id=? AND (created_at<? OR created_at=? AND id<?) ORDER BY created_at DESC,id DESC LIMIT ?",
+              )
+              .all(
+                messages[1],
+                after.createdAt,
+                after.createdAt,
+                after.id,
+                limit + 1,
+              )
+          : db()
+              .prepare(
+                "SELECT * FROM messages WHERE conversation_id=? ORDER BY created_at DESC,id DESC LIMIT ?",
+              )
+              .all(messages[1], limit + 1);
+        markConversationRead(user.id, messages[1]);
+        return respond(rows.slice(0, limit).reverse().map(messageDTO), 200, {
+          nextCursor: historyCursor(
+            `messages:${messages[1]}`,
+            rows as any,
+            limit,
+          ),
+        });
       }
       if (method === "POST") {
         const input = parse(
@@ -1097,7 +1273,6 @@ export async function handleApi(request: Request): Promise<Response> {
     }
     if (path === "uploads" && method === "POST") {
       const user = requireUser(request);
-      rateLimit(`upload:${user.id}`, 60, 3600);
       if (Number(request.headers.get("content-length") || 0) > 16 * 1024 * 1024)
         throw new ApiError(413, "Image trop volumineuse (10 Mo maximum).");
       const form = await boundedFormData(request),
@@ -1147,6 +1322,7 @@ export async function handleApi(request: Request): Promise<Response> {
         );
       await mkdir(folder, { recursive: true });
       const storagePath = resolve(folder, `${id}.webp`);
+      localConsumeUpload(user.id, output.length);
       await writeFile(storagePath, output, { mode: 0o600 });
       db()
         .prepare("INSERT INTO media VALUES(?,?,?,?,?,?)")
@@ -1202,52 +1378,8 @@ export async function handleApi(request: Request): Promise<Response> {
         .run(id, user.id, input.listingId, input.reason, now());
       return respond({ id }, 201);
     }
-    if (path === "me/delete" && method === "POST") {
-      const user = requireUser(request);
-      const input = parse(
-        z.object({
-          password: z.string().max(128),
-          confirmation: z.literal("SUPPRIMER"),
-        }),
-        await body(request),
-      );
-      const row = db()
-        .prepare("SELECT password FROM users WHERE id=?")
-        .get(user.id);
-      if (
-        !row?.password ||
-        !passwordMatches(input.password, String(row.password))
-      )
-        throw new ApiError(
-          403,
-          "Confirmez votre mot de passe. Les comptes de démonstration partagés ne peuvent pas être supprimés.",
-          "REAUTH_REQUIRED",
-        );
-      transact(() => {
-        db()
-          .prepare(
-            "UPDATE users SET status='deleted',name='Compte supprimé',email=?,password=NULL WHERE id=?",
-          )
-          .run(`${user.id}@deleted.invalid`, user.id);
-        db()
-          .prepare(
-            "UPDATE listings SET status='withdrawn',public_json=NULL WHERE seller_id=?",
-          )
-          .run(user.id);
-        db().prepare("DELETE FROM favorites WHERE user_id=?").run(user.id);
-        db().prepare("DELETE FROM sessions WHERE user_id=?").run(user.id);
-        db()
-          .prepare("UPDATE mail_tokens SET used=1 WHERE user_id=?")
-          .run(user.id);
-        audit(user.id, "account.deletion_pending", user.id);
-      });
-      cookie = "gp_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0";
-      return respond({
-        deactivated: true,
-        message:
-          "Compte désactivé et publications retirées. Les données résiduelles nécessaires aux échanges et aux journaux restent à purger selon la politique de conservation.",
-      });
-    }
+    if (path === "me/delete" && method === "POST")
+      return handlePrivacyCommands(request, "delete");
     if (path === "notifications" && method === "GET") {
       const user = requireUser(request);
       const value = notificationsFor(user.id);
@@ -1357,28 +1489,33 @@ export async function handleApi(request: Request): Promise<Response> {
     if (path === "me/profile" && method === "PATCH") {
       const user = requireUser(request);
       const input = parse(
-        z.object({ name: text.min(2).max(80) }).strict(),
+        z
+          .object({
+            name: text.min(2).max(80).optional(),
+            sellerType: z
+              .enum(["private", "professional"])
+              .nullable()
+              .optional(),
+          })
+          .strict()
+          .refine((x) => Object.keys(x).length > 0),
         await body(request),
       );
       db()
-        .prepare("UPDATE users SET name=? WHERE id=?")
-        .run(input.name, user.id);
-      return respond({ ...user, name: input.name });
+        .prepare("UPDATE users SET name=?,seller_type=? WHERE id=?")
+        .run(
+          input.name ?? user.name,
+          input.sellerType === undefined
+            ? (user.sellerType ?? null)
+            : input.sellerType,
+          user.id,
+        );
+      return respond(
+        userDTO(db().prepare("SELECT * FROM users WHERE id=?").get(user.id)!),
+      );
     }
-    if (path === "me/export" && ["GET", "POST"].includes(method)) {
-      const user = requireUser(request);
-      return respond({
-        profile: user,
-        listings: db()
-          .prepare("SELECT * FROM listings WHERE seller_id=?")
-          .all(user.id)
-          .map(privateListing),
-        messages: db()
-          .prepare("SELECT * FROM messages WHERE sender_id=?")
-          .all(user.id)
-          .map(messageDTO),
-      });
-    }
+    if (path === "me/export" && ["GET", "POST"].includes(method))
+      return handlePrivacyCommands(request, "export");
     throw new ApiError(404, "Ressource introuvable.", "NOT_FOUND");
   } catch (error) {
     if (error instanceof ApiError)
@@ -1388,7 +1525,9 @@ export async function handleApi(request: Request): Promise<Response> {
           status: error.status,
           headers: {
             "Cache-Control": "no-store",
-            ...(error.status === 429 ? { "Retry-After": "60" } : {}),
+            ...(error.status === 429
+              ? { "Retry-After": String(error.retryAfter ?? 60) }
+              : {}),
           },
         },
       );

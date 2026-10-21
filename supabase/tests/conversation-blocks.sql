@@ -17,6 +17,7 @@ select set_config('request.jwt.claim.sub','f1000000-0000-4000-8000-000000000001'
 select 1/((select count(*)=0 from listings where id='f2000000-0000-4000-8000-000000000001')::int) as private_draft_rls;
 do $$ begin begin perform gp_moderate('f2000000-0000-4000-8000-000000000001','approve',3,null);raise exception 'Expected FORBIDDEN';exception when others then if sqlerrm not in ('FORBIDDEN','MFA_OR_PERMISSION_REQUIRED') then raise;end if;end;end;$$;
 select set_config('request.jwt.claim.sub','f1000000-0000-4000-8000-000000000003',true);
+select set_config('request.jwt.claims','{"sub":"f1000000-0000-4000-8000-000000000003","role":"authenticated","aal":"aal2"}',true);
 do $$begin begin perform gp_moderate('f2000000-0000-4000-8000-000000000001','approve',null,null);raise exception 'Expected VERSION_CONFLICT';exception when others then if sqlerrm<>'VERSION_CONFLICT' then raise;end if;end;end;$$;
 select gp_moderate('f2000000-0000-4000-8000-000000000001','approve',3,null);
 select 1/((select payload->'spacePhotos' ? (id::text||':unit:1') and not(payload->'spacePhotos' ? 'f3000000-0000-4000-8000-000000000001') and not(payload?'address') and not(payload?'sellerId') and payload->>'sceneAvailable'='false' and payload->'coordinates'='[4.86,45.76]'::jsonb from published_listings where id='f2000000-0000-4000-8000-000000000001')::int) as public_privacy;
@@ -31,6 +32,7 @@ select gp_set_conversation_block(current_setting('gp.qa_conversation')::uuid,tru
 select 1/((select (value->>'blocked')::boolean and (value->>'blockedByMe')::boolean from jsonb_array_elements(gp_conversations()) where (value->>'id')::uuid=current_setting('gp.qa_conversation')::uuid)::integer) as buyer_block_persisted;
 do $$begin begin perform gp_message(current_setting('gp.qa_conversation')::uuid,'Message interdit','block-message-123');raise exception 'Expected block';exception when others then if sqlerrm<>'CONVERSATION_BLOCKED' then raise;end if;end;begin perform gp_visit(current_setting('gp.qa_conversation')::uuid,'blocked-visit-123',null);raise exception 'Expected block';exception when others then if sqlerrm<>'CONVERSATION_BLOCKED' then raise;end if;end;end;$$;
 select set_config('request.jwt.claim.sub','f1000000-0000-4000-8000-000000000003',true);
+select set_config('request.jwt.claims','{"sub":"f1000000-0000-4000-8000-000000000003","role":"authenticated","aal":"aal2"}',true);
 do $$begin begin perform gp_set_conversation_block(current_setting('gp.qa_conversation')::uuid,false);raise exception 'Expected third party refusal';exception when others then if sqlerrm<>'FORBIDDEN' then raise;end if;end;begin perform gp_conversation_block_state(current_setting('gp.qa_conversation')::uuid);raise exception 'Expected third party read refusal';exception when others then if sqlerrm<>'FORBIDDEN' then raise;end if;end;end;$$;
 select 1/((select count(*)=0 from conversation_blocks)::integer) as no_moderator_block_access;
 select set_config('request.jwt.claim.sub','f1000000-0000-4000-8000-000000000002',true);

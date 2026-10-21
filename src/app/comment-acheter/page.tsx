@@ -41,10 +41,8 @@ export default function HowToBuy() {
         <section className="card prose">
           <h2>La 3D aide à comprendre le lieu.</h2>
           <p>
-            Elle complète les photos, les mesures et la visite. Un modèle
-            schématique ne garantit ni la conformité d’un véhicule ni l’absence
-            de défauts. Le niveau de fidélité et la source des informations
-            doivent rester visibles.
+            Un schéma représentatif pour mieux comprendre le parking et ses
+            places.
           </p>
           <p>
             GP park. facilite la mise en relation. Le prix du bien est affiché,

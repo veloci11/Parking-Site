@@ -29,7 +29,7 @@ after(() => {
 test("première page inclut le seed même lorsque la DB n’était pas initialisée", () => {
   const page = localCatalogPage(filters, 2, null);
   assert.equal(page.items.length, 2);
-  assert.equal(page.total, 6);
+  assert.equal(page.total, 7);
   assert.ok(page.nextCursor);
 });
 test("une insertion entre deux pages ne duplique ni ne perd les annonces déjà présentes", () => {

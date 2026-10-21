@@ -57,3 +57,33 @@ test("préparation corrompue ou quantité invalide ne crée pas de lot implicite
     90,
   );
 });
+test("le choix exclusif vente ou location est conservé dans la préparation", () => {
+  for (const transactionType of ["sale", "rent"] as const) {
+    const prepared = decodePreparation(
+      JSON.stringify({
+        title: "Lot à proposer",
+        city: "Lyon",
+        type: "covered",
+        quantity: 2,
+        transactionType,
+      }),
+    );
+    assert.equal(prepared?.transactionType, transactionType);
+    assert.equal(
+      preparationPayload(prepared!, () => "unit").transactionType,
+      transactionType,
+    );
+  }
+  assert.equal(
+    decodePreparation(
+      JSON.stringify({
+        title: "Lot",
+        city: "Lyon",
+        type: "covered",
+        quantity: 2,
+        transactionType: "both",
+      }),
+    ),
+    null,
+  );
+});

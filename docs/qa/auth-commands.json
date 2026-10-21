@@ -1,0 +1,16 @@
+{
+  "scope": "018 auth commands, signed recovery grants and versioned declarations",
+  "localTests": { "passed": 5, "failed": 0 },
+  "typecheck": "passed",
+  "supabaseSql": {
+    "migrationAndTestsInRollbackTransaction": "passed",
+    "finalPrivilegeAssertion": 1,
+    "schemaRolledBack": true,
+    "qaUsersRemaining": 0
+  },
+  "permanentMigration": "parent review and application required",
+  "realEmailSent": false,
+  "realEmailRoundTripTested": false,
+  "publicDeployment": false,
+  "policyDocuments": "preparation versions; operator review still required"
+}

@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-21T16:48:51.035Z",
+  "timestamp": "2026-10-21T19:46:20.304Z",
   "scope": "Next HTTP + confirmed GoTrue accounts + direct PostgREST/Storage with publishable key",
   "status": "passed",
   "checks": [
@@ -157,6 +157,47 @@
       "passed": true
     },
     {
+      "name": "moderator_mfa_role",
+      "passed": true
+    },
+    {
+      "name": "moderator_mfa_mfa_available",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "moderator_mfa_no_preexisting_verified_factor",
+      "passed": true
+    },
+    {
+      "name": "moderator_mfa_factor_enrolled",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "moderator_mfa_private_factor_contract",
+      "passed": true
+    },
+    {
+      "name": "moderator_mfa_challenge_1",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "moderator_mfa_code_verified",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "moderator_mfa_session_aal2",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "moderator_mfa_own_factor_verified",
+      "passed": true
+    },
+    {
       "name": "anon_gp_limit_not_callable",
       "passed": true,
       "httpStatus": 401,
@@ -184,6 +225,10 @@
       "name": "draft_creation",
       "passed": true,
       "httpStatus": 201
+    },
+    {
+      "name": "legacy_transaction_defaults_to_sale",
+      "passed": true
     },
     {
       "name": "direct_rest_owner_can_read",
@@ -336,7 +381,7 @@
       "name": "attestation_required_by_server",
       "passed": true,
       "httpStatus": 400,
-      "code": "OWNERSHIP_ATTESTATION_REQUIRED"
+      "code": "LOCATION_CONFIRMATION_REQUIRED"
     },
     {
       "name": "submission",
@@ -369,7 +414,7 @@
       "name": "member_moderation_endpoint_denied",
       "passed": true,
       "httpStatus": 403,
-      "code": "VALIDATION_ERROR"
+      "code": "FORBIDDEN"
     },
     {
       "name": "moderation_queue",
@@ -378,6 +423,61 @@
     },
     {
       "name": "submitted_revision_in_queue",
+      "passed": true
+    },
+    {
+      "name": "admin_mfa_login",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_mfa_identity",
+      "passed": true
+    },
+    {
+      "name": "admin_mfa_role",
+      "passed": true
+    },
+    {
+      "name": "admin_mfa_mfa_available",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_mfa_no_preexisting_verified_factor",
+      "passed": true
+    },
+    {
+      "name": "admin_mfa_registry_rejects_aal1",
+      "passed": true,
+      "httpStatus": 403
+    },
+    {
+      "name": "admin_mfa_factor_enrolled",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_mfa_private_factor_contract",
+      "passed": true
+    },
+    {
+      "name": "admin_mfa_challenge_1",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_mfa_code_verified",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_mfa_session_aal2",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_mfa_own_factor_verified",
       "passed": true
     },
     {
@@ -393,6 +493,10 @@
       "name": "public_listing",
       "passed": true,
       "httpStatus": 200
+    },
+    {
+      "name": "sale_public_projection",
+      "passed": true
     },
     {
       "name": "public_total_price",
@@ -489,8 +593,8 @@
     {
       "name": "outsider_conversation_api_denied",
       "passed": true,
-      "httpStatus": 404,
-      "code": "VALIDATION_ERROR"
+      "httpStatus": 403,
+      "code": "FORBIDDEN"
     },
     {
       "name": "direct_messages_other_query",
@@ -583,6 +687,26 @@
       "httpStatus": 200
     },
     {
+      "name": "moderator_mfa_own_factor_removed",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "moderator_mfa_own_factor_absent",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_mfa_own_factor_removed",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_mfa_own_factor_absent",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
       "name": "seller_logout",
       "passed": true,
       "httpStatus": 200
@@ -603,9 +727,11 @@
       "httpStatus": 200
     }
   ],
-  "passed": 128,
+  "passed": 155,
   "failedCheck": null,
   "credentialsIncluded": false,
+  "qrSecretOrTotpIncluded": false,
+  "qaFactorsRevoked": true,
   "fixtures": "Ignored .data/supabase-qa-result.json; coordinator must clean up exact IDs",
   "emailsSent": false,
   "limitations": [

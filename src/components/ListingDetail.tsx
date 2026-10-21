@@ -1,4 +1,8 @@
 "use client";
+import { listingPrice, offerLabel } from "@/lib/listing-price";
+import { loadPublicParkingGroup } from "@/lib/parking-client";
+import type { PublicParkingSceneGroup } from "@/lib/parking-registry";
+import { contactDraftKey, decodeContactDraft } from "@/lib/contact-draft";
 import Image from "./SafePhoto";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -10,13 +14,14 @@ import {
   Calendar,
   CheckCircle2,
   Heart,
-  Layers3,
   MapPin,
   MessageCircle,
   ShieldCheck,
 } from "lucide-react";
 import { api, useSession } from "@/lib/client";
 import { useFavorites } from "@/lib/favorites";
+import { ConditionEvidenceSummary } from "./account/condition-evidence";
+import { CommercialSummary, PhotoCaption } from "./CommercialSummary";
 import {
   areaLabel,
   money,
@@ -51,12 +56,113 @@ export default function ListingDetail({
   });
   const { user, loading } = useSession();
   const favorites = useFavorites();
-  const [viewer, setViewer] = useState(false);
+  const [parkingGroup, setParkingGroup] =
+    useState<PublicParkingSceneGroup | null>(null);
+  const [parkingLoading, setParkingLoading] = useState(true);
+  const [parkingError, setParkingError] = useState("");
+  const [parkingAttempt, setParkingAttempt] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    setParkingLoading(true);
+    setParkingError("");
+    setParkingGroup(null);
+    let pending = false;
+    async function refreshParking() {
+      if (pending || document.visibilityState !== "visible") return;
+      pending = true;
+      try {
+        const group = await loadPublicParkingGroup(
+          listing.id,
+          controller.signal,
+        );
+        if (!controller.signal.aborted) {
+          setParkingGroup(group);
+          setParkingError("");
+        }
+      } catch (error) {
+        if (!controller.signal.aborted)
+          setParkingError((error as Error).message);
+      } finally {
+        pending = false;
+        if (!controller.signal.aborted) setParkingLoading(false);
+      }
+    }
+    void refreshParking();
+    const timer = setInterval(() => void refreshParking(), 30000);
+    const focus = () => void refreshParking();
+    window.addEventListener("focus", focus);
+    document.addEventListener("visibilitychange", focus);
+    return () => {
+      controller.abort();
+      clearInterval(timer);
+      window.removeEventListener("focus", focus);
+      document.removeEventListener("visibilitychange", focus);
+    };
+  }, [listing.id, listing.version, parkingAttempt]);
+  const hasParkingViewer =
+    !parkingLoading &&
+    !parkingError &&
+    (parkingGroup
+      ? parkingGroup.levels.some((level) => level.spaces.length > 0)
+      : Boolean(listing.sceneAvailable));
   const [message, setMessage] = useState(
     "Bonjour, votre annonce m’intéresse. Est-il possible d’organiser une visite ?",
   );
   const [visit, setVisit] = useState(true);
   const [sending, setSending] = useState(false);
+  const [draftNotice, setDraftNotice] = useState("");
+  useEffect(() => {
+    try {
+      const saved = decodeContactDraft(
+        sessionStorage.getItem(contactDraftKey(initialListing.id)),
+      );
+      if (saved) {
+        setMessage(saved.message);
+        setVisit(saved.visit);
+        requestIds.current = {
+          message: saved.messageRequestId,
+          visit: saved.visitRequestId,
+        };
+        setDraftNotice(
+          "Votre texte préparé dans cet onglet a été restauré. Aucun message n’a encore été envoyé par cette reprise.",
+        );
+      }
+    } catch {
+      setDraftNotice(
+        "Le stockage de cet onglet est indisponible : votre texte ne sera pas conservé pendant la connexion.",
+      );
+    }
+  }, [initialListing.id]);
+  function saveContactText(text: string, requestVisit: boolean) {
+    try {
+      sessionStorage.setItem(
+        contactDraftKey(listing.id),
+        JSON.stringify({
+          message: text,
+          visit: requestVisit,
+          messageRequestId: requestIds.current.message,
+          visitRequestId: requestIds.current.visit,
+        }),
+      );
+      setDraftNotice(
+        "Texte conservé dans cet onglet uniquement, jusqu’à l’envoi ou sa fermeture.",
+      );
+    } catch {
+      setDraftNotice(
+        "Texte non sauvegardé dans cet onglet. Copiez-le avant de vous connecter.",
+      );
+    }
+  }
+  function editContactText(text: string) {
+    if (text !== message) requestIds.current.message = crypto.randomUUID();
+    setMessage(text);
+    saveContactText(text, visit);
+  }
+  function editVisit(value: boolean) {
+    setVisit(value);
+    saveContactText(message, value);
+  }
+
   const [error, setError] = useState("");
   const [report, setReport] = useState(false);
   const [reportReason, setReportReason] = useState("");
@@ -135,6 +241,12 @@ export default function ListingDetail({
           method: "POST",
           body: JSON.stringify({ clientRequestId: requestIds.current.visit }),
         });
+      try {
+        sessionStorage.removeItem(contactDraftKey(listing.id));
+      } catch {
+        /* The server acknowledgement remains valid if local cleanup is unavailable. */
+      }
+      setDraftNotice("");
       router.push(`/compte/messages/${c.id}`);
     } catch (e) {
       setError((e as Error).message);
@@ -214,27 +326,112 @@ export default function ListingDetail({
       ) : null}
       <div className="detail-layout">
         <div>
-          <div className="detail-gallery">
-            {listing.photos.length ? (
-              listing.photos.map((photo, i) => (
-                <Image
-                  key={photo}
-                  src={photo}
-                  alt={
-                    listing.isDemo
-                      ? `Illustration de démonstration ${i + 1}`
-                      : `${listing.title} — photo ${i + 1}`
-                  }
-                  width={900}
-                  height={600}
-                  sizes="(max-width:767px) 100vw, 800px"
-                  loading={i ? "lazy" : "eager"}
-                />
-              ))
-            ) : (
-              <div className="notice">Le vendeur n’a pas ajouté de photo.</div>
-            )}
-          </div>
+          {hasParkingViewer ? (
+            <>
+              <section
+                aria-label="Le parking et ses places"
+                className="detail-parking-section"
+              >
+                <div className="detail-viewer">
+                  <ParkingViewer
+                    listing={listing}
+                    group={parkingGroup ?? undefined}
+                    onListingSelect={(id, unit) => {
+                      if (id === listing.id) return;
+                      const target = parkingGroup?.listings.find(
+                        (item) => item.id === id,
+                      );
+                      if (!target) return;
+                      const floor = parkingGroup?.levels.find((level) =>
+                        level.spaces.some(
+                          (space) =>
+                            space.listingId === id &&
+                            space.listingUnitId === unit,
+                        ),
+                      )?.level;
+                      const params = new URLSearchParams({ parking: id, unit });
+                      if (floor !== undefined)
+                        params.set("floor", String(floor));
+                      router.push(
+                        `/annonces/${target.id}/${target.slug}?${params}`,
+                      );
+                    }}
+                  />
+                </div>
+              </section>
+              <details className="detail-photo-fold">
+                <summary>Photos de l’annonce ({listing.photos.length})</summary>
+                <div className="detail-gallery">
+                  {listing.photos.length ? (
+                    listing.photos.map((photo, i) => (
+                      <Image
+                        key={photo}
+                        src={photo}
+                        alt={
+                          listing.isDemo
+                            ? `Illustration de démonstration ${i + 1}`
+                            : `${listing.title} — photo ${i + 1}`
+                        }
+                        width={900}
+                        height={600}
+                        sizes="(max-width:767px) 100vw, 800px"
+                        loading={i ? "lazy" : "eager"}
+                      />
+                    ))
+                  ) : (
+                    <div className="notice">
+                      Le vendeur n’a pas ajouté de photo.
+                    </div>
+                  )}
+                </div>
+              </details>
+            </>
+          ) : (
+            <>
+              <div className="detail-gallery">
+                {listing.photos.length ? (
+                  listing.photos.map((photo, i) => (
+                    <Image
+                      key={photo}
+                      src={photo}
+                      alt={
+                        listing.isDemo
+                          ? `Illustration de démonstration ${i + 1}`
+                          : `${listing.title} — photo ${i + 1}`
+                      }
+                      width={900}
+                      height={600}
+                      sizes="(max-width:767px) 100vw, 800px"
+                      loading={i ? "lazy" : "eager"}
+                    />
+                  ))
+                ) : (
+                  <div className="notice">
+                    Le vendeur n’a pas ajouté de photo.
+                  </div>
+                )}
+              </div>
+              {parkingLoading ? (
+                <p className="small muted" role="status">
+                  Chargement du parking…
+                </p>
+              ) : parkingError ? (
+                <p className="notice" role="status">
+                  Le plan est momentanément indisponible.{" "}
+                  <button
+                    className="text-button"
+                    onClick={() => setParkingAttempt((value) => value + 1)}
+                  >
+                    Réessayer
+                  </button>
+                </p>
+              ) : (
+                <p className="small muted">
+                  Aucun plan 3D disponible pour le moment.
+                </p>
+              )}
+            </>
+          )}
           <div className="detail-facts">
             <div>
               <span>Type</span>
@@ -276,6 +473,17 @@ export default function ListingDetail({
             </div>
           </div>
           <h2>La place, dans les détails.</h2>
+          <CommercialSummary listing={listing} />
+          {listing.photos.map((url, index) =>
+            listing.commercialDetails?.photoMetadata[
+              url.split("/").at(-1) || ""
+            ] ? (
+              <div key={url}>
+                <span className="muted small">Photo générale {index + 1}</span>
+                <PhotoCaption listing={listing} url={url} />
+              </div>
+            ) : null,
+          )}
           <p style={{ whiteSpace: "pre-line" }}>{listing.description}</p>
           <h2 style={{ marginTop: 32 }}>Un état clair, pour décider.</h2>
           <p className="muted small">
@@ -301,6 +509,7 @@ export default function ListingDetail({
               {listing.quality.observations}
             </p>
           ) : null}
+          <ConditionEvidenceSummary values={listing.conditionObservations} />
           <h2 style={{ marginTop: 32 }}>Photos de chaque place</h2>
           <p className="muted small">
             Les vues générales et les photos liées à une place ont des
@@ -318,6 +527,11 @@ export default function ListingDetail({
                     ? `${photos.length} photo${photos.length > 1 ? "s" : ""} liée${photos.length > 1 ? "s" : ""} — couverture partielle déclarée`
                     : "aucune photo individuelle"}
                 </summary>
+                <ConditionEvidenceSummary
+                  values={listing.conditionObservations}
+                  spaceId={space.id}
+                />
+                <CommercialSummary listing={listing} spaceId={space.id} />
                 {quality ? (
                   <div className="quality-grid">
                     <p className="muted small">
@@ -353,14 +567,18 @@ export default function ListingDetail({
                 {photos.length ? (
                   <div className="unit-photo-grid">
                     {photos.map((photo, index) => (
-                      <Image
-                        key={photo}
-                        src={photo}
-                        alt={`${listing.isDemo ? "Illustration de démonstration" : "Photo déclarée"} — place ${space.number}, vue ${index + 1}`}
-                        width={600}
-                        height={400}
-                        sizes="(max-width:767px) 100vw, 360px"
-                      />
+                      <figure key={photo} style={{ margin: 0 }}>
+                        <Image
+                          src={photo}
+                          alt={`${listing.isDemo ? "Illustration de démonstration" : "Photo déclarée"} — place ${space.number}, vue ${index + 1}`}
+                          width={600}
+                          height={400}
+                          sizes="(max-width:767px) 100vw, 360px"
+                        />
+                        <figcaption>
+                          <PhotoCaption listing={listing} url={photo} />
+                        </figcaption>
+                      </figure>
                     ))}
                   </div>
                 ) : (
@@ -414,28 +632,6 @@ export default function ListingDetail({
               ? listing.address
               : `${listing.city} · secteur ${listing.district}. L’adresse précise est communiquée par le vendeur.`}
           </p>
-          {listing.sceneAvailable ? (
-            <>
-              <button
-                className="button button-soft"
-                onClick={() => setViewer(!viewer)}
-                aria-expanded={viewer}
-              >
-                <Layers3 size={18} />
-                {viewer ? "Masquer le plan 3D" : "Explorer le parking en 3D"}
-              </button>
-              {viewer ? (
-                <div className="detail-viewer">
-                  <ParkingViewer listing={listing} />
-                </div>
-              ) : null}
-            </>
-          ) : (
-            <p className="notice">
-              Les photos et les caractéristiques sont disponibles. Aucun plan
-              intérieur vérifié n’est publié pour cette annonce.
-            </p>
-          )}
           <section
             ref={contact}
             id="contact"
@@ -458,6 +654,35 @@ export default function ListingDetail({
                 <p className="muted">
                   Connectez-vous pour contacter le vendeur en privé.
                 </p>
+                <label htmlFor="visitor-message">
+                  Préparer votre message avant connexion
+                </label>
+                <textarea
+                  id="visitor-message"
+                  className="input"
+                  rows={4}
+                  maxLength={4000}
+                  value={message}
+                  onChange={(e) => editContactText(e.target.value)}
+                />
+                <label className="checkbox-field">
+                  <input
+                    type="checkbox"
+                    checked={visit}
+                    onChange={(e) => editVisit(e.target.checked)}
+                  />
+                  Demander aussi une visite après connexion
+                </label>
+                <p className="small muted">
+                  Votre texte reste local à cet onglet. Il sera présenté après
+                  connexion et envoyé uniquement lorsque vous validerez le
+                  formulaire.
+                </p>
+                {draftNotice ? (
+                  <p className="small muted" role="status">
+                    {draftNotice}
+                  </p>
+                ) : null}
                 <Link
                   className="button button-primary"
                   href={`/connexion?next=${encodeURIComponent(`/annonces/${listing.id}/${listing.slug}?contact=1`)}`}
@@ -478,6 +703,11 @@ export default function ListingDetail({
               </div>
             ) : (
               <form className="detail-contact" onSubmit={send}>
+                {draftNotice ? (
+                  <p className="small muted" role="status">
+                    {draftNotice}
+                  </p>
+                ) : null}
                 <label htmlFor="message">Votre message</label>
                 <textarea
                   id="message"
@@ -485,13 +715,13 @@ export default function ListingDetail({
                   maxLength={4000}
                   required
                   value={message}
-                  onChange={(e) => setMessage(e.target.value)}
+                  onChange={(e) => editContactText(e.target.value)}
                 />
                 <label className="checkbox-field">
                   <input
                     type="checkbox"
                     checked={visit}
-                    onChange={(e) => setVisit(e.target.checked)}
+                    onChange={(e) => editVisit(e.target.checked)}
                   />
                   <Calendar size={18} />
                   Demander aussi une visite
@@ -562,10 +792,15 @@ export default function ListingDetail({
         </div>
         <aside className="detail-side card">
           <span className="badge">
-            À vendre{listing.spaces.length > 1 ? " · prix total du lot" : ""}
+            {offerLabel(listing)}
+            {listing.spaces.length > 1
+              ? listing.transactionType === "rent"
+                ? " · loyer mensuel du lot"
+                : " · prix total du lot"
+              : ""}
           </span>
           <p className="price" style={{ margin: "16px 0" }}>
-            {money(listing.priceCents)}
+            {listingPrice(listing)}
           </p>
           <p className="muted">
             {typeLabels[listing.type]}
@@ -589,8 +824,9 @@ export default function ListingDetail({
               {listing.sellerName}
             </p>
             <p className="small muted">
-              Le prix d’achat du parking n’est pas encaissé sur la plateforme.
-              La vente est formalisée avec les professionnels compétents.
+              {listing.transactionType === "rent"
+                ? "Le loyer n’est pas encaissé sur la plateforme. Les conditions de location sont à convenir avec le bailleur."
+                : "Le prix d’achat du parking n’est pas encaissé sur la plateforme. La vente est formalisée avec les professionnels compétents."}
             </p>
           </div>
         </aside>

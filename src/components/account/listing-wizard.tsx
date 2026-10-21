@@ -1,4 +1,5 @@
 "use client";
+import FilterSelect from "../FilterSelect";
 import {
   useCallback,
   useEffect,
@@ -23,6 +24,15 @@ import {
 } from "lucide-react";
 import { AccountGate, api } from "./shared";
 import { QualitySummary, emptyQuality } from "./unit-quality";
+import {
+  ConditionEvidenceEditor,
+  ConditionEvidenceSummary,
+} from "./condition-evidence";
+import { editableConditions } from "@/lib/condition-observations";
+import { emptyCommercialDetails } from "@/lib/commercial-details";
+import { CommercialEditor } from "./commercial-editor";
+import { CommercialSummary } from "../CommercialSummary";
+import { listingIssues } from "@/lib/listing-issues";
 import { useSession } from "@/lib/client";
 import PreparationForm from "./preparation";
 import {
@@ -82,7 +92,7 @@ function NumField({
           type="number"
           min={unit === "€/an" ? 0 : 0.01}
           max={max ?? (unit === "m²" ? 500 : unit === "€/an" ? 1000000 : 50)}
-          step="0.01"
+          step={unit === "m" ? "0.001" : "0.01"}
           value={value ?? ""}
           onChange={(e) =>
             onChange(e.target.value === "" ? null : Number(e.target.value))
@@ -96,6 +106,10 @@ function NumField({
 }
 function WizardContent({ user, id }: { user: User; id?: string }) {
   const [listing, setListing] = useState<Listing | null>(null),
+    [preview, setPreview] = useState<Listing | null>(null),
+    [previewError, setPreviewError] = useState(""),
+    [previewAttempt, setPreviewAttempt] = useState(0),
+    [showIssues, setShowIssues] = useState(false),
     [step, setStep] = useState(0),
     [loading, setLoading] = useState(!!id),
     [creating, setCreating] = useState(false),
@@ -149,11 +163,28 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
     api<{ data: Listing }>(`/api/listings/${id}?draft=1`)
       .then((r) => {
         setListing(r.data);
+        setLocationConfirmed(!!r.data.locationConfirmedAt);
         latest.current = r.data;
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [id]);
+  useEffect(() => {
+    setPreview(null);
+    setPreviewError("");
+    if (step !== 7 || !listing?.id || saveState !== "saved") return;
+    let active = true;
+    api<{ data: Listing }>(`/api/listings/${listing.id}/preview`)
+      .then((response) => {
+        if (active) setPreview(response.data);
+      })
+      .catch((error) => {
+        if (active) setPreviewError(error.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [step, listing?.id, listing?.version, saveState, previewAttempt]);
   async function create() {
     setCreating(true);
     setError("");
@@ -214,12 +245,19 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
           city: current.city,
           district: current.district,
           priceCents: current.priceCents,
+          transactionType: current.transactionType || "sale",
           type: current.type,
           spaces: current.spaces,
           photos: current.photos,
           spacePhotos: current.spacePhotos,
           quality: current.quality,
           unitQuality: current.unitQuality,
+          conditionObservations: editableConditions(
+            current.conditionObservations,
+          ),
+          commercialDetails: current.commercialDetails,
+          publicCoordinates: current.publicCoordinates,
+          locationConfirmedAt: current.locationConfirmedAt,
           locationPrecision: current.locationPrecision,
           coordinates: current.coordinates,
           address: current.address,
@@ -239,6 +277,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
             updatedAt: r.data.updatedAt,
           }
         : r.data;
+      if (!changed) setLocationConfirmed(!!r.data.locationConfirmedAt);
       latest.current = next;
       setListing(next);
       dirty.current = changed;
@@ -285,9 +324,13 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
       "city" in patch ||
       "district" in patch ||
       "coordinates" in patch ||
+      "publicCoordinates" in patch ||
+      "address" in patch ||
       "locationPrecision" in patch
-    )
+    ) {
       setLocationConfirmed(false);
+      patch.locationConfirmedAt = null;
+    }
     const next = { ...latest.current, ...patch };
     if (patch.spaces) {
       const allowed = new Set(patch.spaces.map((s) => s.id));
@@ -301,10 +344,56 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
           allowed.has(id),
         ),
       );
+      next.conditionObservations = next.conditionObservations?.filter(
+        (value) => !value.spaceId || allowed.has(value.spaceId),
+      );
+      if (next.commercialDetails)
+        next.commercialDetails = {
+          ...next.commercialDetails,
+          units: Object.fromEntries(
+            Object.entries(next.commercialDetails.units).filter(([id]) =>
+              allowed.has(id),
+            ),
+          ),
+        };
       if (qualityTarget !== "general" && !allowed.has(qualityTarget))
         setQualityTarget("general");
       if (photoTarget !== "general" && !allowed.has(photoTarget))
         setPhotoTarget("general");
+    }
+    if (patch.photos || patch.spacePhotos) {
+      if (next.commercialDetails) {
+        const photos = new Set([
+          ...next.photos,
+          ...Object.values(next.spacePhotos || {}).flat(),
+        ]);
+        next.commercialDetails = {
+          ...next.commercialDetails,
+          photoMetadata: Object.fromEntries(
+            Object.entries(next.commercialDetails.photoMetadata).filter(
+              ([id]) => photos.has(`/api/media/${id}`),
+            ),
+          ),
+        };
+      }
+      next.conditionObservations = next.conditionObservations?.map((value) => {
+        const photos = new Set(
+          value.spaceId
+            ? next.spacePhotos?.[value.spaceId] || []
+            : [...next.photos, ...Object.values(next.spacePhotos || {}).flat()],
+        );
+        const evidenceMediaIds = value.evidenceMediaIds.filter((id) =>
+          photos.has(`/api/media/${id}`),
+        );
+        return {
+          ...value,
+          evidenceMediaIds,
+          ...(value.sourceKind === "photo_documented" &&
+          !evidenceMediaIds.length
+            ? { sourceKind: "seller_declared" as const }
+            : {}),
+        };
+      });
     }
     seq.current++;
     latest.current = next;
@@ -424,11 +513,8 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
     if (step === 1 && !locationConfirmed)
       message =
         "Vérifiez le point de localisation puis confirmez qu’il correspond au secteur ou à l’adresse que vous autorisez.";
-    if (
-      step === 2 &&
-      (!listing.spaces.length || listing.spaces.some((s) => !s.number.trim()))
-    )
-      message = "Renseignez un numéro ou une référence pour chaque place.";
+    if (step === 2 && !listing.spaces.length)
+      message = "Ajoutez au moins une place à votre annonce.";
     if (step === 4 && listing.photos.length < 3)
       message =
         "Ajoutez au moins 3 photos pour présenter le bien et ses contraintes.";
@@ -436,7 +522,10 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
       step === 5 &&
       (!Number.isSafeInteger(listing.priceCents) || listing.priceCents <= 0)
     )
-      message = "Indiquez un prix total de vente positif.";
+      message =
+        listing.transactionType === "rent"
+          ? "Indiquez un loyer mensuel total positif."
+          : "Indiquez un prix total de vente positif.";
     if (
       step === 6 &&
       (listing.title.length < 15 ||
@@ -450,7 +539,10 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
     return !message;
   }
   async function next() {
-    if (!validateStep()) return;
+    if (!validateStep()) {
+      setShowIssues(true);
+      return;
+    }
     await save();
     setStep((s) => Math.min(7, s + 1));
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -458,6 +550,11 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!latest.current || !attest) return;
+    if (listingIssues(latest.current).length) {
+      setShowIssues(true);
+      setError("Complétez les informations indiquées avant de soumettre.");
+      return;
+    }
     if (!locationConfirmed) {
       setError(
         "Confirmez le point de localisation avant de soumettre votre annonce.",
@@ -562,6 +659,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
     photoTarget === "general"
       ? listing.photos
       : listing.spacePhotos?.[photoTarget] || [];
+  const missing = listingIssues(listing);
   const imageUnion = new Set([
     ...listing.photos,
     ...Object.values(listing.spacePhotos || {}).flat(),
@@ -624,7 +722,12 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
               <li
                 key={label}
                 className={
-                  step === index ? "active" : index < step ? "complete" : ""
+                  step === index
+                    ? "active"
+                    : index < step &&
+                        !missing.some((issue) => issue.step === index)
+                      ? "complete"
+                      : ""
                 }
               >
                 <button
@@ -634,8 +737,26 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                   }}
                   aria-current={step === index ? "step" : undefined}
                 >
-                  <span>{index < step ? <Check size={14} /> : index + 1}</span>
-                  {label}
+                  <span>
+                    {index < step &&
+                    !missing.some((issue) => issue.step === index) ? (
+                      <Check size={14} />
+                    ) : (
+                      index + 1
+                    )}
+                  </span>
+                  {index === 5 && listing.transactionType === "rent"
+                    ? "Loyer mensuel"
+                    : label}
+                  {missing.some((issue) => issue.step === index) ? (
+                    <small className="muted">
+                      {" "}
+                      · {
+                        missing.filter((issue) => issue.step === index).length
+                      }{" "}
+                      à compléter
+                    </small>
+                  ) : null}
                 </button>
               </li>
             ))}
@@ -645,9 +766,52 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
             restent indiquées comme telles.
           </p>
         </aside>
-        <section className="account-wizard-content">
+        <section
+          className="account-wizard-content"
+          id={
+            step === 2
+              ? "listing-units"
+              : step === 3
+                ? "listing-condition"
+                : step === 4
+                  ? "listing-photos"
+                  : undefined
+          }
+          tabIndex={-1}
+          aria-labelledby="wizard-step-title"
+        >
           <span className="account-eyebrow">ÉTAPE {step + 1} SUR 8</span>
-          <h1>{steps[step]}</h1>
+          <h1 id="wizard-step-title">
+            {step === 5 && listing.transactionType === "rent"
+              ? "Loyer mensuel"
+              : steps[step]}
+          </h1>
+          {(showIssues || step === 7) && missing.length ? (
+            <div className="notice" role="status">
+              <p>
+                {missing.length} information(s) à compléter avant la soumission
+                :
+              </p>
+              <ul>
+                {missing.map((issue) => (
+                  <li key={issue.field}>
+                    <a
+                      href={`#${issue.field}`}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        setStep(issue.step);
+                        requestAnimationFrame(() =>
+                          document.getElementById(issue.field)?.focus(),
+                        );
+                      }}
+                    >
+                      {issue.message}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           {error ? (
             <p className="error" role="alert">
               {error}
@@ -715,8 +879,25 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                 Une place, un box ou plusieurs unités d’un même parking :
                 décrivez ce que vous proposez.
               </p>
+              <div className="field">
+                <span>Type d’offre</span>
+                <FilterSelect
+                  label="Type d’offre"
+                  variant="field"
+                  value={listing.transactionType || "sale"}
+                  options={[
+                    { value: "sale", label: "À vendre" },
+                    { value: "rent", label: "À louer" },
+                  ]}
+                  onChange={(transactionType) =>
+                    change({
+                      transactionType: transactionType as "sale" | "rent",
+                    })
+                  }
+                />
+              </div>
               <div className="account-type-options">
-                {(["covered", "box", "outdoor"] as const).map((t) => (
+                {(["covered", "box", "outdoor", "mixed"] as const).map((t) => (
                   <button
                     key={t}
                     className={listing.type === t ? "active" : ""}
@@ -729,7 +910,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                 ))}
               </div>
               <label className="field">
-                Combien de places vendez-vous ensemble ?
+                Combien de places proposez-vous ensemble ?
                 <input
                   className="input"
                   type="number"
@@ -754,7 +935,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                 <Info size={18} />
                 <p>
                   {listing.spaces.length > 1
-                    ? `Ce lot de ${listing.spaces.length} places sera proposé avec un seul prix total. Pour une vente à l’unité, créez des annonces distinctes.`
+                    ? `Ce lot de ${listing.spaces.length} places sera proposé avec un seul ${listing.transactionType === "rent" ? "loyer mensuel total" : "prix total"}. Pour les proposer à l’unité, créez des annonces distinctes.`
                     : "Votre annonce proposera une place unique."}{" "}
                   Une annonce concerne un seul parking/site.
                 </p>
@@ -771,6 +952,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                 <label className="field">
                   Ville
                   <input
+                    id="parking-city"
                     className="input"
                     value={listing.city}
                     maxLength={80}
@@ -782,6 +964,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                 <label className="field">
                   Quartier
                   <input
+                    id="parking-district"
                     className="input"
                     value={listing.district}
                     maxLength={100}
@@ -800,6 +983,24 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                   onChange={(e) => change({ address: e.target.value })}
                   autoComplete="street-address"
                   placeholder="Numéro et nom de rue"
+                />
+              </label>
+              <label className="field">
+                Code postal
+                <input
+                  className="input"
+                  autoComplete="postal-code"
+                  maxLength={16}
+                  value={listing.commercialDetails?.postalCode || ""}
+                  onChange={(e) =>
+                    change({
+                      commercialDetails: {
+                        ...(listing.commercialDetails ||
+                          emptyCommercialDetails()),
+                        postalCode: e.target.value,
+                      },
+                    })
+                  }
                 />
               </label>
               <fieldset className="account-fieldset">
@@ -888,19 +1089,70 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                 </label>
               </div>
               <p className="muted">
-                Ces coordonnées sont proposées à titre de point de départ.
-                Vérifiez-les et corrigez-les pour votre bien ; elles ne
+                Ces coordonnées exactes sont proposées à titre de point de
+                départ. Vérifiez-les et corrigez-les pour votre bien ; elles ne
                 constituent pas un relevé mesuré.
               </p>
+              {listing.locationPrecision === "area" ? (
+                <fieldset className="account-fieldset">
+                  <legend>Point de secteur affiché au public</legend>
+                  <p className="muted">
+                    Choisissez un point qui situe le quartier sans révéler
+                    l’entrée. Les coordonnées exactes ci-dessus restent privées.
+                  </p>
+                  <div className="form-grid">
+                    {["Longitude du secteur", "Latitude du secteur"].map(
+                      (label, index) => (
+                        <label className="field" key={label}>
+                          {label}
+                          <input
+                            className="input"
+                            type="number"
+                            min={index === 0 ? -180 : -90}
+                            max={index === 0 ? 180 : 90}
+                            step="0.000001"
+                            value={
+                              listing.publicCoordinates?.[index] ??
+                              Math.round(listing.coordinates[index] * 100) / 100
+                            }
+                            onChange={(e) => {
+                              const point: [number, number] = [
+                                ...(listing.publicCoordinates ||
+                                  (listing.coordinates.map(
+                                    (v) => Math.round(v * 100) / 100,
+                                  ) as [number, number])),
+                              ];
+                              point[index] = Number(e.target.value);
+                              change({ publicCoordinates: point });
+                            }}
+                          />
+                        </label>
+                      ),
+                    )}
+                  </div>
+                </fieldset>
+              ) : null}
               <label className="account-checkbox">
                 <input
                   type="checkbox"
                   checked={locationConfirmed}
-                  onChange={(e) => setLocationConfirmed(e.target.checked)}
+                  id="location-confirmed"
+                  disabled={saveState !== "saved"}
+                  onChange={(e) => {
+                    setLocationConfirmed(e.target.checked);
+                    change({
+                      locationConfirmedAt: e.target.checked
+                        ? new Date().toISOString()
+                        : null,
+                    });
+                  }}
                 />
                 <span>
                   Je confirme que ce point correspond au quartier ou à la
                   position exacte que j’autorise à afficher.
+                  {saveState !== "saved"
+                    ? " Attendez l’enregistrement des coordonnées avant de confirmer."
+                    : ""}
                 </span>
               </label>
             </>
@@ -916,10 +1168,10 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                   <legend>Place {index + 1}</legend>
                   <div className="form-grid">
                     <label className="field">
-                      Numéro / référence publique
+                      Numéro peint · public et facultatif
                       <input
                         className="input"
-                        maxLength={30}
+                        maxLength={40}
                         value={space.number}
                         onChange={(e) =>
                           spaceChange(index, "number", e.target.value)
@@ -968,118 +1220,146 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                 Les dimensions saisies sont déclaratives. Un modèle mesuré exige
                 des sources et des distances de contrôle supplémentaires.
               </p>
+              <CommercialEditor
+                listing={listing}
+                section="units"
+                onChange={(commercialDetails) => change({ commercialDetails })}
+              />
             </>
           ) : null}
           {step === 3 ? (
             <>
-              <label className="field">
-                Périmètre de la description
-                <select
-                  className="input"
+              <div className="field">
+                <span>{"Périmètre de la description"}</span>
+                <FilterSelect
+                  label={"Périmètre de la description"}
+                  variant="field"
                   value={qualityTarget}
-                  onChange={(e) => setQualityTarget(e.target.value)}
-                >
-                  <option value="general">État commun du parking</option>
-                  {listing.spaces.map((space, index) => (
-                    <option key={space.id} value={space.id}>
-                      Place {space.number || index + 1} · niveau {space.level}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  onChange={(selectedValue) => setQualityTarget(selectedValue)}
+                  options={[
+                    { value: "general", label: "État commun du parking" },
+                    ...listing.spaces.map((space, index) => ({
+                      value: space.id,
+                      label: [
+                        " Place ",
+                        space.number || index + 1,
+                        " · niveau ",
+                        space.level,
+                      ]
+                        .join("")
+                        .trim(),
+                    })),
+                  ]}
+                />
+              </div>
               <p className="notice">
                 Déclarations du vendeur. Chaque place conserve ses propres
                 informations ; un champ vide reste non renseigné, sans reprendre
                 l’état commun. Les photos associées ne constituent pas une
                 validation automatique.
               </p>
-              <label className="field">
-                Date des observations de ce périmètre · facultative
-                <input
-                  className="input"
-                  type="date"
-                  max={new Date().toISOString().slice(0, 10)}
-                  value={
-                    (qualityTarget === "general"
-                      ? listing.quality.observedAt || listing.observedAt
-                      : listing.unitQuality?.[qualityTarget]?.observedAt
-                    )?.slice(0, 10) || ""
-                  }
-                  onChange={(e) =>
-                    quality(
-                      "observedAt",
-                      e.target.value ? `${e.target.value}T00:00:00.000Z` : null,
-                    )
-                  }
-                />
-              </label>
-              <label className="field">
-                Origine déclarée par le vendeur
-                <select
-                  className="input"
-                  value={
-                    (qualityTarget === "general"
-                      ? listing.quality
-                      : listing.unitQuality?.[qualityTarget]
-                    )?.basis || "unknown"
-                  }
-                  onChange={(e) =>
-                    quality("basis", e.target.value as Quality["basis"])
-                  }
-                >
-                  <option value="unknown">À préciser</option>
-                  <option value="seller_observation">
-                    Observation du vendeur
-                  </option>
-                  <option value="provided_document">Document fourni</option>
-                </select>
-              </label>
-              <p className="muted">
-                Montrez le parking tel qu’il est. Décrivez les limites et les
-                défauts visibles : ils aident à préparer une visite utile.
-              </p>
-              <div className="form-grid">
-                {(
-                  [
-                    ["floor", "Sol"],
-                    ["lighting", "Éclairage"],
-                    ["humidity", "Humidité"],
-                    ["access", "Accès et fermeture"],
-                    ["maneuver", "Manœuvres"],
-                  ] as [keyof Quality, string][]
-                ).map(([key, label]) => (
-                  <label className="field" key={key}>
-                    {label}
-                    <input
-                      className="input"
-                      value={
-                        (qualityTarget === "general"
-                          ? listing.quality
-                          : listing.unitQuality?.[qualityTarget])?.[key] || ""
-                      }
-                      maxLength={500}
-                      placeholder="Non renseigné"
-                      onChange={(e) => quality(key, e.target.value)}
-                    />
-                  </label>
-                ))}
-              </div>
-              <label className="field">
-                Observations, contraintes et défauts
-                <textarea
-                  className="input"
-                  rows={5}
-                  maxLength={3000}
-                  value={
-                    (qualityTarget === "general"
-                      ? listing.quality
-                      : listing.unitQuality?.[qualityTarget]
-                    )?.observations || ""
-                  }
-                  onChange={(e) => quality("observations", e.target.value)}
-                  placeholder="Ex. poteau à gauche de la place, marquage usé, traces visibles sur un mur…"
-                />
-              </label>
+              <ConditionEvidenceEditor
+                listing={listing}
+                spaceId={qualityTarget === "general" ? null : qualityTarget}
+                onChange={(conditionObservations) =>
+                  change({ conditionObservations })
+                }
+              />
+              <details>
+                <summary>Description libre complémentaire</summary>
+                <label className="field">
+                  Date des observations de ce périmètre · facultative
+                  <input
+                    className="input"
+                    type="date"
+                    max={new Date().toISOString().slice(0, 10)}
+                    value={
+                      (qualityTarget === "general"
+                        ? listing.quality.observedAt || listing.observedAt
+                        : listing.unitQuality?.[qualityTarget]?.observedAt
+                      )?.slice(0, 10) || ""
+                    }
+                    onChange={(e) =>
+                      quality(
+                        "observedAt",
+                        e.target.value
+                          ? `${e.target.value}T00:00:00.000Z`
+                          : null,
+                      )
+                    }
+                  />
+                </label>
+                <div className="field">
+                  <span>{"Origine déclarée par le vendeur"}</span>
+                  <FilterSelect
+                    label={"Origine déclarée par le vendeur"}
+                    variant="field"
+                    value={
+                      (qualityTarget === "general"
+                        ? listing.quality
+                        : listing.unitQuality?.[qualityTarget]
+                      )?.basis || "unknown"
+                    }
+                    onChange={(selectedValue) =>
+                      quality("basis", selectedValue as Quality["basis"])
+                    }
+                    options={[
+                      { value: "unknown", label: "À préciser" },
+                      {
+                        value: "seller_observation",
+                        label: "Observation du vendeur",
+                      },
+                      { value: "provided_document", label: "Document fourni" },
+                    ]}
+                  />
+                </div>
+                <p className="muted">
+                  Montrez le parking tel qu’il est. Décrivez les limites et les
+                  défauts visibles : ils aident à préparer une visite utile.
+                </p>
+                <div className="form-grid">
+                  {(
+                    [
+                      ["floor", "Sol"],
+                      ["lighting", "Éclairage"],
+                      ["humidity", "Humidité"],
+                      ["access", "Accès et fermeture"],
+                      ["maneuver", "Manœuvres"],
+                    ] as [keyof Quality, string][]
+                  ).map(([key, label]) => (
+                    <label className="field" key={key}>
+                      {label}
+                      <input
+                        className="input"
+                        value={
+                          (qualityTarget === "general"
+                            ? listing.quality
+                            : listing.unitQuality?.[qualityTarget])?.[key] || ""
+                        }
+                        maxLength={500}
+                        placeholder="Non renseigné"
+                        onChange={(e) => quality(key, e.target.value)}
+                      />
+                    </label>
+                  ))}
+                </div>
+                <label className="field">
+                  Observations, contraintes et défauts
+                  <textarea
+                    className="input"
+                    rows={5}
+                    maxLength={3000}
+                    value={
+                      (qualityTarget === "general"
+                        ? listing.quality
+                        : listing.unitQuality?.[qualityTarget]
+                      )?.observations || ""
+                    }
+                    onChange={(e) => quality("observations", e.target.value)}
+                    placeholder="Ex. poteau à gauche de la place, marquage usé, traces visibles sur un mur…"
+                  />
+                </label>
+              </details>
               <div className="notice">
                 <Info size={18} />
                 <p>
@@ -1097,25 +1377,33 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                 manœuvre. Reliez ensuite les vues propres à chaque place, sans
                 présenter une vue commune comme sa preuve individuelle.
               </p>
-              <label className="field">
-                Ajouter des photos à
-                <select
-                  className="input"
+              <div className="field">
+                <span>{"Ajouter des photos à"}</span>
+                <FilterSelect
+                  label={"Ajouter des photos à"}
+                  variant="field"
                   value={photoTarget}
                   disabled={uploading}
-                  onChange={(e) => {
-                    setPhotoTarget(e.target.value);
+                  onChange={(selectedValue) => {
+                    setPhotoTarget(selectedValue);
                     setShareExisting(false);
                   }}
-                >
-                  <option value="general">Galerie générale du parking</option>
-                  {listing.spaces.map((space, index) => (
-                    <option key={space.id} value={space.id}>
-                      Place {space.number || index + 1} · niveau {space.level}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  options={[
+                    { value: "general", label: "Galerie générale du parking" },
+                    ...listing.spaces.map((space, index) => ({
+                      value: space.id,
+                      label: [
+                        " Place ",
+                        space.number || index + 1,
+                        " · niveau ",
+                        space.level,
+                      ]
+                        .join("")
+                        .trim(),
+                    })),
+                  ]}
+                />
+              </div>
               <div className="account-photo-target-note">
                 <span className="badge">
                   {photoTarget === "general"
@@ -1291,22 +1579,34 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                 <Link href="/compte/scenes">Mes plans et vues 3D</Link>. Aucun
                 modèle n’est inventé à partir de ces seules photos.
               </p>
+              <CommercialEditor
+                listing={listing}
+                section="photos"
+                onChange={(commercialDetails) => change({ commercialDetails })}
+              />
             </>
           ) : null}
           {step === 5 ? (
             <>
               <p className="muted">
-                Le montant présenté sera le prix total de l’annonce, pour{" "}
+                Le montant présenté sera{" "}
+                {listing.transactionType === "rent"
+                  ? "le loyer mensuel total"
+                  : "le prix total de vente"}{" "}
+                de l’annonce, pour{" "}
                 {listing.spaces.length > 1
                   ? `l’ensemble des ${listing.spaces.length} places`
                   : "la place"}
                 .
               </p>
               <label className="field">
-                Prix total de vente
+                {listing.transactionType === "rent"
+                  ? "Loyer mensuel total"
+                  : "Prix total de vente"}
                 <span className="account-unit-field">
                   <input
                     className="input account-price-input"
+                    id="listing-price"
                     type="number"
                     min="1"
                     max="100000000"
@@ -1317,29 +1617,36 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                         priceCents: Math.round(Number(e.target.value) * 100),
                       })
                     }
-                    placeholder="18 500"
+                    placeholder={
+                      listing.transactionType === "rent" ? "120" : "18 500"
+                    }
                   />
-                  <span>€</span>
+                  <span>
+                    {listing.transactionType === "rent" ? "€/mois" : "€"}
+                  </span>
                 </span>
               </label>
-              <label className="field">
-                Occupation actuelle
-                <select
-                  className="input"
+              <div className="field">
+                <span>{"Occupation actuelle"}</span>
+                <FilterSelect
+                  label={"Occupation actuelle"}
+                  variant="field"
                   value={listing.occupancy || "unknown"}
-                  onChange={(e) =>
+                  onChange={(selectedValue) =>
                     change({
-                      occupancy: e.target.value as Listing["occupancy"],
+                      occupancy: selectedValue as Listing["occupancy"],
                     })
                   }
-                >
-                  <option value="unknown">Non renseignée</option>
-                  <option value="vacant">Libre · déclaration vendeur</option>
-                  <option value="occupied">
-                    Occupée · déclaration vendeur
-                  </option>
-                </select>
-              </label>
+                  options={[
+                    { value: "unknown", label: "Non renseignée" },
+                    { value: "vacant", label: "Libre · déclaration vendeur" },
+                    {
+                      value: "occupied",
+                      label: "Occupée · déclaration vendeur",
+                    },
+                  ]}
+                />
+              </div>
               <div className="form-grid">
                 <NumField
                   label="Charges annuelles connues"
@@ -1373,15 +1680,22 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
               </div>
               <p className="muted">
                 Une case vide indique un montant inconnu. Précisez l’année et le
-                périmètre des montants dans votre description.
+                périmètre des montants ci-dessous.
               </p>
+              <CommercialEditor
+                listing={listing}
+                section="financial"
+                onChange={(commercialDetails) => change({ commercialDetails })}
+              />
               {listing.spaces.length > 1 ? (
                 <p className="muted">
                   Moyenne indicative :{" "}
                   {money(
                     Math.round(listing.priceCents / listing.spaces.length),
                   )}{" "}
-                  par place. Le lot n’est pas vendu séparément.
+                  {listing.transactionType === "rent"
+                    ? "par place et par mois. Le lot n’est pas loué séparément."
+                    : "par place. Le lot n’est pas vendu séparément."}
                 </p>
               ) : null}
               <div className="notice">
@@ -1399,6 +1713,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
               <label className="field">
                 Titre de l’annonce
                 <input
+                  id="listing-title"
                   className="input"
                   minLength={15}
                   maxLength={90}
@@ -1411,6 +1726,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
               <label className="field">
                 Description
                 <textarea
+                  id="listing-description"
                   className="input"
                   rows={8}
                   minLength={100}
@@ -1438,89 +1754,133 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                 Relisez les informations qui seront proposées aux acheteurs
                 après modération.
               </p>
-              <article className="account-preview card">
-                {listing.photos[0] ? (
-                  <img
-                    src={listing.photos[0]}
-                    alt="Photo principale de l’annonce"
-                  />
-                ) : null}
-                <div>
-                  <span className="badge">APERÇU · NON PUBLIÉ</span>
-                  <h2>{listing.title || "Titre à compléter"}</h2>
-                  <p>
-                    {listing.city} · {listing.district}
-                  </p>
-                  <h3>{money(listing.priceCents)}</h3>
-                  <p>
-                    {typeLabels[listing.type]} · {areaLabel(listing.spaces)}
-                    {listing.spaces.length > 1
-                      ? ` · lot de ${listing.spaces.length} places`
-                      : ""}
-                  </p>
-                  <div className="account-preview-unit-galleries">
-                    <h3>Photos propres aux places</h3>
-                    {listing.spaces.map((space, index) => {
-                      const photos = listing.spacePhotos?.[space.id] || [];
-                      return (
-                        <section key={space.id}>
-                          <strong>Place {space.number || index + 1}</strong>
-                          <p className="muted">
-                            {photos.length
-                              ? `${photos.length} photo(s) rattachée(s) par le vendeur · couverture à vérifier`
-                              : "Aucune photo propre fournie · couverture individuelle non établie"}
-                          </p>
-                          {photos.length ? (
-                            <div className="account-photo-grid">
-                              {photos.map((photo, n) => (
-                                <div key={`${photo}-${n}`}>
-                                  <img
-                                    src={photo}
-                                    alt={`Photo déclarée de la place ${space.number || index + 1}`}
-                                    loading="lazy"
-                                  />
-                                  <span>Place {space.number || index + 1}</span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : null}
-                        </section>
-                      );
-                    })}
-                  </div>
-                  <p className="account-preview-description">
-                    {listing.description || "Description à compléter"}
-                  </p>
-                  <p>
-                    Occupation :{" "}
-                    {
+              {preview ? (
+                <article className="account-preview card">
+                  {preview.photos[0] ? (
+                    <img
+                      src={preview.photos[0]}
+                      alt="Photo principale de l’annonce"
+                    />
+                  ) : null}
+                  <div>
+                    <span className="badge">APERÇU · NON PUBLIÉ</span>
+                    <h2>{preview.title || "Titre à compléter"}</h2>
+                    <p>
+                      {preview.city} · {preview.district}
+                    </p>
+                    <h3>
+                      {money(preview.priceCents)}
+                      {preview.transactionType === "rent" ? " / mois" : ""}
+                    </h3>
+                    <p>
+                      {preview.transactionType === "rent"
+                        ? "À louer · loyer mensuel total"
+                        : "À vendre · prix total de vente"}
+                    </p>
+                    <p>
+                      {typeLabels[preview.type]} · {areaLabel(preview.spaces)}
+                      {preview.spaces.length > 1
+                        ? ` · lot de ${preview.spaces.length} places`
+                        : ""}
+                    </p>
+                    <div className="account-preview-unit-galleries">
+                      <h3>Photos propres aux places</h3>
+                      {preview.spaces.map((space, index) => {
+                        const photos = preview.spacePhotos?.[space.id] || [];
+                        return (
+                          <section key={space.id}>
+                            <strong>Place {space.number || index + 1}</strong>
+                            <p className="muted">
+                              {photos.length
+                                ? `${photos.length} photo(s) rattachée(s) par le vendeur · couverture à vérifier`
+                                : "Aucune photo propre fournie · couverture individuelle non établie"}
+                            </p>
+                            {photos.length ? (
+                              <div className="account-photo-grid">
+                                {photos.map((photo, n) => (
+                                  <div key={`${photo}-${n}`}>
+                                    <img
+                                      src={photo}
+                                      alt={`Photo déclarée de la place ${space.number || index + 1}`}
+                                      loading="lazy"
+                                    />
+                                    <span>
+                                      Place {space.number || index + 1}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : null}
+                          </section>
+                        );
+                      })}
+                    </div>
+                    <p className="account-preview-description">
+                      {preview.description || "Description à compléter"}
+                    </p>
+                    <p>
+                      Occupation :{" "}
                       {
-                        vacant: "Libre · déclaré",
-                        occupied: "Occupée · déclaré",
-                        unknown: "Non renseignée",
-                      }[listing.occupancy || "unknown"]
-                    }
-                    . Charges :{" "}
-                    {listing.annualChargesCents == null
-                      ? "non renseignées"
-                      : `${money(listing.annualChargesCents)}/an`}
-                    . Taxe foncière :{" "}
-                    {listing.propertyTaxCents == null
-                      ? "non renseignée"
-                      : `${money(listing.propertyTaxCents)}/an`}
-                    .
-                  </p>
-                  <h3>État commun · déclaration vendeur</h3>
-                  <QualitySummary quality={listing.quality} common />
-                  <p className="notice">
-                    Localisation publique :{" "}
-                    {listing.locationPrecision === "area"
-                      ? "quartier uniquement, sans scène intérieure"
-                      : "position exacte autorisée"}
-                    . La 3D n’est disponible qu’après une revue spécifique.
-                  </p>
-                </div>
-              </article>
+                        {
+                          vacant: "Libre · déclaré",
+                          occupied: "Occupée · déclaré",
+                          unknown: "Non renseignée",
+                        }[preview.occupancy || "unknown"]
+                      }
+                      . Charges :{" "}
+                      {preview.annualChargesCents == null
+                        ? "non renseignées"
+                        : `${money(preview.annualChargesCents)}/an`}
+                      . Taxe foncière :{" "}
+                      {preview.propertyTaxCents == null
+                        ? "non renseignée"
+                        : `${money(preview.propertyTaxCents)}/an`}
+                      .
+                    </p>
+                    <h3>État commun · déclaration vendeur</h3>
+                    <QualitySummary quality={preview.quality} common />
+                    <CommercialSummary listing={preview} />
+                    <ConditionEvidenceSummary
+                      values={preview.conditionObservations}
+                    />
+                    {preview.spaces.map((space) => (
+                      <ConditionEvidenceSummary
+                        key={space.id}
+                        values={preview.conditionObservations}
+                        spaceId={space.id}
+                      />
+                    ))}
+                    <p className="notice">
+                      Localisation publique :{" "}
+                      {preview.locationPrecision === "area"
+                        ? "quartier uniquement, sans scène intérieure"
+                        : "position exacte autorisée"}
+                      . La 3D n’est disponible qu’après une revue spécifique.
+                      <br />
+                      Point public : {preview.coordinates[1]},{" "}
+                      {preview.coordinates[0]}
+                      {preview.address
+                        ? ` · adresse publique : ${preview.address}`
+                        : " · adresse complète masquée"}
+                      .
+                    </p>
+                  </div>
+                </article>
+              ) : (
+                <p role="status">
+                  {previewError ||
+                    "Enregistrement puis préparation de l’aperçu public…"}
+                </p>
+              )}
+              {previewError ? (
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  onClick={() => setPreviewAttempt((v) => v + 1)}
+                >
+                  Recharger l’aperçu
+                </button>
+              ) : null}
               {!user.emailVerified ? (
                 <p className="notice">
                   Votre email doit être confirmé avant la soumission.{" "}
@@ -1547,7 +1907,9 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                   !user.emailVerified ||
                   busy ||
                   uploading ||
-                  saveState === "saving"
+                  saveState !== "saved" ||
+                  !preview ||
+                  preview.version !== listing.version
                 }
               >
                 {busy ? "Envoi en cours…" : "Soumettre à la modération"}

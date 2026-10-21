@@ -27,30 +27,8 @@ jobs:
         run: npm test
       - name: Production build without deployment credentials
         run: npm run build
-      - name: HTTP integration against an isolated loopback server
-        shell: bash
+      - name: HTTP integration against an isolated production build
         env:
-          GP_FORCE_LOCAL_DEMO: 'true'
-          GP_PUBLIC_LAUNCH: 'false'
-          GP_DATABASE_PATH: ${{ runner.temp }}/gp-ci-local.sqlite
-          GP_MEDIA_PATH: ${{ runner.temp }}/gp-ci-media
-        run: |
-          ./node_modules/.bin/next dev --hostname 127.0.0.1 --port 3100 > "$RUNNER_TEMP/gp-ci-server.log" 2>&1 &
-          server_pid=$!
-          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
-          ready=false
-          for attempt in $(seq 1 60); do
-            if curl --fail --silent http://127.0.0.1:3100/api/health > /dev/null; then
-              ready=true
-              break
-            fi
-            if ! kill -0 "$server_pid" 2>/dev/null; then
-              break
-            fi
-            sleep 1
-          done
-          if [ "$ready" != true ]; then
-            echo 'The owned loopback test server did not become ready.'
-            exit 1
-          fi
-          GP_ACCOUNT_TEST_URL=http://127.0.0.1:3100 ./node_modules/.bin/tsx --test tests/account-flow.test.ts
+          GP_HTTP_QA_PORT: "3100"
+          GP_PUBLIC_LAUNCH: "false"
+        run: ./node_modules/.bin/tsx scripts/verify-local-http.ts

@@ -1,28 +1,28 @@
 # Exploitation de GP Parking
 
-État au 21 octobre 2026 : prévisualisations locales sur les ports 3000 (démo) et 3001 (connecté), migrations Supabase 001 à 009 appliquées au projet de recette, 128 + 74 assertions connectées, 88 assertions scènes, 40 tests unitaires et 2 parcours HTTP isolés réussis. Aucun déploiement public ni email réel envoyé. Une procédure décrite n’est pas une opération exécutée. Les preuves des vérifications et les limites sont consignées dans [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
+État au 21 octobre 2026 : prévisualisations locales sur les ports3000(démo) et3001(connecté), migrations Supabase001–027 appliquées au projet de recette et342assertions HTTP connectées réussies dans leur périmètre explicite. Aucun déploiement public ni email réel envoyé. Les preuves, le nettoyage et les limites figurent dans [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md). Une procédure décrite n’est pas une opération exécutée.
 
 ## Deux environnements distincts
 
-**Démonstration locale — port 3000** : Node 24, SQLite persistant dans `.data/gp-demo.sqlite` et fichiers dans `.data`. Les six annonces, profils de démonstration et photographies générées sont fictifs. Le serveur de développement écoute `127.0.0.1` ; le backend local refuse les hôtes non locaux. Les boutons de personnages acheteur/vendeur/modération sont des outils de démonstration locale. Ils n’existent pas en environnement Supabase.
+**Démonstration locale — port 3000** : Node 24, SQLite persistant dans `.data/gp-demo.sqlite` et fichiers dans `.data`. Les annonces, profils de démonstration et photographies générées sont fictifs. Le serveur de développement écoute `127.0.0.1` ; le backend local refuse les hôtes non locaux. Les boutons de personnages acheteur/vendeur/modération sont des outils de démonstration locale. Ils n’existent pas en environnement Supabase.
 
 **Application connectée — port 3001** : l’URL de projet et une clé publiable configurées ensemble activent l’adaptateur Supabase. L’identité vient de Supabase Auth, les données de PostgreSQL, les fichiers de Storage. La migration ne crée ni comptes de démonstration ni fausses annonces. Aucun nom de rôle ne doit provenir de métadonnées éditables par l’utilisateur. Un déploiement public ne doit jamais exposer le backend SQLite ou les personnages de démonstration.
 
 Les variables de démarrage sont décrites dans `.env.example`, détenu par le coordinateur ; les réglages avancés ci-dessous sont utilisés par les processus concernés :
 
-| Variable | Fonction |
-|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | URL du projet prévu pour cet environnement |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Clé publiable Supabase ; l’alternative ancienne est `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
-| `GP_FORCE_LOCAL_DEMO` | Force la démonstration isolée sur loopback ; ne jamais activer sur une ouverture publique |
-| `GP_LOCAL_DEMO` | Autorisation supplémentaire pour `next start` en mode production sur loopback uniquement ; pas nécessaire au serveur de développement CI |
-| `NEXT_PUBLIC_SITE_URL` | Origine canonique de l’application pour les liens et callbacks Auth |
-| `GP_PUBLIC_LAUNCH` | Garde l’ouverture publique désactivée tant que les critères de lancement ne sont pas remplis |
-| `GP_DATABASE_PATH` | Emplacement du fichier SQLite local |
-| `GP_MEDIA_PATH` | Emplacement des médias de démonstration locale |
-| `GP_DIST_DIR` | Dossier de sortie Next distinct pour les serveurs simultanés |
-| `GP_REQUIRE_ADMIN_MFA` | Exigence MFA côté application ; désactivée actuellement, à coordonner avec la politique serveur en base |
-| `NEXT_PUBLIC_MAP_STYLE` | Style MapLibre ; défaut OpenFreeMap Liberty |
+| Variable                               | Fonction                                                                                                                                 |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`             | URL du projet prévu pour cet environnement                                                                                               |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Clé publiable Supabase ; l’alternative ancienne est `NEXT_PUBLIC_SUPABASE_ANON_KEY`                                                      |
+| `GP_FORCE_LOCAL_DEMO`                  | Force la démonstration isolée sur loopback ; ne jamais activer sur une ouverture publique                                                |
+| `GP_LOCAL_DEMO`                        | Autorisation supplémentaire pour `next start` en mode production sur loopback uniquement ; pas nécessaire au serveur de développement CI |
+| `NEXT_PUBLIC_SITE_URL`                 | Origine canonique de l’application pour les liens et callbacks Auth                                                                      |
+| `GP_PUBLIC_LAUNCH`                     | Garde l’ouverture publique désactivée tant que les critères de lancement ne sont pas remplis                                             |
+| `GP_DATABASE_PATH`                     | Emplacement du fichier SQLite local                                                                                                      |
+| `GP_MEDIA_PATH`                        | Emplacement des médias de démonstration locale                                                                                           |
+| `GP_DIST_DIR`                          | Dossier de sortie Next distinct pour les serveurs simultanés                                                                             |
+| `GP_REQUIRE_ADMIN_MFA`                 | Contrôle MFA complémentaire côté application ; exemple à `true`. La migration025 impose AAL2 aux modérateurs/administrateurs en base     |
+| `NEXT_PUBLIC_MAP_STYLE`                | Style MapLibre ; défaut OpenFreeMap Liberty                                                                                              |
 
 Les clés publiables ne remplacent pas les policies RLS. Les clés administratives, credentials GitHub, secrets SMTP et éventuels secrets de facturation ne doivent pas être placés dans le navigateur, les logs, les fixtures ou Git.
 
@@ -46,23 +46,23 @@ npm run dev:connected
 
 Ouvrir `http://127.0.0.1:3001`. Ce script désactive le forçage démo, fixe cette origine canonique et utilise `.next-connected` pour séparer les sorties Next. Il exige les deux variables Supabase. Ces deux serveurs écoutent sur loopback ; ils ne constituent pas un hébergement public. Vérifier `/api/health` et `/api/session` pour constater le mode effectif, sans imprimer les cookies.
 
-Pour vérifier une livraison : `npm run typecheck`, `npm test`, puis `npm run build`. La CI livre ces mêmes contrôles sous Node 24. La CI démarre ensuite son propre serveur de développement sur loopback, avec une base et des médias temporaires propres au runner, pour exécuter le parcours HTTP via `GP_ACCOUNT_TEST_URL`. Elle arrête seulement ce processus possédé. Le workflow ne contient ni déploiement ni secret ; un build réussi ne prouve ni une migration appliquée, ni la livraison de mails, ni la sécurité d’un environnement distant.
+Pour vérifier une livraison : `npm run typecheck`, `npm test`, puis `npm run build`. La CI livre ces mêmes contrôles sous Node 24. La CI démarre ensuite son propre serveur de production sur loopback via `scripts/verify-local-http.ts`, avec une base et des médias temporaires propres au runner, puis exécute les deux parcours HTTP sans les ignorer. Elle arrête seulement ce processus possédé. Le workflow ne contient ni déploiement ni secret ; un build réussi ne prouve ni une migration appliquée, ni la livraison de mails, ni la sécurité d’un environnement distant.
 
 ## Préparation d’un environnement Supabase
 
-Utiliser un projet dédié au bon environnement et inventorier son contenu avant mutation. Sur le projet de recette actuel, le coordinateur a appliqué les dix migrations 001 à 010, du schéma V1 au blocage privé des échanges. La liste exacte figure dans [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md). La portée du blocage entre interlocuteurs a été testée sur PostgreSQL réel en transaction annulée après application de 010. Pour un autre environnement, appliquer les fichiers versionnés de `supabase/migrations/` dans leur ordre, après inventaire et relecture. Ne pas réappliquer aveuglément une migration déjà enregistrée et ne pas remplacer une base existante par le schéma de test.
+Utiliser un projet dédié au bon environnement et inventorier son contenu avant mutation. Sur le projet de recette actuel, le coordinateur a appliqué les migrations001–027, du schéma V1 aux plans communs par niveau. La liste exacte figure dans [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md). La portée du blocage entre interlocuteurs a été testée sur PostgreSQL réel en transaction annulée après application de 010. Pour un autre environnement, appliquer les fichiers versionnés de `supabase/migrations/` dans leur ordre, après inventaire et relecture. Ne pas réappliquer aveuglément une migration déjà enregistrée et ne pas remplacer une base existante par le schéma de test.
 
 Configurer Supabase Auth : origine du site, URL de redirection de confirmation et récupération, confirmation email, paramètres de mot de passe et anti-abus, SMTP de l’opérateur si nécessaire. En test, employer des identités et boîtes contrôlées. Une boîte locale de démonstration n’est pas un service d’email réel.
 
 Après création légitime d’un premier compte opérateur, attribuer le rôle modérateur/admin depuis une intervention serveur autorisée et auditée. Aucun rôle privilégié ne se crée depuis l’écran de profil. Garder les credentials d’administration hors de l’application publique.
 
-Le TOTP réel est disponible dans `/compte/securite` ; son cycle d’enrôlement/vérification/suppression a été testé sur une identité QA, puis le facteur a été révoqué. **La politique globale d’obligation MFA administrateur est actuellement `false`**, et `GP_REQUIRE_ADMIN_MFA=false` dans la configuration d’exemple. Ne pas en déduire qu’un opérateur humain est déjà protégé. Avant ouverture, enrôler et vérifier chaque opérateur, coordonner la politique en base et côté application, puis tester qu’une session AAL1 est refusée et qu’une session AAL2 autorisée fonctionne. Prévoir la récupération d’accès avant de rendre cette obligation active.
+Le TOTP réel est disponible dans `/compte/securite` ; son cycle d’enrôlement/vérification/suppression a été testé sur une identité QA, puis le facteur a été révoqué. **La migration025 définit `gp_private.configuration.mfa_required=true`** : les accès de modération et d’administration connectés exigent AAL2, y compris via RPC/RLS directs. `GP_REQUIRE_ADMIN_MFA=true` dans la configuration d’exemple ajoute le contrôle applicatif. L’ancien constat `false` précède cette migration ; vérifier sa présence et sa valeur dans l’environnement cible après application. Enrôler et vérifier chaque opérateur et organiser la récupération d’accès ; aucun opérateur humain n’est déclaré enrôlé par la migration. La recette `supabase/tests/moderation-mfa-default.sql` vérifie refus AAL1 et droits AAL2 sous transaction annulée. L’exception de démonstration SQLite reste limitée à la boucle locale et ne simule pas de facteur TOTP.
 
 Vérifier séparément les deux types de Storage : originaux/variantes privées et fichiers approuvés. Les fichiers publiables doivent être des variantes assainies ; le traitement enlève les métadonnées EXIF et borne le format et la taille. Les plans sources et les fichiers d’un autre vendeur ne sont jamais publics par simple connaissance de leur URL.
 
 ## Vérifications avant ouverture publique
 
-Les rapports [Supabase](qa/supabase-integration.json) (128 assertions) et [fonctions de compte](qa/account-features.json) (74 assertions) couvrent déjà les parcours techniques avec quatre identités QA distinctes. Le [pipeline scènes](qa/scenes-integration.json) a aussi réussi 88 assertions sur une fixture paramétrique fictive. Les [compléments V1](qa/supabase-v1-complements.json) vérifient les fonctions/RLS 008/009 sur la base réelle, avec rollback des transactions. Le nettoyage final des fixtures Supabase est confirmé : aucun utilisateur, annonce ou fichier QA restant dans les inventaires ciblés. Ces preuves ne remplacent ni un pilote terrain ni les contrôles de l’environnement de lancement. La revue des redirections Auth n’a pas exercé de livraison email.
+Les rapports actuels [Supabase](qa/supabase-integration.json)(155assertions), [fonctions de compte](qa/account-features.json)(110), [file d’export](qa/privacy-export-integration.json)(11) et [quarantaine des scènes](qa/scenes-integration.json)(66) sont consolidés dans [completion-connected-latest.json](qa/completion-connected-latest.json). Ils ne prouvent ni un worker distant d’archive/rasterisation, ni une livraison email, ni un parking réel. Les fixtures et leur facteur TOTP ont été retirés puis leur absence vérifiée ; voir [nettoyage](qa/completion-cleanup.json).
 
 L’ouverture n’est considérée prête qu’après une recette sur l’environnement réellement retenu :
 

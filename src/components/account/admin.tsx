@@ -11,6 +11,8 @@ import {
 import { AccountGate, AccountShell, api } from "./shared";
 import Publications from "./publications";
 import { QualitySummary } from "./unit-quality";
+import { ConditionEvidenceSummary } from "./condition-evidence";
+import { CommercialSummary } from "../CommercialSummary";
 import { money, type Listing, type User } from "@/lib/types";
 function Content({ user }: { user: User }) {
   const [items, setItems] = useState<Listing[]>([]),
@@ -86,6 +88,16 @@ function Content({ user }: { user: User }) {
       }
     >
       <div className="account-admin-links">
+        {user.role === "admin" ? (
+          <>
+            <Link href="/admin/comptes" className="button button-secondary">
+              Comptes et accès
+            </Link>
+            <Link href="/admin/journal" className="button button-secondary">
+              Journal administratif
+            </Link>
+          </>
+        ) : null}
         <Link href="/admin/signalements" className="button button-secondary">
           Examiner les signalements
         </Link>
@@ -173,6 +185,17 @@ function Content({ user }: { user: User }) {
             {item.spaces.length} place{item.spaces.length > 1 ? "s" : ""}
           </p>
           <p className="account-preview-description">{item.description}</p>
+          <p className="notice">
+            Le rattachement des places à un parking identifié doit être contrôlé
+            avant la publication.{" "}
+            {user.role === "admin" ? (
+              <Link href={`/admin/parkings?listingId=${item.id}`}>
+                Consulter le rattachement administratif
+              </Link>
+            ) : (
+              "Un administrateur habilité réalise cette étape."
+            )}
+          </p>
           <div className="account-photo-grid">
             {item.photos.map((photo, i) => (
               <a
@@ -206,6 +229,10 @@ function Content({ user }: { user: User }) {
                       : "Aucune photo propre · couverture individuelle non établie"}
                   </p>
                   <QualitySummary quality={item.unitQuality?.[space.id]} />
+                  <ConditionEvidenceSummary
+                    values={item.conditionObservations}
+                    spaceId={space.id}
+                  />
                   {photos.length ? (
                     <div className="account-photo-grid">
                       {photos.map((photo, n) => (
@@ -231,6 +258,15 @@ function Content({ user }: { user: User }) {
           </section>
           <h3>État commun · déclaration vendeur</h3>
           <QualitySummary quality={item.quality} common />
+          <ConditionEvidenceSummary values={item.conditionObservations} />
+          <CommercialSummary listing={item} />
+          {item.spaces.map((space) => (
+            <CommercialSummary
+              key={space.id}
+              listing={item}
+              spaceId={space.id}
+            />
+          ))}
           <p>
             Précision publique :{" "}
             <strong>

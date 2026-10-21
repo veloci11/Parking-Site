@@ -1,6 +1,9 @@
+import { publicCommercialDetails } from "@/lib/commercial-details";
+import { publicConditions } from "@/lib/condition-observations";
 import type { Listing, Quality, Space } from "@/lib/types";
 import { db } from "./db";
-import { getLocalPublicScene } from "./scenes/local";
+import { localEffectiveSceneAvailable } from "./scene-availability";
+import { initializeLocalParkingRegistry } from "./parking-registry";
 import { publicSpacePhotos } from "./media-links";
 export function publicQuality(q: Quality): Quality {
   return {
@@ -53,26 +56,40 @@ export function publicProjection(value: Listing): Listing {
     city: value.city,
     district: value.district,
     priceCents: value.priceCents,
+    transactionType: value.transactionType ?? "sale",
     type: value.type,
     spaces,
     photos: [...value.photos],
     spacePhotos: publicSpacePhotos(value),
     quality,
     unitQuality: publicUnitQuality(value),
+    conditionObservations: publicConditions(value),
+    commercialDetails: publicCommercialDetails(value),
+    locationConfirmedAt: value.locationConfirmedAt ?? null,
+    ...(value.publicCoordinates
+      ? { publicCoordinates: [...value.publicCoordinates] as [number, number] }
+      : {}),
     locationPrecision: value.locationPrecision,
     coordinates:
-      value.locationPrecision === "area"
-        ? [
-            Math.round(value.coordinates[0] * 100) / 100,
-            Math.round(value.coordinates[1] * 100) / 100,
-          ]
-        : [...value.coordinates],
+      value.locationPrecision === "area" && value.publicCoordinates
+        ? [...value.publicCoordinates]
+        : value.locationPrecision === "area"
+          ? [
+              Math.round(value.coordinates[0] * 100) / 100,
+              Math.round(value.coordinates[1] * 100) / 100,
+            ]
+          : [...value.coordinates],
     sceneAvailable:
       value.locationPrecision === "exact_opt_in" && value.sceneAvailable,
     isDemo: value.isDemo,
     status: "published",
     version: value.version,
     sellerName: value.sellerName,
+    sellerTypeSnapshot:
+      value.sellerTypeSnapshot === "private" ||
+      value.sellerTypeSnapshot === "professional"
+        ? value.sellerTypeSnapshot
+        : null,
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
     ...(value.locationPrecision === "exact_opt_in" && value.address
@@ -97,21 +114,28 @@ export interface CatalogQuery {
   sort?: string;
   ids?: string[];
 }
-export function listPublicListings(query: CatalogQuery = {}): Listing[] {
-  let listings = db()
+/** Public snapshots without derived scene flags; used by the canonical parking projection. */
+export function listPublicListingSnapshots(): Listing[] {
+  return db()
     .prepare(
-      "SELECT public_json FROM listings WHERE public_json IS NOT NULL AND status NOT IN ('sold','withdrawn','paused') ORDER BY created_at DESC,id ASC",
+      "SELECT l.public_json FROM listings l JOIN users u ON u.id=l.seller_id WHERE l.public_json IS NOT NULL AND l.status NOT IN ('sold','withdrawn','paused','expired','suspended') AND u.status='active' ORDER BY l.created_at DESC,l.id ASC",
     )
     .all()
-    .map((r) => {
-      const value = publicProjection(JSON.parse(String(r.public_json)));
-      return {
-        ...value,
-        sceneAvailable:
-          value.locationPrecision === "exact_opt_in" &&
-          (value.sceneAvailable || getLocalPublicScene(value.id) !== null),
-      };
-    });
+    .map((r) => JSON.parse(String(r.public_json)) as Listing)
+    .filter(
+      (value) =>
+        !value.availabilityExpiresAt ||
+        Date.parse(value.availabilityExpiresAt) > Date.now(),
+    )
+    .map(publicProjection);
+}
+export function listPublicListings(query: CatalogQuery = {}): Listing[] {
+  initializeLocalParkingRegistry();
+  const snapshots = listPublicListingSnapshots();
+  let listings = snapshots.map((value) => ({
+    ...value,
+    sceneAvailable: localEffectiveSceneAvailable(value, snapshots),
+  }));
   const fold = (s: string) =>
     s
       .normalize("NFD")
@@ -123,7 +147,15 @@ export function listPublicListings(query: CatalogQuery = {}): Listing[] {
     );
   if (query.city)
     listings = listings.filter((l) => fold(l.city).includes(fold(query.city!)));
-  if (query.type) listings = listings.filter((l) => l.type === query.type);
+  if (query.type)
+    listings = listings.filter(
+      (l) =>
+        l.type === query.type ||
+        (l.type === "mixed" &&
+          l.spaces.some(
+            (s) => l.commercialDetails?.units[s.id]?.type === query.type,
+          )),
+    );
   if (query.maxPrice !== undefined)
     listings = listings.filter((l) => l.priceCents <= query.maxPrice!);
   if (query.minArea !== undefined)
@@ -166,9 +198,8 @@ export async function loadPublicListing(id: string): Promise<Listing | null> {
       .maybeSingle();
     if (error) throw new Error("Public catalogue unavailable");
     if (!data) return null;
-    const scene = await client.rpc("gp_scene_public", {
+    const scene = await client.rpc("gp_effective_scene_available", {
       p_listing_id: id,
-      p_level: null,
     });
     if (scene.error) throw new Error("Public scene catalogue unavailable");
     return { ...data.payload, sceneAvailable: !!scene.data } as Listing;

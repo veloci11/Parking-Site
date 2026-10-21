@@ -1,13 +1,38 @@
 "use client";
+import { listingPrice } from "@/lib/listing-price";
 
 import { useEffect, useRef, useState } from "react";
 import type { Map as MapLibreMap, Marker } from "maplibre-gl";
-import { Compass, Layers3, MapPin, Minus, Plus, RefreshCw } from "lucide-react";
+import {
+  Compass,
+  Layers3,
+  MapPin,
+  Minus,
+  Plus,
+  RefreshCw,
+  LocateFixed,
+} from "lucide-react";
 import { money, type Listing } from "@/lib/types";
+import {
+  normalizeMapView,
+  normalizeMapSearchArea,
+  type MapViewState,
+  type MapSearchArea,
+  type MapViewport,
+} from "@/lib/map-view";
+import {
+  approximateBrowserPosition,
+  geolocationErrorMessage,
+} from "@/lib/geolocation";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "@/styles/maps.css";
 
-interface CityMapProps {
+export interface CityMapProps {
+  initialView?: MapViewState | null;
+  onCameraChange?: (view: MapViewState, meta?: { transient?: boolean }) => void;
+  onViewChange?: (view: MapViewState) => void;
+  onViewportChange?: (viewport: MapViewport) => void;
+  onSearchArea?: (area: MapSearchArea) => void;
   listings: Listing[];
   selectedId: string | null;
   onSelect: (id: string) => void;
@@ -18,19 +43,86 @@ export default function CityMap({
   listings,
   selectedId,
   onSelect,
+  initialView,
+  onCameraChange,
+  onViewChange,
+  onViewportChange,
+  onSearchArea,
 }: CityMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markers = useRef<Marker[]>([]);
   const onSelectRef = useRef(onSelect);
+  const initialViewRef = useRef(normalizeMapView(initialView));
+  const cameraCallbacks = useRef({
+    onCameraChange,
+    onViewChange,
+    onViewportChange,
+    onSearchArea,
+  });
+  cameraCallbacks.current = {
+    onCameraChange,
+    onViewChange,
+    onViewportChange,
+    onSearchArea,
+  };
+  const manualMovement = useRef(false);
+  const transientLocation = useRef(false),
+    locationRequest = useRef(0);
+  const [locating, setLocating] = useState(false),
+    [locationNotice, setLocationNotice] = useState("");
+  useEffect(
+    () => () => {
+      locationRequest.current++;
+    },
+    [],
+  );
+  const [searchAreaReady, setSearchAreaReady] = useState(false);
+  const readArea = (map: MapLibreMap) => {
+    const bounds = map.getBounds(),
+      center = map.getCenter();
+    return normalizeMapSearchArea(
+      [
+        bounds.getWest(),
+        bounds.getSouth(),
+        bounds.getEast(),
+        bounds.getNorth(),
+      ],
+      [center.lng, center.lat],
+    );
+  };
+  const publishCamera = (map: MapLibreMap) => {
+    const center = map.getCenter();
+    const view = normalizeMapView({
+      center: [center.lng, center.lat],
+      zoom: map.getZoom(),
+      bearing: map.getBearing(),
+      pitch: map.getPitch(),
+    });
+    if (view) {
+      cameraCallbacks.current.onCameraChange?.(view, {
+        transient: transientLocation.current,
+      });
+      if (!transientLocation.current)
+        cameraCallbacks.current.onViewChange?.(view);
+    }
+    const area = readArea(map);
+    if (area && !transientLocation.current)
+      cameraCallbacks.current.onViewportChange?.({
+        center: area.center,
+        bounds: area.bbox,
+      });
+  };
   const [status, setStatus] = useState<"loading" | "ready" | "error">(
     "loading",
   );
   const [attempt, setAttempt] = useState(0);
-  const [is3D, setIs3D] = useState(true);
+  const [is3D, setIs3D] = useState((initialViewRef.current?.pitch ?? 55) > 0);
   const [mapLoaded, setMapLoaded] = useState(0);
-  const [zoom, setZoom] = useState(14.4);
-  const previousSelected = useRef<string | null>(null);
+  const [zoom, setZoom] = useState(initialViewRef.current?.zoom ?? 14.4);
+  const previousSelected = useRef<string | null>(
+    initialViewRef.current ? selectedId : null,
+  );
   const publicCities = [...new Set(listings.map((listing) => listing.city))];
   const mapLabel =
     publicCities.length === 1
@@ -60,10 +152,10 @@ export default function CityMap({
           style:
             process.env.NEXT_PUBLIC_MAP_STYLE ||
             "https://tiles.openfreemap.org/styles/liberty",
-          center: [4.8596, 45.7538],
-          zoom: 14.4,
-          pitch: reducedMotion ? 35 : 55,
-          bearing: -28,
+          center: initialViewRef.current?.center ?? [4.8596, 45.7538],
+          zoom: initialViewRef.current?.zoom ?? 14.4,
+          pitch: initialViewRef.current?.pitch ?? (reducedMotion ? 35 : 55),
+          bearing: initialViewRef.current?.bearing ?? -28,
           maxPitch: 70,
           minZoom: 4,
           maxZoom: 19,
@@ -136,8 +228,24 @@ export default function CityMap({
             color: "#FFFFFF",
             intensity: 0.45,
           });
+          publishCamera(map);
           setStatus("ready");
           setMapLoaded((value) => value + 1);
+        });
+        localMap.on("movestart", (event) => {
+          if ("originalEvent" in event && event.originalEvent) {
+            manualMovement.current = true;
+            transientLocation.current = false;
+          }
+        });
+        localMap.on("moveend", () => {
+          if (disposed || !localMap) return;
+          publishCamera(localMap);
+          setIs3D(localMap.getPitch() > 0);
+          if (manualMovement.current) {
+            setSearchAreaReady(true);
+            manualMovement.current = false;
+          }
         });
         localMap.on("zoomend", () => {
           if (!disposed && localMap) setZoom(localMap.getZoom());
@@ -192,7 +300,7 @@ export default function CityMap({
         )
           return;
         const precision = zoom < 11 ? 1 : zoom < 13 ? 2 : 5;
-        const key = `${lng.toFixed(precision)}:${lat.toFixed(precision)}`;
+        const key = `${lng.toFixed(precision)}:${lat.toFixed(precision)}:${listing.transactionType || "sale"}`;
         groups.set(key, [...(groups.get(key) || []), listing]);
       });
       markers.current = [...groups.values()].map((group) => {
@@ -203,17 +311,19 @@ export default function CityMap({
         button.className = `gp-map-price${selected ? " is-selected" : ""}${group.length > 1 ? " is-cluster" : ""}`;
         button.textContent =
           group.length > 1
-            ? `${group.length} annonces · dès ${money(Math.min(...group.map((item) => item.priceCents)))}`
-            : money(first.priceCents);
+            ? `${group.length} annonces · dès ${listingPrice({ ...first, priceCents: Math.min(...group.map((item) => item.priceCents)) })}`
+            : listingPrice(first);
         button.setAttribute(
           "aria-label",
           group.length > 1
             ? `Agrandir le groupe de ${group.length} annonces`
-            : `${first.city}, ${first.district}, ${money(first.priceCents)}${first.locationPrecision === "area" ? ", position de secteur" : ""}`,
+            : `${first.city}, ${first.district}, ${listingPrice(first)}${first.locationPrecision === "area" ? ", position de secteur" : ""}`,
         );
         if (selected) button.setAttribute("aria-pressed", "true");
         button.addEventListener("click", () => {
           if (group.length > 1) {
+            manualMovement.current = true;
+            transientLocation.current = false;
             const lngs = group.map((item) => item.coordinates[0]),
               lats = group.map((item) => item.coordinates[1]);
             map.fitBounds(
@@ -262,6 +372,8 @@ export default function CityMap({
       return;
     const selected = listings.find((item) => item.id === selectedId);
     if (selected) {
+      transientLocation.current = false;
+      setLocationNotice("");
       map.easeTo({
         center: selected.coordinates,
         duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -271,6 +383,54 @@ export default function CityMap({
       previousSelected.current = selectedId;
     }
   }, [selectedId, listings, status]);
+
+  const locate = () => {
+    if (!navigator.geolocation) {
+      setLocationNotice(
+        "La localisation n’est pas disponible sur ce navigateur.",
+      );
+      return;
+    }
+    const requestId = ++locationRequest.current;
+    setLocating(true);
+    setLocationNotice(
+      "Votre navigateur peut vous demander l’autorisation de vous localiser.",
+    );
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        if (requestId !== locationRequest.current || !mapRef.current) return;
+        setLocating(false);
+        const center = approximateBrowserPosition(
+          position.coords.longitude,
+          position.coords.latitude,
+        );
+        if (!center) {
+          setLocationNotice(geolocationErrorMessage(2));
+          return;
+        }
+        transientLocation.current = true;
+        manualMovement.current = true;
+        mapRef.current.easeTo({
+          center,
+          zoom: Math.max(mapRef.current.getZoom(), 14),
+          duration: window.matchMedia("(prefers-reduced-motion: reduce)")
+            .matches
+            ? 0
+            : 600,
+        });
+        setSearchAreaReady(true);
+        setLocationNotice(
+          "Position approximative utilisée pour cette carte. Cliquez sur « Rechercher dans cette zone » pour chercher des annonces ici.",
+        );
+      },
+      (error) => {
+        if (requestId !== locationRequest.current) return;
+        setLocating(false);
+        setLocationNotice(geolocationErrorMessage(error.code));
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
+    );
+  };
 
   const toggleDimension = () => {
     const next = !is3D;
@@ -296,10 +456,46 @@ export default function CityMap({
           <span>· vue {is3D ? "3D" : "2D"}</span>
         </span>
       </div>
+      <button
+        type="button"
+        className="gp-map-geolocate"
+        onClick={locate}
+        disabled={locating || status !== "ready"}
+        title="Localisation facultative, utilisée uniquement après ce clic pour centrer la carte"
+      >
+        <LocateFixed size={18} />
+        {locating ? "Localisation…" : "Me localiser"}
+      </button>
+      {locationNotice ? (
+        <p className="gp-map-geo-status" role="status">
+          {locationNotice}
+        </p>
+      ) : null}
+      {onSearchArea && searchAreaReady && status === "ready" ? (
+        <button
+          type="button"
+          className="gp-map-search-area button button-primary"
+          onClick={() => {
+            const map = mapRef.current;
+            if (!map) return;
+            const area = readArea(map);
+            if (area) {
+              cameraCallbacks.current.onSearchArea?.(area);
+              setSearchAreaReady(false);
+            }
+          }}
+        >
+          Rechercher dans cette zone
+        </button>
+      ) : null}
       <div className="gp-map-controls" aria-label="Commandes de la carte">
         <button
           type="button"
-          onClick={() => mapRef.current?.zoomIn({ duration: 200 })}
+          onClick={() => {
+            manualMovement.current = true;
+            transientLocation.current = false;
+            mapRef.current?.zoomIn({ duration: 200 });
+          }}
           disabled={status !== "ready"}
           aria-label="Agrandir la carte"
         >
@@ -307,7 +503,11 @@ export default function CityMap({
         </button>
         <button
           type="button"
-          onClick={() => mapRef.current?.zoomOut({ duration: 200 })}
+          onClick={() => {
+            manualMovement.current = true;
+            transientLocation.current = false;
+            mapRef.current?.zoomOut({ duration: 200 });
+          }}
           disabled={status !== "ready"}
           aria-label="Réduire la carte"
         >

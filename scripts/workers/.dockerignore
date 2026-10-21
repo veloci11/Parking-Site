@@ -1,0 +1,5 @@
+*
+!scene-source.Dockerfile
+!scene-source.mjs
+!package.json
+!package-lock.json

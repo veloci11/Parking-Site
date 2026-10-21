@@ -20,6 +20,8 @@ const directory = mkdtempSync(join(tmpdir(), "gp-scenes-"));
 process.env.GP_DATABASE_PATH = join(directory, "scene.sqlite");
 process.env.GP_MEDIA_PATH = join(directory, "media");
 process.env.GP_FORCE_LOCAL_DEMO = "true";
+// This suite uploads only generated inert fixtures; never a production setting.
+process.env.GP_SOURCE_INERT_TEST_WORKER = "1";
 const origin = "http://127.0.0.1:3000",
   listingId = "10000000-0000-4000-8000-000000000001";
 after(() => {
@@ -221,9 +223,12 @@ test("pipeline local complet: sources privÃ©es, refus de fichiers actifs, contrÃ
     404,
   );
   const ownSource = await handleScenes(
-    new Request(`${origin}/api/scenes/sources?id=${evidenceId}`, {
-      headers: { cookie: seller },
-    }),
+    new Request(
+      `${origin}/api/scenes/sources?id=${evidenceId}&download=acknowledged`,
+      {
+        headers: { cookie: seller },
+      },
+    ),
   );
   assert.equal(ownSource.status, 200);
   assert.ok(
@@ -345,4 +350,84 @@ test("pipeline local complet: sources privÃ©es, refus de fichiers actifs, contrÃ
     .prepare("UPDATE listings SET public_json=? WHERE id=?")
     .run(JSON.stringify(changed), listingId);
   assert.equal((await api(`?listingId=${listingId}`)).response.status, 404);
+});
+
+test("runtime parametric version is distinct, observations require dates/proofs and public projection removes source identities", async () => {
+  const { sceneSubmissionSchema, parsePublicScene } =
+    await import("../src/lib/scene-contract");
+  const { attachPublicManifestHash } =
+    await import("../src/server/scenes/public-contract");
+  const listing = fixtureListing(),
+    source = metric(),
+    proof = randomUUID(),
+    observationId = randomUUID();
+  source.schemaVersion = "gp-parametric-1.1";
+  source.provenance.geometrySource = "plan_derived";
+  source.provenance.geometryEvidenceIds = [proof];
+  source.observations = [
+    {
+      id: observationId,
+      spaceId: listing.spaces[0].id,
+      source: "provided_document",
+      observedAt: "2026-10-20T10:00:00.000Z",
+      evidenceIds: [proof],
+      positionXZ: [1, 1],
+      category: "floor",
+      description: "Observation technique fictive issue du document.",
+    },
+  ];
+  assert.ok(
+    sceneSubmissionSchema.safeParse({
+      listingId: listing.id,
+      manifest: source,
+      evidenceIds: [proof],
+      rightsAttested: true,
+    }).success,
+  );
+  assert.ok(
+    !sceneSubmissionSchema.safeParse({
+      listingId: listing.id,
+      manifest: source,
+      evidenceIds: [randomUUID()],
+      rightsAttested: true,
+    }).success,
+  );
+  const publicScene = publicSceneProjection(
+    {
+      id: randomUUID(),
+      listingId: listing.id,
+      version: 2,
+      reviewedAt: "2026-10-21T10:00:00.000Z",
+      manifest: source,
+      observationEvidenceChecked: true,
+    },
+    listing,
+  );
+  assert.equal(publicScene.fidelity, "reviewed");
+  assert.equal(
+    publicScene.documentation?.scope,
+    "geometry_and_listed_observations_only",
+  );
+  for (const privateId of [proof, observationId, listing.spaces[0].id])
+    assert.ok(!JSON.stringify(publicScene).includes(privateId));
+  const hashed = attachPublicManifestHash(publicScene);
+  assert.match(hashed.manifestHash!, /^[a-f0-9]{64}$/);
+  assert.ok(parsePublicScene(hashed));
+  assert.equal(
+    parsePublicScene({
+      ...hashed,
+      runtimeContract: "canonical-parking-level/1.0",
+    }),
+    null,
+  );
+  assert.equal(
+    attachPublicManifestHash({
+      ...publicScene,
+      manifest: { ...publicScene.manifest, observations: [] },
+    }).manifestHash === hashed.manifestHash,
+    false,
+  );
+  const missingDate = structuredClone(source);
+  delete missingDate.observations[0].observedAt;
+  assert.ok(!sceneManifestSchema.safeParse(missingDate).success);
 });

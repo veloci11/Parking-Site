@@ -1,9 +1,15 @@
+import {
+  QaStrongSession,
+  confirmQaLocation,
+  linkQaPublication,
+  type QaAdmin,
+} from "./qa-publication-contract";
 /**
  * Opt-in integration verification against the configured, dedicated Supabase project.
  * Run only after the coordinator has created confirmed test identities and reviewed migrations:
  *   npx tsx scripts/verify-supabase.ts --run
  * Configuration (ignored, chmod 600): .data/supabase-qa.json
- * { origin, supabaseUrl, publishableKey, users: { seller, buyer, outsider, moderator } }
+ * { origin, supabaseUrl, publishableKey, users: { seller, buyer, outsider, moderator, admin } }
  * Each identity contains { id, email, password }. No signup, email sending, service key or deployment.
  * Coordinator owns setup and cleanup. IDs needed for cleanup are written to the ignored result file.
  */
@@ -17,9 +23,9 @@ type Config = {
   origin: string;
   supabaseUrl: string;
   publishableKey: string;
-  users: Record<Persona, Identity>;
+  users: Record<Persona, Identity> & { admin?: QaAdmin };
 };
-type Reply = { status: number; data: any; code?: string; raw: any };
+type Reply = { status: number; data: any; code?: string; raw?: any };
 type Check = {
   name: string;
   passed: boolean;
@@ -149,8 +155,14 @@ async function main() {
   }
   let failed: string | null = null,
     configReady = false;
+  let moderatorMfa: QaStrongSession | undefined,
+    adminMfa: QaStrongSession | undefined;
   try {
     config = JSON.parse(await readFile(".data/supabase-qa.json", "utf8"));
+    assert.ok(
+      config.users.admin?.id,
+      "Current019 recipe needs a separately provisioned dedicated QA admin identity",
+    );
     assert.match(config.origin, /^http:\/\/(127\.0\.0\.1|localhost):\d+$/);
     assert.ok(
       config.supabaseUrl.startsWith("https://") ||
@@ -177,8 +189,13 @@ async function main() {
           config.users[name]?.email &&
           config.users[name]?.password,
       );
+      assert.ok(
+        config.users[name].email.endsWith(".invalid"),
+        "Dedicated fixture domain required",
+      );
       artifacts.userIds.push(config.users[name].id);
     }
+    artifacts.userIds.push(config.users.admin!.id);
     try {
       const prior = JSON.parse(
         await readFile(".data/supabase-qa-result.json", "utf8"),
@@ -196,6 +213,19 @@ async function main() {
           for (const id of prior[key] || [])
             if (typeof id === "string" && !artifacts[key].includes(id))
               artifacts[key].push(id);
+        for (const key of [
+          "registrySiteIds",
+          "registryLevelIds",
+          "registrySpaceIds",
+          "mfaFactorIds",
+          "reportIds",
+        ]) {
+          const values = prior[key];
+          if (Array.isArray(values))
+            (artifacts as any)[key] = values.filter(
+              (value: unknown) => typeof value === "string",
+            );
+        }
         for (const item of prior.media || [])
           if (
             typeof item?.id === "string" &&
@@ -262,6 +292,20 @@ async function main() {
       "moderator_server_role",
       (await clients.moderator.api("session")).data?.role === "moderator",
     );
+    const recordFixture = async (kind: string, value: string) => {
+      const target = artifacts as any;
+      target[kind] ||= [];
+      if (!target[kind].includes(value)) target[kind].push(value);
+      await saveArtifacts();
+    };
+    moderatorMfa = new QaStrongSession(
+      clients.moderator.api.bind(clients.moderator),
+      config.users.moderator,
+      "moderator_mfa",
+      recordFixture,
+      check,
+    );
+    await moderatorMfa.establish("moderator");
     const limitArgs = { p_kind: "qa-probe", p_limit: 1, p_seconds: 60 };
     const anonLimit = await rpc("gp_limit", null, limitArgs);
     status("anon_gp_limit_not_callable", anonLimit, [401, 403, 404]);
@@ -279,6 +323,10 @@ async function main() {
     );
     const created = await clients.seller.api("listings", "POST", {});
     status("draft_creation", created, 201);
+    check(
+      "legacy_transaction_defaults_to_sale",
+      created.data.transactionType === "sale",
+    );
     const id = created.data.id;
     artifacts.listingIds.push(id);
     await saveArtifacts();
@@ -453,6 +501,10 @@ async function main() {
       }),
       400,
     );
+    saved.data = await confirmQaLocation(
+      clients.seller.api.bind(clients.seller),
+      saved.data,
+    );
     const submitted = await clients.seller.api(
       `listings/${id}/submit`,
       "POST",
@@ -471,12 +523,24 @@ async function main() {
       p_version: null,
       p_reason: null,
     });
-    status("moderation_null_version_refused", nullVersion, 400);
-    check(
-      "moderation_null_version_conflict",
-      String(nullVersion.data?.message || "").includes("VERSION_CONFLICT"),
-      nullVersion,
-    );
+    const assurance = await clients.moderator.api("mfa");
+    // The independently obtained direct token deliberately remains AAL1.
+    if (assurance.data.requiredForAdmin) {
+      status("direct_aal1_moderation_refused", nullVersion, [400, 403]);
+      check(
+        "direct_aal1_moderation_gate",
+        String(nullVersion.data?.message || "").includes(
+          "MFA_OR_PERMISSION_REQUIRED",
+        ),
+      );
+    } else {
+      status("moderation_null_version_refused", nullVersion, 400);
+      check(
+        "moderation_null_version_conflict",
+        String(nullVersion.data?.message || "").includes("VERSION_CONFLICT"),
+        nullVersion,
+      );
+    }
     status(
       "member_moderation_endpoint_denied",
       await clients.buyer.api(`admin/revisions/${id}/decision`, "POST", {
@@ -491,15 +555,36 @@ async function main() {
       "submitted_revision_in_queue",
       queue.data.some((x: any) => x.id === id),
     );
+    const qaAdmin = new Client();
+    adminMfa = new QaStrongSession(
+      qaAdmin.api.bind(qaAdmin),
+      config.users.admin!,
+      "admin_mfa",
+      recordFixture,
+      check,
+    );
+    await adminMfa.establish("admin");
+    const registryVersion = await linkQaPublication(
+      qaAdmin.api.bind(qaAdmin),
+      config.users.admin,
+      submitted.data,
+      (kind, value) => {
+        const inventory = artifacts as any;
+        inventory[kind] ||= [];
+        inventory[kind].push(value);
+      },
+    );
+    await saveArtifacts();
     const approved = await clients.moderator.api(
       `admin/revisions/${id}/decision`,
       "POST",
-      { version: submitted.data.version, decision: "approve" },
+      { version: registryVersion, decision: "approve" },
     );
     status("approved_publication", approved, 200);
     check("approved_status", approved.data.status === "published");
     const published = await guest.api(`listings/${id}`);
     status("public_listing", published, 200);
+    check("sale_public_projection", published.data.transactionType === "sale");
     check("public_total_price", published.data.priceCents === 3100000);
     check("private_address_absent", !("address" in published.data));
     check("area_scene_unavailable", published.data.sceneAvailable === false);
@@ -689,6 +774,8 @@ async function main() {
       await clients.buyer.api(`favorites/${id}`, "DELETE"),
       200,
     );
+    await moderatorMfa.cleanup();
+    await adminMfa.cleanup();
     for (const persona of ["seller", "buyer", "outsider", "moderator"] as const)
       status(
         `${persona}_logout`,
@@ -703,6 +790,14 @@ async function main() {
         : "configuration_or_transport_failure";
     artifacts.status = "failed";
   }
+  for (const strong of [moderatorMfa, adminMfa]) {
+    try {
+      await strong?.cleanup();
+    } catch {
+      failed ||= "qa_factor_cleanup_failed";
+      artifacts.status = "failed";
+    }
+  }
   if (configReady) await saveArtifacts();
   await mkdir("docs/qa", { recursive: true });
   const report = {
@@ -714,6 +809,10 @@ async function main() {
     passed: checks.filter((c) => c.passed).length,
     failedCheck: failed,
     credentialsIncluded: false,
+    qrSecretOrTotpIncluded: false,
+    qaFactorsRevoked: [moderatorMfa, adminMfa].every(
+      (s) => !s?.factorId || s.factorRevoked,
+    ),
     fixtures:
       "Ignored .data/supabase-qa-result.json; coordinator must clean up exact IDs",
     emailsSent: false,

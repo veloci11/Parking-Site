@@ -1,7 +1,8 @@
 {
-  "date": "2026-10-21",
-  "scope": "production dependencies",
-  "result": {
+  "checkedAt": "2026-10-21T20:20:13.166154+00:00",
+  "command": "npm audit --omit=dev --json",
+  "status": "passed",
+  "vulnerabilities": {
     "info": 0,
     "low": 0,
     "moderate": 0,
@@ -9,13 +10,14 @@
     "critical": 0,
     "total": 0
   },
-  "updated": {
-    "maplibre-gl": "6.15.0",
-    "sharp": "0.35.5"
+  "dependencies": {
+    "prod": 117,
+    "dev": 36,
+    "optional": 74,
+    "peer": 7,
+    "peerOptional": 0,
+    "total": 206
   },
-  "sources": [
-    "https://github.com/maplibre/maplibre-gl-js/security/advisories/GHSA-jrc7-96c5-q579",
-    "https://sharp.pixelplumbing.com/changelog/v0.35.5"
-  ],
-  "limitations": "npm audit reports known package advisories; it does not certify application security."
+  "scope": "locked application dependencies",
+  "limitations": "Known dependency advisories at check time; no claim of exhaustive application security."
 }

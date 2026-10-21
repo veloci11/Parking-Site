@@ -1,6 +1,6 @@
 # GP park.
 
-Plateforme de vente de parkings : exploration géographique et intérieure, annonces modérées, comptes, photos privées, favoris, comparaison, messagerie et visites.
+Plateforme de vente et de location de parkings : exploration géographique et intérieure, annonces modérées, comptes, photos privées, favoris, comparaison, messagerie et visites.
 
 ## Démarrer
 

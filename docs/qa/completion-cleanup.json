@@ -1,0 +1,40 @@
+{
+  "checkedAt": "2026-10-21T20:33:22.395548+00:00",
+  "status": "passed",
+  "scope": "five dedicated fictional accounts, five listing IDs, three registry sites and exact Storage keys only",
+  "planDigest": "a6241d38f4b1616f2b8238d016901f72850e49effc7a1aaa8b1472ccdf987b1a",
+  "procedure": "Reviewed scoped DML removes dependencies; Storage SDK deletes exact objects while QA credentials remain; scoped Auth DML final; all temporary TOTP factors revoked.",
+  "fixtureIdentitiesDeleted": 5,
+  "buckets": [
+    {
+      "bucket": "private-uploads",
+      "requested": 10,
+      "deleted": 10
+    },
+    {
+      "bucket": "public-approved",
+      "requested": 10,
+      "deleted": 10
+    },
+    {
+      "bucket": "scene-sources",
+      "requested": 8,
+      "deleted": 2
+    }
+  ],
+  "absentPreviewCandidates": 6,
+  "storageCleaned": true,
+  "factorRevoked": true,
+  "finalDatabaseReadback": {
+    "authUsers": 0,
+    "listings": 0,
+    "storageObjects": 0,
+    "parkingSites": 0,
+    "commonParkingPlans": 0,
+    "moderationMfaRequired": true
+  },
+  "commonPlanRollbackRecipe": "026 and027 executed with real remote scene validator; rollback successful; final database counters zero",
+  "privateSecretsPublished": false,
+  "externalEmailsSent": false,
+  "humanAccountsTargeted": false
+}

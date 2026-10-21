@@ -1,8 +1,10 @@
+import { observedRoute } from "@/server/observability";
 import { handleApi } from "@/server/api";
+const observed = observedRoute(handleApi, "application");
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const GET = handleApi;
-export const POST = handleApi;
-export const PATCH = handleApi;
-export const PUT = handleApi;
-export const DELETE = handleApi;
+export const GET = observed;
+export const POST = observed;
+export const PATCH = observed;
+export const PUT = observed;
+export const DELETE = observed;

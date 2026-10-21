@@ -1,4 +1,5 @@
 "use client";
+import { apiErrorMessage } from "@/lib/api-error";
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -27,7 +28,10 @@ export async function api<T>(
   const body = await r
     .json()
     .catch(() => ({ error: "Une réponse inattendue a été reçue." }));
-  if (!r.ok) throw new Error(body.error || "La demande n’a pas pu aboutir.");
+  if (!r.ok)
+    throw new Error(
+      apiErrorMessage(r, body.error || "La demande n’a pas pu aboutir."),
+    );
   return body as T;
 }
 export function useAccount() {
@@ -59,9 +63,11 @@ export function useAccount() {
 export function AccountGate({
   children,
   admin = false,
+  adminOnly = false,
 }: {
   children: (user: User) => ReactNode;
   admin?: boolean;
+  adminOnly?: boolean;
 }) {
   const path = usePathname();
   const { user, loading, error } = useAccount();
@@ -139,11 +145,15 @@ export function AccountGate({
         </Link>
       </div>
     );
-  if (admin && user.role === "member")
+  if (admin && (user.role === "member" || (adminOnly && user.role !== "admin")))
     return (
       <div id="main" role="main" className="page-shell">
         <h1>Accès réservé</h1>
-        <p>Cette page est réservée à la modération.</p>
+        <p>
+          {adminOnly
+            ? "Cette page est réservée aux administrateurs habilités."
+            : "Cette page est réservée à la modération."}
+        </p>
         <Link href="/compte" className="button button-secondary">
           Revenir à mon compte
         </Link>
@@ -261,11 +271,25 @@ export function AccountNav({ user }: { user: User }) {
           ) : null}
         </Link>
         <Link
+          href="/compte/signalements"
+          aria-current={path === "/compte/signalements" ? "page" : undefined}
+        >
+          <Flag size={18} />
+          Mes signalements
+        </Link>
+        <Link
           href="/compte/scenes"
           aria-current={path === "/compte/scenes" ? "page" : undefined}
         >
           <Box size={18} />
           Mes plans et vues 3D
+        </Link>
+        <Link
+          href="/compte/parkings"
+          aria-current={path === "/compte/parkings" ? "page" : undefined}
+        >
+          <Box size={18} />
+          Mes parkings rattachés
         </Link>
         <Link href="/favoris">
           <House size={18} />
@@ -277,6 +301,13 @@ export function AccountNav({ user }: { user: User }) {
         >
           <ShieldCheck size={18} />
           Sécurité du compte
+        </Link>
+        <Link
+          href="/compte/abonnement"
+          aria-current={path === "/compte/abonnement" ? "page" : undefined}
+        >
+          <ListChecks size={18} />
+          Mon forfait et mes limites
         </Link>
         <Link
           href="/compte/parametres"
@@ -307,6 +338,38 @@ export function AccountNav({ user }: { user: User }) {
             >
               <Box size={18} />
               Scènes à relire
+            </Link>
+          </>
+        ) : null}
+        {user.role === "admin" ? (
+          <>
+            <Link
+              href="/admin/parkings"
+              aria-current={path === "/admin/parkings" ? "page" : undefined}
+            >
+              <Box size={18} />
+              Parkings et places
+            </Link>
+            <Link
+              href="/admin/comptes"
+              aria-current={path === "/admin/comptes" ? "page" : undefined}
+            >
+              <ShieldCheck size={18} />
+              Comptes et accès
+            </Link>
+            <Link
+              href="/admin/limites"
+              aria-current={path === "/admin/limites" ? "page" : undefined}
+            >
+              <ListChecks size={18} />
+              Limites de la V1
+            </Link>
+            <Link
+              href="/admin/journal"
+              aria-current={path === "/admin/journal" ? "page" : undefined}
+            >
+              <ListChecks size={18} />
+              Journal administratif
             </Link>
           </>
         ) : null}
@@ -363,5 +426,6 @@ export const statusLabels: Record<string, string> = {
   paused: "En pause",
   suspended: "Suspendue · correction requise",
   sold: "Vendue",
+  expired: "Expirée · nouvelle revue requise",
   withdrawn: "Retirée",
 };

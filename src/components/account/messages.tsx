@@ -2,6 +2,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type FormEvent,
@@ -17,6 +18,8 @@ import {
   X,
 } from "lucide-react";
 import { AccountGate, AccountShell, api } from "./shared";
+import { mergeMessageHistory } from "./message-history";
+import ContextReportForm from "./context-report-form";
 import type { Conversation, Listing, Message, User, Visit } from "@/lib/types";
 const visitLabels: Record<Visit["status"], string> = {
   requested: "Visite demandée",
@@ -52,9 +55,76 @@ function Content({ user, id }: { user: User; id?: string }) {
     [blockConfirm, setBlockConfirm] = useState(false),
     [blockBusy, setBlockBusy] = useState(false),
     [blockNotice, setBlockNotice] = useState("");
+  const [reportTarget, setReportTarget] = useState<{
+    type: "conversation" | "message";
+    id: string;
+  } | null>(null);
   const requestId = useRef("");
+  const feed = useRef<HTMLDivElement>(null),
+    currentId = useRef(id),
+    initializedCursor = useRef(false),
+    scrollRestore = useRef<{
+      height: number;
+      top: number;
+      bottom: boolean;
+      prepend: boolean;
+    } | null>(null);
+  currentId.current = id;
+  const [historyCursor, setHistoryCursor] = useState<string | null>(null),
+    [loadingHistory, setLoadingHistory] = useState(false);
+  function rememberScroll(prepend = false) {
+    const node = feed.current;
+    if (node)
+      scrollRestore.current = {
+        height: node.scrollHeight,
+        top: node.scrollTop,
+        bottom: node.scrollHeight - node.scrollTop - node.clientHeight < 80,
+        prepend,
+      };
+  }
+  useLayoutEffect(() => {
+    const snapshot = scrollRestore.current,
+      node = feed.current;
+    if (!snapshot || !node) return;
+    scrollRestore.current = null;
+    node.scrollTop = snapshot.prepend
+      ? snapshot.top + node.scrollHeight - snapshot.height
+      : snapshot.bottom
+        ? node.scrollHeight
+        : snapshot.top;
+  }, [messages, visits]);
+  useEffect(() => {
+    initializedCursor.current = false;
+    setHistoryCursor(null);
+    setMessages([]);
+    setVisits([]);
+    setLoadingHistory(false);
+    requestId.current = "";
+  }, [id]);
+  async function loadOlder() {
+    if (!id || !historyCursor || loadingHistory) return;
+    const conversationId = id;
+    setLoadingHistory(true);
+    setError("");
+    try {
+      const p = new URLSearchParams({ limit: "100", cursor: historyCursor });
+      const r = await api<{ data: Message[]; nextCursor?: string | null }>(
+        `/api/conversations/${id}/messages?${p}`,
+      );
+      if (currentId.current !== conversationId) return;
+      rememberScroll(true);
+      setMessages((current) => mergeMessageHistory(current, r.data));
+      setHistoryCursor(r.nextCursor || null);
+    } catch (e) {
+      if (currentId.current === conversationId) setError((e as Error).message);
+    } finally {
+      if (currentId.current === conversationId) setLoadingHistory(false);
+    }
+  }
+
   const blocked = blockState?.blocked ?? true;
   useEffect(() => {
+    setReportTarget(null);
     setBlockState(null);
     setBlockConfirm(false);
     setBlockNotice("");
@@ -73,6 +143,8 @@ function Content({ user, id }: { user: User; id?: string }) {
       setBlockState(result.data);
       setBlockConfirm(false);
       setShowVisit(false);
+      const list = await api<{ data: Conversation[] }>("/api/conversations");
+      setConversations(list.data);
       setBlockNotice(
         removing
           ? result.data.blocked
@@ -101,14 +173,23 @@ function Content({ user, id }: { user: User; id?: string }) {
   }, []);
   const load = useCallback(async () => {
     if (!id) return;
+    const conversationId = id;
     const [m, v, b] = await Promise.all([
-      api<{ data: Message[] }>(`/api/conversations/${id}/messages`),
+      api<{ data: Message[]; nextCursor?: string | null }>(
+        `/api/conversations/${id}/messages?limit=100`,
+      ),
       api<{ data: Visit[] }>(`/api/conversations/${id}/visits`),
       api<{ data: { blocked: boolean; blockedByMe: boolean } }>(
         `/api/conversations/${id}/block`,
       ),
     ]);
-    setMessages(m.data);
+    if (currentId.current !== conversationId) return;
+    rememberScroll();
+    setMessages((current) => mergeMessageHistory(current, m.data));
+    if (!initializedCursor.current) {
+      initializedCursor.current = true;
+      setHistoryCursor(m.nextCursor || null);
+    }
     setVisits(v.data);
     setBlockState(b.data);
   }, [id]);
@@ -219,6 +300,7 @@ function Content({ user, id }: { user: User; id?: string }) {
                   <span>{c.listingTitle}</span>
                   <small>
                     {new Date(c.updatedAt).toLocaleDateString("fr-FR")}
+                    {c.blocked ? " · échanges bloqués" : ""}
                   </small>
                 </div>
                 <ChevronRight size={16} />
@@ -247,6 +329,20 @@ function Content({ user, id }: { user: User; id?: string }) {
                   </Link>
                 ) : null}
               </header>
+              <button
+                className="account-link-button"
+                onClick={() => setReportTarget({ type: "conversation", id })}
+              >
+                Signaler cette conversation
+              </button>
+              {reportTarget ? (
+                <ContextReportForm
+                  key={`${reportTarget.type}-${reportTarget.id}`}
+                  targetType={reportTarget.type}
+                  targetId={reportTarget.id}
+                  onClose={() => setReportTarget(null)}
+                />
+              ) : null}
               <section
                 className="account-block-controls"
                 aria-label="Gestion de l’interlocuteur"
@@ -316,9 +412,21 @@ function Content({ user, id }: { user: User; id?: string }) {
               </section>
               <div
                 className="account-chat-feed"
+                ref={feed}
                 aria-label="Messages de la conversation"
                 aria-live="polite"
               >
+                {historyCursor ? (
+                  <button
+                    className="button button-secondary"
+                    disabled={loadingHistory}
+                    onClick={() => void loadOlder()}
+                  >
+                    {loadingHistory
+                      ? "Chargement de l’historique…"
+                      : "Afficher les messages précédents"}
+                  </button>
+                ) : null}
                 {messages.length ? (
                   messages.map((m) => (
                     <article
@@ -334,6 +442,14 @@ function Content({ user, id }: { user: User; id?: string }) {
                       <time dateTime={m.createdAt}>
                         {formatDate(m.createdAt)}
                       </time>
+                      <button
+                        className="account-link-button"
+                        onClick={() =>
+                          setReportTarget({ type: "message", id: m.id })
+                        }
+                      >
+                        Signaler ce message
+                      </button>
                     </article>
                   ))
                 ) : (

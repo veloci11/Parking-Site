@@ -107,7 +107,10 @@ test("la surface minimale s’applique à chaque place et exclut toute surface i
   );
   assert.equal(listPublicListings({ ids }).length, 3);
   assert.equal(getPublicListing(unknown.id)?.spaces[1].areaM2, null);
-  assert.equal(areaLabel(unknown.spaces), "12 m² / place · partiel");
+  assert.equal(
+    areaLabel(unknown.spaces),
+    "12 m² / place · 1/2 surfaces renseignées",
+  );
   assert.equal(areaLabel([makeSpace(null)]), "Surface à préciser");
 });
 

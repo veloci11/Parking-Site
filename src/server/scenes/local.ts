@@ -20,6 +20,7 @@ export interface SceneRow {
   approved_mapping: unknown;
   reviewed_at: string | null;
   review_reason: string | null;
+  review_checks?: { observationEvidenceChecked?: boolean } | null;
   created_at: string;
 }
 export function sceneDB() {
@@ -34,6 +35,15 @@ export function sceneDB() {
       .some((column) => column.name === "creator_id")
   )
     sql.exec("ALTER TABLE scene_models ADD COLUMN creator_id TEXT");
+  const sourceColumns = sql.prepare("PRAGMA table_info(scene_sources)").all();
+  for (const [name, definition] of [
+    ["processing_state", "TEXT NOT NULL DEFAULT 'processing'"],
+    ["preview_keys", "TEXT NOT NULL DEFAULT '[]'"],
+    ["page_count", "INTEGER"],
+  ]) {
+    if (!sourceColumns.some((column) => column.name === name))
+      sql.exec(`ALTER TABLE scene_sources ADD COLUMN ${name} ${definition}`);
+  }
   return sql;
 }
 const unpack = (row: Record<string, unknown>): SceneRow => ({
@@ -51,6 +61,9 @@ const unpack = (row: Record<string, unknown>): SceneRow => ({
     : null,
   reviewed_at: row.reviewed_at as string | null,
   review_reason: row.review_reason as string | null,
+  review_checks: row.review_checks
+    ? JSON.parse(String(row.review_checks))
+    : null,
   created_at: String(row.created_at),
 });
 export function localSceneListing(id: string, user: User) {
@@ -75,11 +88,16 @@ export function listLocalScenes(user: User, review = false): SceneRow[] {
 export function getLocalPublicScene(listingId: string, level?: number | null) {
   const listingRow = sceneDB()
     .prepare(
-      "SELECT * FROM listings WHERE id=? AND public_json IS NOT NULL AND status NOT IN ('sold','withdrawn','paused')",
+      "SELECT * FROM listings WHERE id=? AND public_json IS NOT NULL AND status NOT IN ('sold','withdrawn','paused','expired','suspended')",
     )
     .get(listingId);
   if (!listingRow) return null;
   const listing: Listing = JSON.parse(String(listingRow.public_json));
+  if (
+    listing.availabilityExpiresAt &&
+    Date.parse(listing.availabilityExpiresAt) <= Date.now()
+  )
+    return null;
   if (listing.locationPrecision !== "exact_opt_in") return null;
   const rows = sceneDB()
     .prepare(
@@ -105,6 +123,8 @@ export function getLocalPublicScene(listingId: string, level?: number | null) {
         version: row.row_version,
         reviewedAt: row.reviewed_at,
         manifest: row.manifest,
+        observationEvidenceChecked:
+          row.review_checks?.observationEvidenceChecked,
       },
       listing,
     );
@@ -122,7 +142,9 @@ export function createLocalScene(
   for (const id of input.evidenceIds)
     if (
       !sceneDB()
-        .prepare("SELECT id FROM scene_sources WHERE id=? AND listing_id=?")
+        .prepare(
+          "SELECT id FROM scene_sources WHERE id=? AND listing_id=? AND processing_state='ready'",
+        )
         .get(id, input.listingId)
     )
       throw new ApiError(
@@ -172,9 +194,18 @@ export function reviewLocalScene(id: string, input: SceneReview, user: User) {
       throw new ApiError(409, "Le plan a changé.", "VERSION_CONFLICT");
     let approvedMapping: string | null = null;
     if (input.decision === "approve") {
+      for (const proof of row.evidence_ids)
+        if (
+          !sceneDB()
+            .prepare(
+              "SELECT id FROM scene_sources WHERE id=? AND processing_state='ready'",
+            )
+            .get(proof)
+        )
+          throw new ApiError(409, "Une source est en traitement ou refusée.");
       const listingRow = sceneDB()
         .prepare(
-          "SELECT * FROM listings WHERE id=? AND public_json IS NOT NULL AND status NOT IN ('sold','withdrawn','paused')",
+          "SELECT * FROM listings WHERE id=? AND public_json IS NOT NULL AND status NOT IN ('sold','withdrawn','paused','expired','suspended')",
         )
         .get(row.listing_id);
       if (!listingRow)

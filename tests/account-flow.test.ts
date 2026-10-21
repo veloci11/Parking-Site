@@ -1,6 +1,7 @@
 /**
  * Black-box HTTP acceptance flow. Opt-in against the LOCAL demonstration only:
- * GP_ACCOUNT_TEST_URL=http://127.0.0.1:3000 npm test
+ * GP_ACCOUNT_TEST_URL=http://127.0.0.1:3000 GP_ACCOUNT_ADMIN_EMAIL=... GP_ACCOUNT_ADMIN_PASSWORD=... npm test
+ * The admin must be an explicitly provisioned fixture in that isolated local database.
  * Creates distinct @test.invalid accounts and withdraws their test inventory.
  * Does not send external emails or interact with Supabase/production accounts.
  */
@@ -8,7 +9,15 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
+import {
+  processLocalExport,
+  purgeLocalExport,
+} from "../src/server/privacy-export-local-worker";
+import { EXPORT_POLICY } from "../src/server/privacy-archive";
+import { db, resetDbForTests } from "../src/server/db";
 const base = process.env.GP_ACCOUNT_TEST_URL;
+const adminEmail = process.env.GP_ACCOUNT_ADMIN_EMAIL,
+  adminPassword = process.env.GP_ACCOUNT_ADMIN_PASSWORD;
 class Client {
   cookie = "";
   async request(path: string, method = "GET", body?: unknown) {
@@ -25,7 +34,12 @@ class Client {
     });
     const setCookie = response.headers.get("set-cookie");
     if (setCookie) this.cookie = setCookie.split(";")[0];
-    const json = await response.json().catch(() => null);
+    const isArchive =
+      response.headers.get("content-type") === "application/zip";
+    const archive = isArchive
+      ? Buffer.from(await response.arrayBuffer())
+      : null;
+    const json = isArchive ? null : await response.json().catch(() => null);
     return {
       status: response.status,
       data: json?.data,
@@ -33,12 +47,19 @@ class Client {
       code: json?.code,
       raw: json,
       response,
+      archive,
     };
   }
 }
 test(
   "HTTP account journey: registration to moderated publication, private media, buyer contact and versioned visit",
-  { skip: !base },
+  {
+    skip: !base
+      ? "Local HTTP origin not configured"
+      : !adminEmail || !adminPassword
+        ? "Isolated admin fixture credentials required for physical registry approval"
+        : false,
+  },
   async (t) => {
     assert.ok(
       /^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(base!),
@@ -53,16 +74,21 @@ test(
     );
     const seller = new Client(),
       buyer = new Client(),
-      moderator = new Client();
+      moderator = new Client(),
+      admin = new Client();
     const suffix = randomUUID(),
       password = "Acceptance Test Password 2026!",
       sellerEmail = `seller-${suffix}@test.invalid`,
       buyerEmail = `buyer-${suffix}@test.invalid`;
     const register = async (client: Client, email: string, name: string) => {
-      const result = await client.request("auth/register", "POST", {
+      const policy = await client.request("auth/commands/policy");
+      assert.equal(policy.status, 200, policy.error);
+      const result = await client.request("auth/commands/register", "POST", {
         name,
         email,
         password,
+        termsAccepted: true,
+        ...policy.data,
       });
       assert.equal(result.status, 201, result.error);
       const mailbox = await client.request("local-mailbox");
@@ -80,7 +106,7 @@ test(
     t.after(async () => {
       for (const client of [seller, buyer]) {
         try {
-          await client.request("me/delete", "POST", {
+          await client.request("privacy/delete", "POST", {
             password,
             confirmation: "SUPPRIMER",
           });
@@ -95,6 +121,16 @@ test(
       (await moderator.request("auth/demo", "POST", { persona: "moderator" }))
         .status,
       200,
+    );
+    const adminLogin = await admin.request("auth/login", "POST", {
+      email: adminEmail,
+      password: adminPassword,
+    });
+    assert.equal(adminLogin.status, 200, adminLogin.error);
+    assert.equal(
+      adminLogin.data.role,
+      "admin",
+      "Refusing to elevate the moderator or a normal fixture",
     );
     // A fresh login must work with the cookie issued by the actual Next route handler.
     assert.equal((await seller.request("auth/logout", "POST", {})).status, 200);
@@ -210,11 +246,50 @@ test(
       title: "Saisie périmée",
     });
     assert.equal(conflict.status, 409);
-    const revised = await seller.request(`listings/${draft.id}`, "PATCH", {
+    let revised = await seller.request(`listings/${draft.id}`, "PATCH", {
       version: saved.data.version,
       title: "Parking de recette HTTP · sauvegardé",
+      locationConfirmedAt: new Date().toISOString(),
     });
     assert.equal(revised.status, 200, revised.error);
+    const areaPreview = await seller.request(`listings/${draft.id}/preview`);
+    assert.equal(areaPreview.status, 200, areaPreview.error);
+    assert.equal(areaPreview.data.address, undefined);
+    assert.notDeepEqual(
+      areaPreview.data.coordinates,
+      patch.coordinates,
+      "Area preview must not expose exact source point",
+    );
+    const exactPreviewDraft = await seller.request(
+      `listings/${draft.id}`,
+      "PATCH",
+      { version: revised.data.version, locationPrecision: "exact_opt_in" },
+    );
+    assert.equal(exactPreviewDraft.status, 200, exactPreviewDraft.error);
+    const exactPreview = await seller.request(`listings/${draft.id}/preview`);
+    assert.equal(exactPreview.status, 200, exactPreview.error);
+    assert.deepEqual(exactPreview.data.coordinates, patch.coordinates);
+    assert.equal(
+      (await guest.request(`listings/${draft.id}`)).status,
+      404,
+      "Private preview does not publish the draft",
+    );
+    const restoredArea = await seller.request(`listings/${draft.id}`, "PATCH", {
+      version: exactPreviewDraft.data.version,
+      locationPrecision: "area",
+    });
+    assert.equal(restoredArea.status, 200, restoredArea.error);
+    assert.equal(
+      restoredArea.data.locationConfirmedAt,
+      null,
+      "Changing precision clears the old confirmation",
+    );
+    revised = await seller.request(`listings/${draft.id}`, "PATCH", {
+      version: restoredArea.data.version,
+      locationConfirmedAt: new Date().toISOString(),
+    });
+    assert.equal(revised.status, 200, revised.error);
+
     assert.equal(
       (
         await seller.request(`listings/${draft.id}/submit`, "POST", {
@@ -234,10 +309,54 @@ test(
     assert.equal((await guest.request(`listings/${draft.id}`)).status, 404);
     const queue = await moderator.request("admin/revisions");
     assert.ok(queue.data.some((l: { id: string }) => l.id === draft.id));
+    const site = await admin.request("admin/parking-registry", "POST", {
+      action: "create_site",
+      publicName: "Site de recette HTTP",
+      internalReference: suffix,
+      exactAddress: "Adresse privée de recette",
+    });
+    assert.equal(site.status, 200, site.error);
+    assert.equal(site.data.status, "saved");
+    const level = await admin.request("admin/parking-registry", "POST", {
+      action: "add_level",
+      siteId: site.data.id,
+      code: "N-1",
+      label: "Sous-sol de recette",
+      number: -1,
+      sortOrder: 0,
+    });
+    assert.equal(level.status, 200, level.error);
+    const units = [];
+    for (const unit of patch.spaces) {
+      const physical = await admin.request("admin/parking-registry", "POST", {
+        action: "add_space",
+        levelId: level.data.id,
+        number: unit.number,
+        privateLotReference: unit.number,
+        areaM2: unit.areaM2,
+        lengthM: null,
+        widthM: null,
+        clearanceM: null,
+      });
+      assert.equal(physical.status, 200, physical.error);
+      units.push({ unitId: unit.id, spaceId: physical.data.id });
+    }
+    const linked = await admin.request("admin/parking-registry", "POST", {
+      action: "link_listing",
+      listingId: draft.id,
+      version: submitted.data.version,
+      siteId: site.data.id,
+      units,
+      reason:
+        "Rattachement des deux places à la fixture physique de recette HTTP.",
+    });
+    assert.equal(linked.status, 200, linked.error);
+    assert.equal(linked.data.status, "saved");
+    assert.ok(linked.data.version > submitted.data.version);
     const approved = await moderator.request(
       `admin/revisions/${draft.id}/decision`,
       "POST",
-      { version: submitted.data.version, decision: "approve" },
+      { version: linked.data.version, decision: "approve" },
     );
     assert.equal(approved.status, 200, approved.error);
     const published = await guest.request(`listings/${draft.id}`);
@@ -317,6 +436,103 @@ test(
       { version: confirmed.data.version, action: "cancel" },
     );
     assert.equal(cancelled.data.status, "cancelled");
+
+    const identity = await seller.request("session");
+    const limits = await seller.request("entitlements");
+    assert.equal(limits.status, 200, limits.error);
+    assert.equal(limits.data.billingEnabled, false);
+    assert.equal((await buyer.request("admin/entitlements")).status, 403);
+    const override = await admin.request("admin/entitlements", "POST", {
+      action: "set_user_override",
+      userId: identity.data.id,
+      version: 0,
+      limits: { draftsPerDay: 0 },
+      expiresAt: new Date(Date.now() + 3600000).toISOString(),
+      reason: "Quota temporaire de la fixture de recette HTTP isolée.",
+    });
+    assert.equal(override.status, 200, override.error);
+    const deniedDraft = await seller.request("listings", "POST", {});
+    assert.equal(deniedDraft.status, 429, deniedDraft.error);
+    assert.ok(deniedDraft.response.headers.get("retry-after"));
+    const clearOverride = await admin.request("admin/entitlements", "POST", {
+      action: "clear_user_override",
+      userId: identity.data.id,
+      version: override.data.user.override.version,
+      reason: "Fin du contrôle de quota sur cette fixture HTTP isolée.",
+    });
+    assert.equal(clearOverride.status, 200, clearOverride.error);
+    assert.equal(
+      (await seller.request("me/export")).status,
+      405,
+      "Legacy export cannot skip reauthentication",
+    );
+    assert.equal(
+      (
+        await seller.request("privacy/exports", "POST", {
+          password: "incorrect",
+        })
+      ).status,
+      403,
+    );
+    const exportJob = await seller.request("privacy/exports", "POST", {
+      password,
+    });
+    assert.equal(exportJob.status, 201, exportJob.error);
+    assert.equal(exportJob.data.state, "queued");
+    assert.ok(
+      process.env.GP_DATABASE_PATH?.includes("http-acceptance-"),
+      "Archive maintenance must target only the launcher's disposable QA database",
+    );
+    assert.equal(process.env.GP_FORCE_LOCAL_DEMO, "true");
+    const builtArchive = await processLocalExport(
+      exportJob.data.id,
+      EXPORT_POLICY,
+    );
+    assert.equal(builtArchive.state, "ready");
+    assert.equal(builtArchive.files, 3);
+    const privateDownload = await seller.request(
+      `privacy/exports/${exportJob.data.id}/download`,
+      "POST",
+      { password },
+    );
+    assert.equal(privateDownload.status, 200, privateDownload.error);
+    assert.equal(
+      privateDownload.response.headers.get("content-type"),
+      "application/zip",
+    );
+    assert.equal(privateDownload.archive?.subarray(0, 2).toString(), "PK");
+    assert.equal(
+      (
+        await buyer.request(
+          `privacy/exports/${exportJob.data.id}/download`,
+          "POST",
+          { password },
+        )
+      ).status,
+      404,
+    );
+    db()
+      .prepare("UPDATE export_jobs SET expires_at=? WHERE id=? AND user_id=?")
+      .run(
+        new Date(Date.now() - 1000).toISOString(),
+        exportJob.data.id,
+        identity.data.id,
+      );
+    assert.equal(
+      (await purgeLocalExport(exportJob.data.id, EXPORT_POLICY)).state,
+      "expired",
+    );
+    resetDbForTests();
+    assert.equal(
+      (
+        await seller.request(
+          `privacy/exports/${exportJob.data.id}/download`,
+          "POST",
+          { password },
+        )
+      ).status,
+      409,
+    );
     const withdrawn = await seller.request(
       `listings/${draft.id}/lifecycle`,
       "POST",

@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { handleApi } from "../src/server/api";
 import { db, resetDbForTests } from "../src/server/db";
+import { linkTestListing } from "./helpers/registry";
 const dir = mkdtempSync(join(tmpdir(), "gp-backend-"));
 process.env.GP_DATABASE_PATH = join(dir, "test.sqlite");
 process.env.GP_MEDIA_PATH = join(dir, "media");
@@ -75,7 +76,7 @@ after(() => {
 test("catalogue public assaini, filtre de lot par chaque surface, prix total", async () => {
   const a = await api("listings");
   assert.equal(a.response.status, 200);
-  assert.equal(a.result.data.length, 6);
+  assert.equal(a.result.data.length, 7);
   assert.ok(
     a.result.data.every((l: any) => !("sellerId" in l) && !("email" in l)),
   );
@@ -170,10 +171,17 @@ test("brouillon privé, contrôle version, modération et révision préservant 
     ).response.status,
     409,
   );
+  const confirmed = await api(
+    `listings/${id}`,
+    "PATCH",
+    { version: 2, locationConfirmedAt: new Date().toISOString() },
+    seller,
+  );
+  assert.equal(confirmed.response.status, 200);
   const submitted = await api(
     `listings/${id}/submit`,
     "POST",
-    { version: 2, ownershipAttested: true },
+    { version: 3, ownershipAttested: true },
     seller,
   );
   assert.equal(submitted.result.data.status, "pending");
@@ -183,16 +191,17 @@ test("brouillon privé, contrôle version, modération et révision préservant 
       await api(
         `admin/revisions/${id}/decision`,
         "POST",
-        { version: 3, decision: "approve" },
+        { version: 4, decision: "approve" },
         buyer,
       )
     ).response.status,
     403,
   );
+  const linkedVersion = linkTestListing(id);
   const approved = await api(
     `admin/revisions/${id}/decision`,
     "POST",
-    { version: 3, decision: "approve" },
+    { version: linkedVersion, decision: "approve" },
     moderator,
   );
   assert.equal(approved.response.status, 200);
@@ -202,21 +211,25 @@ test("brouillon privé, contrôle version, modération et révision préservant 
   const update = await api(
     `listings/${id}`,
     "PATCH",
-    { version: 4, priceCents: 2000000 },
+    { version: approved.result.data.version, priceCents: 2000000 },
     seller,
   );
-  assert.equal(update.result.data.version, 5);
+  assert.equal(update.result.data.version, approved.result.data.version + 1);
   assert.equal((await api(`listings/${id}`)).result.data.priceCents, 1850000);
   await api(
     `listings/${id}/submit`,
     "POST",
-    { version: 5, ownershipAttested: true },
+    { version: update.result.data.version, ownershipAttested: true },
     seller,
   );
   await api(
     `admin/revisions/${id}/decision`,
     "POST",
-    { version: 6, decision: "reject", reason: "Photo à revoir" },
+    {
+      version: update.result.data.version + 1,
+      decision: "reject",
+      reason: "Photo à revoir",
+    },
     moderator,
   );
   assert.equal((await api(`listings/${id}`)).result.data.priceCents, 1850000);

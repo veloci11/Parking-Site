@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import type { Listing, User } from "@/lib/types";
+import { currentRequestId } from "./request-context";
 let singleton: DatabaseSync | undefined;
 export function db() {
   if (singleton) return singleton;
@@ -25,6 +26,30 @@ export function db() {
  CREATE TABLE IF NOT EXISTS outbox(id TEXT PRIMARY KEY,user_id TEXT NOT NULL,type TEXT NOT NULL,target_id TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',created_at TEXT NOT NULL,UNIQUE(user_id,type,target_id));
  CREATE TABLE IF NOT EXISTS rate_limits(bucket TEXT PRIMARY KEY,count INTEGER NOT NULL,reset_at INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS claims(space_id TEXT PRIMARY KEY,listing_id TEXT NOT NULL REFERENCES listings(id));`);
+  for (const column of ["request_id", "before_json", "after_json"]) {
+    if (
+      !sql
+        .prepare("PRAGMA table_info(audit)")
+        .all()
+        .some((r) => r.name === column)
+    )
+      sql.exec(`ALTER TABLE audit ADD COLUMN ${column} TEXT`);
+  }
+  sql.function("gp_request_id", () => currentRequestId() ?? null);
+  sql.exec(`CREATE TRIGGER IF NOT EXISTS gp_listing_state_audit AFTER UPDATE ON listings
+    WHEN OLD.version<>NEW.version OR OLD.status<>NEW.status BEGIN
+    INSERT INTO audit(id,action,target_id,created_at,request_id,before_json,after_json)
+    VALUES(lower(hex(randomblob(4)))||'-'||lower(hex(randomblob(2)))||'-4'||substr(lower(hex(randomblob(2))),2)||'-8'||substr(lower(hex(randomblob(2))),2)||'-'||lower(hex(randomblob(6))),
+    'listing.state',NEW.id,strftime('%Y-%m-%dT%H:%M:%fZ','now'),gp_request_id(),
+    json_object('version',OLD.version,'status',OLD.status,'priceCents',json_extract(OLD.draft_json,'$.priceCents'),'spaceCount',json_array_length(json_extract(OLD.draft_json,'$.spaces'))),
+    json_object('version',NEW.version,'status',NEW.status,'priceCents',json_extract(NEW.draft_json,'$.priceCents'),'spaceCount',json_array_length(json_extract(NEW.draft_json,'$.spaces')))); END;`);
+  if (
+    !sql
+      .prepare("PRAGMA table_info(listings)")
+      .all()
+      .some((r) => r.name === "location_confirmation_hash")
+  )
+    sql.exec("ALTER TABLE listings ADD COLUMN location_confirmation_hash TEXT");
   if (
     !sql
       .prepare("PRAGMA table_info(listings)")
@@ -35,6 +60,17 @@ export function db() {
   sql.exec(
     "UPDATE listings SET published_at=json_extract(public_json,'$.updatedAt') WHERE public_json IS NOT NULL AND published_at IS NULL",
   );
+  for (const [column, type] of [
+    ["seller_type", "TEXT"],
+    ["account_version", "INTEGER NOT NULL DEFAULT 1"],
+  ])
+    if (
+      !sql
+        .prepare("PRAGMA table_info(users)")
+        .all()
+        .some((r) => r.name === column)
+    )
+      sql.exec(`ALTER TABLE users ADD COLUMN ${column} ${type}`);
   singleton = sql;
   seed(sql);
   sql.exec(
@@ -70,6 +106,10 @@ export function userDTO(row: Record<string, unknown>): User {
     email: String(row.email),
     role: row.role as User["role"],
     emailVerified: !!row.verified,
+    sellerType:
+      row.seller_type === "private" || row.seller_type === "professional"
+        ? row.seller_type
+        : null,
   };
 }
 function seed(sql: DatabaseSync) {

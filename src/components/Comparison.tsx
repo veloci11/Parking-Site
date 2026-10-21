@@ -1,4 +1,5 @@
 "use client";
+import { listingPrice, offerLabel } from "@/lib/listing-price";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "./SafePhoto";
@@ -55,7 +56,8 @@ export default function Comparison() {
     };
   }, []);
   const rows: [string, (l: Listing) => React.ReactNode][] = [
-    ["Prix total", (l) => <strong>{money(l.priceCents)}</strong>],
+    ["Offre", offerLabel],
+    ["Prix total ou loyer mensuel", (l) => <strong>{listingPrice(l)}</strong>],
     ["Type", (l) => typeLabels[l.type]],
     ["Places dans le lot", (l) => l.spaces.length],
     ["Surface par place", (l) => areaLabel(l.spaces)],

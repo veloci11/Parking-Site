@@ -1,26 +1,25 @@
 "use client";
+import { listingPrice } from "@/lib/listing-price";
 import Image from "./SafePhoto";
+import { ParkingKindIcon } from "./ParkingKindIcon";
+import { accessLabel } from "@/lib/access-label";
 import Link from "next/link";
 import { useState } from "react";
 import {
   ArrowUpRight,
-  Box,
   ChevronLeft,
   ChevronRight,
-  Layers3,
   LockKeyhole,
   Maximize,
   X,
 } from "lucide-react";
-import { areaLabel, money, typeLabels, type Listing } from "@/lib/types";
+import { areaLabel, type Listing } from "@/lib/types";
 export default function ListingInspector({
   listing,
   onClose,
-  onInterior,
 }: {
   listing: Listing;
   onClose: () => void;
-  onInterior: () => void;
 }) {
   const [index, setIndex] = useState(0);
   const photos = listing.photos.length ? listing.photos : ["/demo/covered.png"];
@@ -82,11 +81,17 @@ export default function ListingInspector({
         <h2>
           {listing.spaces.length > 1
             ? `Lot de ${listing.spaces.length} places`
-            : `Place ${listing.spaces[0]?.number || ""}`}
+            : listing.spaces[0]?.number
+              ? `Place ${listing.spaces[0].number}`
+              : "Place de parking"}
         </h2>
-        <p className="inspector-price">{money(listing.priceCents)}</p>
+        <p className="inspector-price">{listingPrice(listing)}</p>
         {listing.spaces.length > 1 ? (
-          <span className="muted small">Prix total du lot</span>
+          <span className="muted small">
+            {listing.transactionType === "rent"
+              ? "Loyer mensuel total du lot"
+              : "Prix total du lot"}
+          </span>
         ) : null}
         <div className="feature-row">
           <span>
@@ -94,46 +99,30 @@ export default function ListingInspector({
             {areaLabel(listing.spaces)}
           </span>
           <span>
-            <Box size={19} />
-            {listing.type === "box"
-              ? "Box"
-              : listing.type === "covered"
-                ? "Couvert"
-                : "Extérieur"}
+            <ParkingKindIcon type={listing.type} size={20} />
+            {listing.type === "mixed"
+              ? "Lot mixte"
+              : listing.type === "box"
+                ? "Box"
+                : listing.type === "covered"
+                  ? "Couvert"
+                  : "Extérieur"}
           </span>
           <span>
             <LockKeyhole size={19} />
-            {listing.quality.access === "unknown"
-              ? "À préciser"
-              : "Accès décrit"}
+            {accessLabel(listing)}
           </span>
         </div>
         <p className="inspector-description">
-          Découvrez la place, son état et ses accès. Échangez avec le vendeur
+          Découvrez la place, son état et ses accès. Échangez avec l’annonceur
           pour organiser une visite.
         </p>
-        {listing.sceneAvailable ? (
-          <button
-            className="button button-soft full-width"
-            onClick={onInterior}
-          >
-            <Layers3 size={18} />
-            Explorer le parking en 3D
-            <ArrowUpRight size={16} />
-          </button>
-        ) : null}
         <Link
           className="button button-primary full-width"
-          href={`/annonces/${listing.id}/${listing.slug}?contact=1`}
-        >
-          Demander une visite
-          <ArrowUpRight size={18} />
-        </Link>
-        <Link
-          className="full-detail-link"
           href={`/annonces/${listing.id}/${listing.slug}`}
         >
-          Voir la fiche complète
+          Consulter l’annonce
+          <ArrowUpRight size={18} />
         </Link>
         {listing.isDemo ? (
           <p className="demo-caption">Bien et visuel de démonstration</p>

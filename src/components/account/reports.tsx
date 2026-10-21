@@ -10,6 +10,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { AccountGate, AccountShell, api } from "./shared";
+import ContextReports from "./context-reports";
 import type { User } from "@/lib/types";
 interface Report {
   id: string;
@@ -227,6 +228,7 @@ function Content({ user }: { user: User }) {
           </div>
         </section>
       ) : null}
+      <ContextReports admin />
     </AccountShell>
   );
 }

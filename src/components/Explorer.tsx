@@ -3,11 +3,8 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowLeft,
   ArrowRight,
   Check,
-  ChevronDown,
-  Heart,
   Layers3,
   List,
   Map as MapIcon,
@@ -17,9 +14,15 @@ import {
   Tag,
   X,
 } from "lucide-react";
-import { api } from "@/lib/client";
+import { readSearch, searchParams, searchProblem } from "@/lib/search-client";
+import {
+  normalizeMapView,
+  type MapViewState,
+  type MapSearchArea,
+} from "@/lib/map-view";
 import { useFavorites } from "@/lib/favorites";
-import { money, type Listing, type ParkingType } from "@/lib/types";
+import { type Listing } from "@/lib/types";
+import FilterSelect from "./FilterSelect";
 import ListingCard from "./ListingCard";
 import ListingInspector from "./ListingInspector";
 const CityMap = dynamic(() => import("./maps/CityMap"), {
@@ -31,21 +34,13 @@ const CityMap = dynamic(() => import("./maps/CityMap"), {
     </div>
   ),
 });
-const ParkingViewer = dynamic(() => import("./maps/ParkingViewer"), {
-  ssr: false,
-  loading: () => (
-    <div className="map-loading">
-      <div className="loading-indicator" />
-      <span>Préparation du parking…</span>
-    </div>
-  ),
-});
 export default function Explorer({
   favoritesOnly = false,
 }: {
   favoritesOnly?: boolean;
 }) {
   const restoredScroll = useRef(false);
+  const requestGeneration = useRef(0);
   const [missingFavorites, setMissingFavorites] = useState<string[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -58,88 +53,190 @@ export default function Explorer({
   const [query, setQuery] = useState("");
   const [city, setCity] = useState("");
   const [type, setType] = useState("");
+  const [transactionType, setTransactionType] = useState<"sale" | "rent">(
+    "sale",
+  );
   const [maxPrice, setMaxPrice] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [covered, setCovered] = useState("");
+  const [closed, setClosed] = useState("");
+  const [occupancy, setOccupancy] = useState("");
+  const [level, setLevel] = useState("");
+  const [bbox, setBbox] = useState("");
+  const [center, setCenter] = useState("");
+  const [radiusKm, setRadiusKm] = useState("");
+  const [radiusDraft, setRadiusDraft] = useState("5");
+  const [mapView, setMapView] = useState<MapViewState | undefined>(undefined);
   const [minArea, setMinArea] = useState("");
   const [sort, setSort] = useState("recent");
   const [more, setMore] = useState(false);
   const [only3D, setOnly3D] = useState(false);
-  const [view, setView] = useState<"city" | "parking">("city");
   const [mobileView, setMobileView] = useState<"list" | "map">("list");
   const [compare, setCompare] = useState<string[]>([]);
   const [compareNotice, setCompareNotice] = useState("");
   const favorites = useFavorites();
   const favoriteKey = favoritesOnly ? favorites.ids.join(",") : "";
+  const searchState = useMemo(
+    () => ({
+      city,
+      transactionType,
+      type,
+      minPrice,
+      maxPrice,
+      minArea,
+      only3D,
+      sort,
+      covered,
+      closed,
+      occupancy,
+      level,
+      bbox,
+      center,
+      radiusKm,
+    }),
+    [
+      city,
+      transactionType,
+      type,
+      minPrice,
+      maxPrice,
+      minArea,
+      only3D,
+      sort,
+      covered,
+      closed,
+      occupancy,
+      level,
+      bbox,
+      center,
+      radiusKm,
+    ],
+  );
+  const advancedCount = [
+    minPrice,
+    covered,
+    closed,
+    occupancy,
+    level,
+    bbox,
+    radiusKm,
+    only3D,
+  ].filter((v) => v !== "" && v !== false).length;
+  const apiQuery = searchParams(searchState, true).toString();
+  function cameraChanged(value: MapViewState, meta?: { transient?: boolean }) {
+    setMapView(value);
+    if (meta?.transient) return;
+    try {
+      sessionStorage.setItem("gp:explore:map:v1", JSON.stringify(value));
+    } catch {
+      /* Camera persistence is optional. */
+    }
+  }
+  function searchArea(area: MapSearchArea) {
+    setBbox(area.bbox.join(","));
+    setCenter("");
+    setRadiusKm("");
+    setSelectedId(null);
+  }
+
   const load = useCallback(
     async (quiet = false) => {
       if (!quiet) setLoading(true);
       setError("");
+      const generation = ++requestGeneration.current;
       try {
+        const problem = searchProblem(searchState);
+        if (problem) throw new Error(problem);
+        const params = new URLSearchParams(apiQuery);
+        params.set("limit", "24");
         if (favoritesOnly) {
           const ids = favoriteKey.split(",").filter(Boolean);
+          if (!ids.length) {
+            if (generation === requestGeneration.current) {
+              setListings([]);
+              setMissingFavorites([]);
+              setTotal(0);
+              setNextCursor(null);
+            }
+            return;
+          }
           const results = await Promise.all(
             ids.map(async (id) => {
               const response = await fetch(`/api/listings/${id}`, {
                 cache: "no-store",
               });
-              if (response.status === 404) return { id, listing: null };
+              if (response.status === 404) return id;
               const result = await response.json();
               if (!response.ok)
                 throw new Error(
                   result.error || "Impossible de vérifier vos favoris.",
                 );
-              return { id, listing: result.data as Listing };
+              return null;
             }),
           );
-          const available = results.flatMap((r) =>
-            r.listing ? [r.listing] : [],
-          );
+          if (generation !== requestGeneration.current) return;
           setMissingFavorites(
-            results.filter((r) => !r.listing).map((r) => r.id),
+            results.filter((id): id is string => id !== null),
           );
-          setListings(available);
-          setTotal(results.length);
-          setNextCursor(null);
-          return;
-        }
-        const params = new URLSearchParams();
-        if (city) params.set("q", city);
-        if (type) params.set("type", type);
-        if (maxPrice) params.set("priceMax", String(Number(maxPrice) * 100));
-        if (minArea) params.set("areaMin", minArea);
-        if (only3D) params.set("scene", "1");
-        params.set("sort", sort);
-        params.set("limit", "24");
+          params.set("ids", ids.join(","));
+        } else setMissingFavorites([]);
         const r = await fetch("/api/listings?" + params);
         const result = await r.json();
         if (!r.ok)
           throw new Error(result.error || "La recherche est interrompue.");
+        if (generation !== requestGeneration.current) return;
         setListings(result.data);
         setNextCursor(result.nextCursor || null);
         setTotal(result.total ?? result.data.length);
       } catch (e) {
-        setError((e as Error).message);
+        if (generation === requestGeneration.current)
+          setError((e as Error).message);
       } finally {
-        setLoading(false);
+        if (generation === requestGeneration.current) setLoading(false);
       }
     },
-    [city, type, maxPrice, minArea, sort, only3D, favoritesOnly, favoriteKey],
+    [apiQuery, searchState, favoritesOnly, favoriteKey],
   );
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    setQuery(params.get("city") || "");
-    setCity(params.get("city") || "");
-    setType(params.get("type") || "");
-    setMaxPrice(params.get("priceMax") || "");
-    setMinArea(params.get("areaMin") || "");
-    setOnly3D(params.get("scene") === "1");
-    setSort(params.get("sort") || "recent");
+    const search = readSearch(params);
+    setQuery(search.city);
+    setCity(search.city);
+    setType(search.type);
+    setTransactionType(search.transactionType);
+    setMinPrice(search.minPrice);
+    setMaxPrice(search.maxPrice);
+    setMinArea(search.minArea);
+    setOnly3D(search.only3D);
+    setSort(search.sort);
+    setCovered(search.covered);
+    setClosed(search.closed);
+    setOccupancy(search.occupancy);
+    setLevel(search.level);
+    setBbox(search.bbox);
+    setCenter(search.center);
+    setRadiusKm(search.radiusKm);
+    setRadiusDraft(search.radiusKm || "5");
+    try {
+      setMapView(
+        normalizeMapView(
+          JSON.parse(sessionStorage.getItem("gp:explore:map:v1") || "null"),
+        ) || undefined,
+      );
+    } catch {
+      /* No stored camera. */
+    }
     setSelectedId(params.get("listing"));
     if (params.get("listing")) setMobileView("map");
-    if (params.get("view") === "parking") setView("parking");
     setInitialized(true);
   }, []);
   useEffect(() => {
-    if (initialized) void load();
+    if (!initialized) return;
+    requestGeneration.current++;
+    setLoading(true);
+    setNextCursor(null);
+    const timer = window.setTimeout(() => void load(), 200);
+    return () => window.clearTimeout(timer);
   }, [initialized, load]);
   useEffect(() => {
     if (!initialized) return;
@@ -163,23 +260,27 @@ export default function Explorer({
     restoredScroll.current = true;
     const panel = document.getElementById("resultats");
     if (panel)
-      panel.scrollTop = Number(
-        sessionStorage.getItem("gp:explore:scroll") || 0,
-      );
+      try {
+        panel.scrollTop = Number(
+          sessionStorage.getItem("gp:explore:scroll") || 0,
+        );
+      } catch {
+        /* No stored position. */
+      }
   }, [loading]);
   async function loadMore() {
     if (!nextCursor || loadingMore) return;
     setLoadingMore(true);
     try {
-      const p = new URLSearchParams({ cursor: nextCursor, sort, limit: "24" });
-      if (city) p.set("q", city);
-      if (type) p.set("type", type);
-      if (maxPrice) p.set("priceMax", String(Number(maxPrice) * 100));
-      if (minArea) p.set("areaMin", minArea);
-      if (only3D) p.set("scene", "1");
+      const generation = requestGeneration.current;
+      const p = new URLSearchParams(apiQuery);
+      p.set("cursor", nextCursor);
+      p.set("limit", "24");
+      if (favoritesOnly) p.set("ids", favoriteKey);
       const r = await fetch("/api/listings?" + p);
       const v = await r.json();
       if (!r.ok) throw new Error(v.error);
+      if (generation !== requestGeneration.current) return;
       setListings((current) => [
         ...current,
         ...v.data.filter((l: Listing) => !current.some((c) => c.id === l.id)),
@@ -191,64 +292,25 @@ export default function Explorer({
       setLoadingMore(false);
     }
   }
-  const filtered = useMemo(
-    () =>
-      listings
-        .filter(
-          (l) =>
-            (!favoritesOnly || favorites.ids.includes(l.id)) &&
-            (!city ||
-              `${l.city} ${l.district}`
-                .toLocaleLowerCase("fr")
-                .includes(city.toLocaleLowerCase("fr"))) &&
-            (!type || l.type === type) &&
-            (!maxPrice || l.priceCents <= Number(maxPrice) * 100) &&
-            (!minArea ||
-              l.spaces.every(
-                (s) => s.areaM2 !== null && s.areaM2 >= Number(minArea),
-              )) &&
-            (!only3D || l.sceneAvailable),
-        )
-        .sort((a, b) =>
-          sort === "price_asc"
-            ? a.priceCents - b.priceCents
-            : sort === "price_desc"
-              ? b.priceCents - a.priceCents
-              : b.createdAt.localeCompare(a.createdAt),
-        ),
-    [
-      listings,
-      city,
-      type,
-      maxPrice,
-      minArea,
-      only3D,
-      sort,
-      favoritesOnly,
-      favorites.ids,
-    ],
-  );
+  const filtered = listings;
   const selected = filtered.find((l) => l.id === selectedId) || null;
   useEffect(() => {
     if (!loading) {
-      const params = new URLSearchParams();
-      if (city) params.set("city", city);
-      if (type) params.set("type", type);
-      if (maxPrice) params.set("priceMax", maxPrice);
-      if (minArea) params.set("areaMin", minArea);
-      if (only3D) params.set("scene", "1");
+      const params = searchParams(searchState);
       if (selectedId) params.set("listing", selectedId);
-      if (view === "parking") params.set("view", "parking");
-      if (sort !== "recent") params.set("sort", sort);
       const href = `${window.location.pathname}${params.size ? "?" + params : ""}`;
-      sessionStorage.setItem("gp:explore:href", href);
+      try {
+        sessionStorage.setItem("gp:explore:href", href);
+      } catch {
+        /* URL remains the source of navigation context. */
+      }
       window.history.replaceState(
         null,
         "",
         `${window.location.pathname}${params.size ? "?" + params : ""}`,
       );
     }
-  }, [city, type, maxPrice, minArea, only3D, selectedId, sort, view, loading]);
+  }, [searchState, selectedId, loading]);
   function toggleCompare(id: string) {
     setCompareNotice("");
     setCompare((current) =>
@@ -267,10 +329,21 @@ export default function Explorer({
     setMaxPrice("");
     setMinArea("");
     setOnly3D(false);
+    setMinPrice("");
+    setCovered("");
+    setClosed("");
+    setOccupancy("");
+    setLevel("");
+    setBbox("");
+    setCenter("");
+    setRadiusKm("");
+    setRadiusDraft("5");
+    setSort("recent");
+    setSelectedId(null);
   }
   function choose(id: string) {
     setSelectedId(id);
-    setView("city");
+
     setMobileView("map");
   }
   return (
@@ -298,72 +371,107 @@ export default function Explorer({
             />
             <span className="search-separator" />
             <Tag size={22} />
-            <span className="search-sale">À vendre</span>
+            <span className="search-sale">
+              {transactionType === "rent" ? "À louer" : "À vendre"}
+            </span>
             <button className="search-submit" aria-label="Rechercher">
               <Search size={25} />
             </button>
           </form>
         </div>
         <div className="filters">
-          <span className="filter-chip active-filter">À vendre</span>
-          <label
-            className={`filter-chip select-chip ${type ? "filter-applied" : ""}`}
-          >
-            <span className="sr-only">Type de parking</span>
-            <select
-              aria-label="Type de parking"
-              value={type}
-              onChange={(e) => setType(e.target.value as ParkingType)}
-            >
-              <option value="">Parking & box</option>
-              <option value="covered">Parking couvert</option>
-              <option value="box">Box fermé</option>
-              <option value="outdoor">Extérieur</option>
-            </select>
-            <ChevronDown size={16} />
-          </label>
-          <label
-            className={`filter-chip select-chip ${maxPrice ? "filter-applied" : ""}`}
-          >
-            <span className="sr-only">Budget maximum</span>
-            <select
-              aria-label="Budget maximum"
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(e.target.value)}
-            >
-              <option value="">Budget</option>
-              <option value="20000">Jusqu’à 20 000 €</option>
-              <option value="25000">Jusqu’à 25 000 €</option>
-              <option value="30000">Jusqu’à 30 000 €</option>
-              <option value="50000">Jusqu’à 50 000 €</option>
-            </select>
-            <ChevronDown size={16} />
-          </label>
-          <label
-            className={`filter-chip select-chip ${minArea ? "filter-applied" : ""}`}
-          >
-            <select
-              aria-label="Surface minimum par place"
-              value={minArea}
-              onChange={(e) => setMinArea(e.target.value)}
-            >
-              <option value="">Surface</option>
-              <option value="12">12 m² minimum</option>
-              <option value="14">14 m² minimum</option>
-              <option value="16">16 m² minimum</option>
-            </select>
-            <ChevronDown size={16} />
-          </label>
+          <FilterSelect
+            label="Type d’offre"
+            value={transactionType}
+            applied
+            onChange={(value) => {
+              setTransactionType(value as "sale" | "rent");
+              setMinPrice("");
+              setMaxPrice("");
+              setSelectedId(null);
+            }}
+            options={[
+              { value: "sale", label: "À vendre" },
+              { value: "rent", label: "À louer" },
+            ]}
+          />
+          <FilterSelect
+            label="Type de parking"
+            value={type}
+            onChange={setType}
+            applied={Boolean(type)}
+            options={[
+              { value: "", label: "Parking & box" },
+              { value: "covered", label: "Parking couvert" },
+              { value: "box", label: "Box fermé" },
+              { value: "outdoor", label: "Extérieur" },
+              { value: "mixed", label: "Lot mixte" },
+            ]}
+          />
+          <FilterSelect
+            label="Budget maximum"
+            hint={
+              transactionType === "rent"
+                ? "Loyer mensuel total du bien ou du lot"
+                : "Prix total du bien ou du lot"
+            }
+            value={maxPrice}
+            onChange={setMaxPrice}
+            applied={Boolean(maxPrice || minPrice)}
+            options={[
+              { value: "", label: "Budget maximum" },
+              ...(maxPrice &&
+              !(
+                transactionType === "rent"
+                  ? ["50", "100", "150", "200"]
+                  : ["20000", "25000", "30000", "50000"]
+              ).includes(maxPrice)
+                ? [
+                    {
+                      value: maxPrice,
+                      label: `Jusqu’à ${Number(maxPrice).toLocaleString("fr-FR")} €`,
+                    },
+                  ]
+                : []),
+              ...(transactionType === "rent"
+                ? [
+                    { value: "50", label: "Jusqu’à 50 € / mois" },
+                    { value: "100", label: "Jusqu’à 100 € / mois" },
+                    { value: "150", label: "Jusqu’à 150 € / mois" },
+                    { value: "200", label: "Jusqu’à 200 € / mois" },
+                  ]
+                : [
+                    { value: "20000", label: "Jusqu’à 20 000 €" },
+                    { value: "25000", label: "Jusqu’à 25 000 €" },
+                    { value: "30000", label: "Jusqu’à 30 000 €" },
+                    { value: "50000", label: "Jusqu’à 50 000 €" },
+                  ]),
+            ]}
+          />
+          <FilterSelect
+            label="Surface minimum par place"
+            value={minArea}
+            onChange={setMinArea}
+            applied={Boolean(minArea)}
+            options={[
+              { value: "", label: "Surface" },
+              { value: "12", label: "12 m² minimum" },
+              { value: "14", label: "14 m² minimum" },
+              { value: "16", label: "16 m² minimum" },
+            ]}
+          />
           <button
-            className={`filter-chip ${more || only3D ? "filter-applied" : ""}`}
+            className={`filter-chip ${more || advancedCount > 0 ? "filter-applied" : ""}`}
             onClick={() => setMore(!more)}
             aria-expanded={more}
           >
             <SlidersHorizontal size={18} />
             Plus de filtres
-            {only3D ? <span className="filter-count">1</span> : null}
+            {advancedCount ? (
+              <span className="filter-count">{advancedCount}</span>
+            ) : null}
           </button>
-          {city || type || maxPrice || minArea || only3D ? (
+          {city || type || maxPrice || minArea || advancedCount > 0 ? (
             <button className="text-button clear-filters" onClick={reset}>
               <X size={15} />
               Effacer
@@ -398,6 +506,155 @@ export default function Explorer({
                 <X size={20} />
               </button>
             </div>
+            <div className="explorer-advanced-grid">
+              <label className="field">
+                {transactionType === "rent"
+                  ? "Loyer minimum · total mensuel (€)"
+                  : "Budget minimum · prix total (€)"}
+                <input
+                  className="input"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={minPrice}
+                  onChange={(e) => setMinPrice(e.target.value)}
+                  placeholder="Sans minimum"
+                />
+              </label>
+              <label className="field">
+                {transactionType === "rent"
+                  ? "Loyer maximum · total mensuel (€)"
+                  : "Budget maximum · prix total (€)"}
+                <input
+                  className="input"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)}
+                  placeholder="Sans maximum"
+                />
+              </label>
+              <div className="field">
+                <span>Couverture</span>
+                <FilterSelect
+                  label="Couverture"
+                  variant="field"
+                  value={covered}
+                  onChange={setCovered}
+                  applied={Boolean(covered)}
+                  options={[
+                    { value: "", label: "Indifférent" },
+                    { value: "1", label: "Couvert (parking ou box)" },
+                    { value: "0", label: "Extérieur" },
+                  ]}
+                />
+              </div>
+              <div className="field">
+                <span>Fermeture</span>
+                <FilterSelect
+                  label="Fermeture"
+                  variant="field"
+                  value={closed}
+                  onChange={setClosed}
+                  applied={Boolean(closed)}
+                  options={[
+                    { value: "", label: "Indifférent" },
+                    { value: "1", label: "Box fermé" },
+                    { value: "0", label: "Place ouverte" },
+                  ]}
+                />
+              </div>
+              <div className="field">
+                <span>Occupation déclarée</span>
+                <FilterSelect
+                  label="Occupation déclarée"
+                  variant="field"
+                  value={occupancy}
+                  onChange={setOccupancy}
+                  applied={Boolean(occupancy)}
+                  options={[
+                    { value: "", label: "Indifférente" },
+                    { value: "vacant", label: "Libre" },
+                    { value: "occupied", label: "Occupée" },
+                    { value: "unknown", label: "Non renseignée" },
+                  ]}
+                />
+              </div>
+              <label className="field">
+                Niveau d’au moins une place
+                <input
+                  className="input"
+                  type="number"
+                  min="-20"
+                  max="50"
+                  step="1"
+                  value={level}
+                  onChange={(e) => setLevel(e.target.value)}
+                  placeholder="Tous les niveaux"
+                />
+              </label>
+            </div>
+            <fieldset className="explorer-geography">
+              <legend>Zone de recherche</legend>
+              <p className="small muted">
+                Déplacez la carte puis utilisez « Rechercher dans cette zone »,
+                ou choisissez un rayon autour de son centre. Les distances
+                utilisent la position publique : elles restent approximatives
+                pour une annonce localisée au quartier.
+              </p>
+              <label className="field">
+                Rayon autour du centre de la carte (km)
+                <input
+                  className="input"
+                  type="number"
+                  min="0.1"
+                  max="200"
+                  step="0.1"
+                  value={radiusDraft}
+                  onChange={(e) => setRadiusDraft(e.target.value)}
+                />
+              </label>
+              <button
+                className="button button-secondary"
+                disabled={
+                  !mapView ||
+                  !Number.isFinite(Number(radiusDraft)) ||
+                  Number(radiusDraft) < 0.1 ||
+                  Number(radiusDraft) > 200
+                }
+                onClick={() => {
+                  if (!mapView) return;
+                  setCenter(mapView.center.join(","));
+                  setRadiusKm(radiusDraft);
+                  setBbox("");
+                  setSelectedId(null);
+                }}
+              >
+                Appliquer autour du centre de la carte
+              </button>
+              {bbox || radiusKm ? (
+                <div className="notice" role="status">
+                  <p>
+                    {bbox
+                      ? "Recherche limitée à la zone de carte sélectionnée."
+                      : `Recherche dans un rayon de ${radiusKm} km autour du centre sélectionné.`}{" "}
+                    Le déplacement de la carte ne change pas ce filtre
+                    automatiquement.
+                  </p>
+                  <button
+                    className="text-button"
+                    onClick={() => {
+                      setBbox("");
+                      setCenter("");
+                      setRadiusKm("");
+                    }}
+                  >
+                    Retirer la limite géographique
+                  </button>
+                </div>
+              ) : null}
+            </fieldset>
             <label className="checkbox-field">
               <input
                 type="checkbox"
@@ -409,13 +666,15 @@ export default function Explorer({
             </label>
             <p className="small muted">
               Les surfaces inconnues sont exclues lorsqu’un minimum est choisi.
-              Le budget correspond au prix total du bien ou du lot.
+              {transactionType === "rent"
+                ? "Le budget correspond au loyer mensuel total du bien ou du lot."
+                : "Le budget correspond au prix total du bien ou du lot."}
             </p>
             <button
               className="button button-primary full-width"
               onClick={() => setMore(false)}
             >
-              Voir les {filtered.length} résultats
+              Voir les {total} résultats
               <ArrowRight size={17} />
             </button>
           </div>
@@ -426,12 +685,16 @@ export default function Explorer({
           id="resultats"
           className="results-panel"
           aria-label="Résultats"
-          onScroll={(event) =>
-            sessionStorage.setItem(
-              "gp:explore:scroll",
-              String(event.currentTarget.scrollTop),
-            )
-          }
+          onScroll={(event) => {
+            try {
+              sessionStorage.setItem(
+                "gp:explore:scroll",
+                String(event.currentTarget.scrollTop),
+              );
+            } catch {
+              /* Optional position persistence. */
+            }
+          }}
         >
           <div className="results-heading">
             <h2>
@@ -441,17 +704,36 @@ export default function Explorer({
               <span aria-live="polite">
                 {loading
                   ? "Recherche…"
-                  : `${favoritesOnly ? filtered.length : total} bien${(favoritesOnly ? filtered.length : total) > 1 ? "s" : ""}${listings.some((l) => l.isDemo) ? " d’exemple" : ""}`}
+                  : `${total} bien${total > 1 ? "s" : ""}${listings.some((l) => l.isDemo) ? " d’exemple" : ""}`}
               </span>
-              <select
-                aria-label="Trier les résultats"
+              <FilterSelect
+                label="Trier les résultats"
+                variant="sort"
                 value={sort}
-                onChange={(e) => setSort(e.target.value)}
-              >
-                <option value="recent">Plus récents</option>
-                <option value="price_asc">Prix croissant</option>
-                <option value="price_desc">Prix décroissant</option>
-              </select>
+                onChange={setSort}
+                options={[
+                  { value: "recent", label: "Plus récents" },
+                  {
+                    value: "price_asc",
+                    label:
+                      transactionType === "rent"
+                        ? "Loyer croissant"
+                        : "Prix croissant",
+                  },
+                  {
+                    value: "price_desc",
+                    label:
+                      transactionType === "rent"
+                        ? "Loyer décroissant"
+                        : "Prix décroissant",
+                  },
+                  { value: "area_asc", label: "Surface par place croissante" },
+                  {
+                    value: "spaces_desc",
+                    label: "Nombre de places décroissant",
+                  },
+                ]}
+              />
             </div>
           </div>
           {error ? (
@@ -473,17 +755,24 @@ export default function Explorer({
               ))}
             </div>
           ) : null}
-          {!loading && !error && !filtered.length ? (
+          {!loading &&
+          !error &&
+          !filtered.length &&
+          !(favoritesOnly && missingFavorites.length) ? (
             <div className="empty-state">
               <Search size={32} />
               <h3>
                 {favoritesOnly
-                  ? "Vos favoris commencent ici."
+                  ? favorites.ids.length
+                    ? "Aucun favori pour ces critères."
+                    : "Vos favoris commencent ici."
                   : "Aucune place pour ces critères."}
               </h3>
               <p>
                 {favoritesOnly
-                  ? "Touchez le cœur d’une annonce pour la retrouver ici."
+                  ? favorites.ids.length
+                    ? "Aucun favori disponible ne correspond à ces filtres. Vos favoris restent enregistrés."
+                    : "Touchez le cœur d’une annonce pour la retrouver ici."
                   : "Essayez un autre quartier ou élargissez votre budget."}
               </p>
               {favoritesOnly ? (
@@ -516,7 +805,7 @@ export default function Explorer({
             <button
               className="button button-secondary full-width"
               onClick={loadMore}
-              disabled={loadingMore}
+              disabled={loadingMore || loading}
             >
               {loadingMore ? "Chargement…" : "Afficher plus de biens"}
             </button>
@@ -541,14 +830,6 @@ export default function Explorer({
               ))}
             </div>
           ) : null}
-          <div className="results-note">
-            <span className="status-dot" />
-            <p>
-              Des photos, un état détaillé.
-              <br />
-              Pour choisir en toute clarté.
-            </p>
-          </div>
           <p className="demo-note">
             {listings.some((l) => l.isDemo)
               ? "Version de démonstration · biens fictifs"
@@ -557,59 +838,29 @@ export default function Explorer({
         </section>
         <section
           className={`map-panel ${selected ? "has-inspector" : ""}`}
-          aria-label={
-            view === "parking" ? "Vue du parking" : "Carte des parkings"
-          }
+          aria-label="Carte des parkings"
         >
-          {view === "parking" && selected ? (
-            <>
-              <div className="map-breadcrumb">
-                <button className="text-button" onClick={() => setView("city")}>
-                  <ArrowLeft size={18} />
-                  Carte de {selected.city}
-                </button>
-                <span />
-                {selected.district}
-                <Link
-                  className="parking-detail-shortcut text-button"
-                  href={`/annonces/${selected.id}/${selected.slug}`}
-                >
-                  Voir la fiche <ArrowRight size={16} />
-                </Link>
-              </div>
-              <ParkingViewer listing={selected} />
-              <div className="parking-mobile-summary">
-                <strong>{money(selected.priceCents)}</strong>
-                <Link
-                  className="button"
-                  href={`/annonces/${selected.id}/${selected.slug}`}
-                >
-                  Voir le bien <ArrowRight size={16} />
-                </Link>
-              </div>
-            </>
-          ) : (
+          {initialized ? (
             <CityMap
               listings={filtered}
               selectedId={selected?.id || null}
               onSelect={choose}
+              initialView={mapView}
+              onCameraChange={cameraChanged}
+              onSearchArea={searchArea}
             />
+          ) : (
+            <div className="map-loading" role="status">
+              Préparation de la carte…
+            </div>
           )}
-          <div className="map-top-label">
-            <span className="status-dot" />
-            {view === "parking"
-              ? "À chaque place, sa perspective."
-              : "Explorez la ville autrement."}
-          </div>
           {selected ? (
             <ListingInspector
               key={selected.id}
               listing={selected}
               onClose={() => {
                 setSelectedId(null);
-                setView("city");
               }}
-              onInterior={() => setView("parking")}
             />
           ) : (
             <div className="map-hint">

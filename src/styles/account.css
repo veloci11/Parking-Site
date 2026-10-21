@@ -2139,3 +2139,68 @@
   padding: 16px 20px;
   border-bottom: 1px solid var(--border, #e4e4ec);
 }
+
+.account-audit-list {
+  display: grid;
+  gap: 16px;
+  margin: 24px 0;
+}
+.account-audit-list article {
+  padding: 24px;
+  overflow-wrap: anywhere;
+}
+.account-audit-list time {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.account-context-report-form {
+  margin: 16px;
+  padding: 24px;
+}
+.account-context-reports {
+  margin-top: 40px;
+}
+.account-reported-context {
+  display: grid;
+  gap: 16px;
+  margin: 24px 0;
+}
+.account-reported-context > section {
+  border-bottom: 1px solid var(--border);
+  padding: 16px 0;
+  overflow-wrap: anywhere;
+}
+
+.quota-list {
+  display: grid;
+  gap: 0;
+  margin-top: 20px;
+}
+.quota-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+.quota-row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.quota-row > span {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 600px) {
+  .quota-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+}

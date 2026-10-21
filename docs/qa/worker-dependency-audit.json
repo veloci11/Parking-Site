@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-10-21T20:20:13.166154+00:00",
+  "command": "npm audit --omit=dev --json",
+  "status": "passed",
+  "vulnerabilities": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "dependencies": {
+    "prod": 3,
+    "dev": 0,
+    "optional": 11,
+    "peer": 0,
+    "peerOptional": 0,
+    "total": 13
+  },
+  "scope": "independent locked PDF raster worker dependencies",
+  "limitations": "Known dependency advisories at check time; no claim of exhaustive application security."
+}

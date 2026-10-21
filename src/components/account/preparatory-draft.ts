@@ -1,16 +1,18 @@
-import type { ParkingType, Space } from "@/lib/types";
+import type { ParkingType, Space, TransactionType } from "@/lib/types";
 export const preparationKey = "gp:preparation:v1";
 export interface Preparation {
   title: string;
   city: string;
   type: ParkingType;
   quantity: number;
+  transactionType?: TransactionType;
 }
 export const emptyPreparation: Preparation = {
   title: "",
   city: "",
   type: "covered",
   quantity: 1,
+  transactionType: "sale",
 };
 export function decodePreparation(raw: string | null): Preparation | null {
   if (!raw || raw.length > 3000) return null;
@@ -23,6 +25,8 @@ export function decodePreparation(raw: string | null): Preparation | null {
       typeof value.title !== "string" ||
       typeof value.city !== "string" ||
       !["covered", "box", "outdoor"].includes(value.type) ||
+      (value.transactionType !== undefined &&
+        !["sale", "rent"].includes(value.transactionType)) ||
       !Number.isInteger(value.quantity) ||
       value.quantity < 1 ||
       value.quantity > 500
@@ -33,6 +37,9 @@ export function decodePreparation(raw: string | null): Preparation | null {
       city: value.city.slice(0, 80),
       type: value.type,
       quantity: value.quantity,
+      ...(value.transactionType
+        ? { transactionType: value.transactionType }
+        : {}),
     };
   } catch {
     return null;
@@ -53,5 +60,11 @@ export function preparationPayload(value: Preparation, makeId: () => string) {
     widthM: null,
     clearanceM: null,
   }));
-  return { title: safe.title, city: safe.city, type: safe.type, spaces };
+  return {
+    title: safe.title,
+    city: safe.city,
+    type: safe.type,
+    spaces,
+    ...(safe.transactionType ? { transactionType: safe.transactionType } : {}),
+  };
 }

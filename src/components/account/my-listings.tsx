@@ -1,4 +1,5 @@
 "use client";
+import { listingPrice, offerLabel } from "@/lib/listing-price";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Check, ClipboardList, Pause, Plus, X } from "lucide-react";
@@ -51,6 +52,22 @@ function Content({ user }: { user: User }) {
       setBusy("");
     }
   }
+  async function reconfirm(item: Listing) {
+    setBusy(item.id);
+    setError("");
+    try {
+      await api(`/api/listings/${item.id}/availability`, {
+        method: "POST",
+        body: JSON.stringify({ version: item.version }),
+      });
+      setNotice("La disponibilité a été confirmée pour 90 jours.");
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy("");
+    }
+  }
   const visible = items.filter((l) => filter === "all" || l.status === filter);
   return (
     <AccountShell
@@ -77,8 +94,9 @@ function Content({ user }: { user: User }) {
           ["pending", "En relecture"],
           ["published", "En ligne"],
           ["changes_requested", "À compléter"],
-          ["sold", "Vendues"],
+          ["sold", "Vendues ou louées"],
           ["suspended", "Suspendues"],
+          ["expired", "Expirées"],
         ].map(([v, l]) => (
           <button
             className={filter === v ? "active" : ""}
@@ -117,7 +135,9 @@ function Content({ user }: { user: User }) {
               <div className="account-manage-copy">
                 <div>
                   <span className={`badge account-status-${l.status}`}>
-                    {statusLabels[l.status] || l.status}
+                    {l.status === "sold" && l.transactionType === "rent"
+                      ? "Louée"
+                      : statusLabels[l.status] || l.status}
                   </span>
                   {l.isDemo ? (
                     <span className="badge">Exemple fictif</span>
@@ -128,11 +148,21 @@ function Content({ user }: { user: User }) {
                   {l.city} · {typeLabels[l.type]} · {areaLabel(l.spaces)}
                 </p>
                 <strong>
-                  {money(l.priceCents)}
+                  {listingPrice(l)}
                   {l.spaces.length > 1
                     ? ` · lot de ${l.spaces.length} places`
                     : ""}
                 </strong>
+                {l.availabilityConfirmedAt || l.availabilityExpiresAt ? (
+                  <p className="muted">
+                    {l.availabilityConfirmedAt
+                      ? `Disponibilité confirmée le ${new Date(l.availabilityConfirmedAt).toLocaleDateString("fr-FR", { timeZone: "UTC" })}. `
+                      : ""}
+                    {l.availabilityExpiresAt
+                      ? `Échéance le ${new Date(l.availabilityExpiresAt).toLocaleDateString("fr-FR", { timeZone: "UTC" })}.`
+                      : ""}
+                  </p>
+                ) : null}
                 {l.status === "suspended" ? (
                   <p className="notice">
                     Cette annonce est masquée. Corrigez le dossier puis
@@ -154,6 +184,23 @@ function Content({ user }: { user: User }) {
                       : "Reprendre l’annonce"}
                     <ArrowRight size={16} />
                   </Link>
+                  {l.status === "published" ? (
+                    <button
+                      className="button button-secondary"
+                      disabled={busy === l.id}
+                      onClick={() => void reconfirm(l)}
+                    >
+                      Confirmer disponible 90 jours
+                    </button>
+                  ) : null}
+                  {l.status === "expired" ? (
+                    <p className="notice">
+                      Cette annonce a expiré et n’est plus publique. Corrigez ou
+                      confirmez son contenu dans « Reprendre l’annonce », puis
+                      soumettez-la à nouveau à la modération. Aucune remise en
+                      ligne directe.
+                    </p>
+                  ) : null}
                   {l.status === "published" && l.spaces.length > 1 ? (
                     <Link
                       href={`/compte/annonces/${l.id}/modifier?partial=1`}
@@ -178,7 +225,7 @@ function Content({ user }: { user: User }) {
                         onClick={() => lifecycle(l, "sold")}
                       >
                         <Check size={16} />
-                        Vendue
+                        {l.transactionType === "rent" ? "Louée" : "Vendue"}
                       </button>
                     </>
                   ) : null}

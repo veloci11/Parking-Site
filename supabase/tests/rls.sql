@@ -17,6 +17,7 @@ select set_config('request.jwt.claim.sub','f1000000-0000-4000-8000-000000000001'
 select 1/((select count(*)=0 from listings where id='f2000000-0000-4000-8000-000000000001')::int) as private_draft_rls;
 do $$ begin begin perform gp_moderate('f2000000-0000-4000-8000-000000000001','approve',3,null);raise exception 'Expected FORBIDDEN';exception when others then if sqlerrm not in ('FORBIDDEN','MFA_OR_PERMISSION_REQUIRED') then raise;end if;end;end;$$;
 select set_config('request.jwt.claim.sub','f1000000-0000-4000-8000-000000000003',true);
+select set_config('request.jwt.claims','{"sub":"f1000000-0000-4000-8000-000000000003","role":"authenticated","aal":"aal2"}',true);
 do $$begin begin perform gp_moderate('f2000000-0000-4000-8000-000000000001','approve',null,null);raise exception 'Expected VERSION_CONFLICT';exception when others then if sqlerrm<>'VERSION_CONFLICT' then raise;end if;end;end;$$;
 select gp_moderate('f2000000-0000-4000-8000-000000000001','approve',3,null);
 select 1/((select not(payload?'address') and not(payload?'sellerId') and payload->>'sceneAvailable'='false' and payload->'coordinates'='[4.86,45.76]'::jsonb from published_listings where id='f2000000-0000-4000-8000-000000000001')::int) as public_privacy;
@@ -30,6 +31,7 @@ do $$declare vid uuid;begin select id into vid from visit_requests limit 1;begin
 select gp_conversations();
 select gp_catalog('',null,2000000,12,'price_asc',0,24);
 select set_config('request.jwt.claim.sub','f1000000-0000-4000-8000-000000000003',true);
+select set_config('request.jwt.claims','{"sub":"f1000000-0000-4000-8000-000000000003","role":"authenticated","aal":"aal2"}',true);
 select 1/((select count(*)=0 from messages)::int) as moderator_no_message_access;
 reset role;
 rollback;

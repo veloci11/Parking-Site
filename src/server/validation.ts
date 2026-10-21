@@ -1,3 +1,5 @@
+import { commercialDetailsSchema } from "@/lib/commercial-details";
+import { conditionObservationsInputSchema } from "@/lib/condition-observations";
 import { z } from "zod";
 const text = z.string().trim();
 export const password = z
@@ -5,8 +7,8 @@ export const password = z
   .min(12, "Utilisez au moins 12 caractères.")
   .max(128);
 const spaceSchema = z.object({
-  id: z.string().min(1).max(100),
-  number: text.max(30),
+  id: z.string().uuid(),
+  number: text.max(40),
   level: z.number().int().min(-20).max(20),
   areaM2: z.number().positive().max(500).nullable(),
   lengthM: z.number().positive().max(50).nullable(),
@@ -40,13 +42,24 @@ export const draftSchema = z
     city: text.max(80).optional(),
     district: text.max(100).optional(),
     priceCents: z.number().int().min(0).max(10000000000).optional(),
-    type: z.enum(["covered", "box", "outdoor"]).optional(),
+    transactionType: z.enum(["sale", "rent"]).optional(),
+    type: z.enum(["covered", "box", "outdoor", "mixed"]).optional(),
     spaces: z.array(spaceSchema).min(1).max(500).optional(),
     photos: z.array(z.string().max(200)).max(20).optional(),
     spacePhotos: z
       .record(z.string().max(100), z.array(z.string().max(200)).max(6))
       .optional(),
     quality: qualitySchema.optional(),
+    commercialDetails: commercialDetailsSchema.optional(),
+    publicCoordinates: z
+      .tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)])
+      .optional(),
+    locationConfirmedAt: z
+      .string()
+      .datetime({ offset: true })
+      .nullable()
+      .optional(),
+    conditionObservations: conditionObservationsInputSchema.optional(),
     unitQuality: z.record(z.string().max(100), qualitySchema).optional(),
     locationPrecision: z.enum(["area", "exact_opt_in"]).optional(),
     coordinates: z

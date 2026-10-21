@@ -1,9 +1,14 @@
+import { handlePrivacyCommands } from "./privacy-commands";
+import { handleAuthCommands } from "./auth-commands";
+import { assertRemoteUploadQuota } from "./upload-quota";
+import { parseHistoryQuery, historyCursor } from "./history-pagination";
 import { mediaVariantWidth, resizeAuthorizedMedia } from "./media-variants";
 import { createServerClient } from "@supabase/ssr";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { boundedFormData } from "./uploads";
-import { readBoundedJson } from "./json-body";
+import { readApiJson } from "./json-body";
+import { diagnosticBackendHeaders } from "./request-context";
 import { parsePageQuery, encodeCursor } from "./pagination";
 import { listingPhotoUrls, validatePhotoLinks } from "./media-links";
 import { z } from "zod";
@@ -29,17 +34,53 @@ function parse<T>(schema: z.ZodType<T>, input: unknown): T {
     );
   return r.data;
 }
-const json = readBoundedJson;
-const schemaError = (e: { message: string; code?: string } | null) => {
+const json = readApiJson;
+const schemaError = (
+  e: { message: string; code?: string; details?: string } | null,
+) => {
   if (!e) return;
+  if (e.message.includes("RATE_LIMITED"))
+    throw new ApiError(
+      429,
+      "Limite d’usage atteinte. Réessayez après sa remise à zéro.",
+      "RATE_LIMITED",
+      Number(e.details?.match(/retryAfter=(\d+)/)?.[1]) || 60,
+    );
   const known: Record<string, [number, string]> = {
     CONVERSATION_BLOCKED: [
       409,
       "Cette conversation est bloquée. Les nouveaux messages et demandes de visite sont désactivés.",
     ],
+    REGISTRY_LINK_REQUIRED: [
+      409,
+      "Un administrateur doit rattacher chaque place physique avant approbation.",
+    ],
+    REGISTRY_DUPLICATE_SAME_SELLER: [
+      409,
+      "Cette place est déjà rattachée à une autre de vos annonces.",
+    ],
+    LOCATION_CONFIRMATION_REQUIRED: [
+      400,
+      "Confirmez la localisation publique après sa dernière modification.",
+    ],
+    COMMERCIAL_INVALID: [
+      400,
+      "Les détails du bien ou leurs justificatifs sont invalides.",
+    ],
+    TRANSACTION_TYPE_INVALID: [
+      400,
+      "Choisissez une vente ou une location mensuelle.",
+    ],
+    CONDITION_INVALID: [400, "Les observations sont invalides."],
+    CONDITION_EVIDENCE_REQUIRED: [
+      400,
+      "Complétez les preuves des observations avant de soumettre.",
+    ],
+    LAST_ADMIN: [409, "Le dernier administrateur actif doit être conservé."],
+    INVALID_CURSOR: [400, "Curseur d’historique invalide."],
     MFA_OR_PERMISSION_REQUIRED: [
       403,
-      "La modération requiert les droits adaptés et la double authentification si elle est activée.",
+      "La modération requiert les droits adaptés et la double authentification.",
     ],
     MFA_REQUIRED: [403, "Confirmez votre double authentification."],
     UNAUTHENTICATED: [401, "Connectez-vous pour continuer."],
@@ -50,7 +91,7 @@ const schemaError = (e: { message: string; code?: string } | null) => {
       409,
       "La version a changé. Rechargez avant de recommencer.",
     ],
-    QUOTA_EXCEEDED: [403, "Limite de 10 annonces actives atteinte."],
+    QUOTA_EXCEEDED: [403, "Limite d’annonces actives atteinte."],
     RATE_LIMITED: [429, "Trop de demandes. Réessayez plus tard."],
     MEDIA_NOT_OWNED: [400, "Une photo n’appartient pas à cette annonce."],
     OWNERSHIP_ATTESTATION_REQUIRED: [
@@ -90,6 +131,7 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
       (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)!,
       {
+        global: { headers: diagnosticBackendHeaders() },
         cookies: {
           getAll() {
             return (request.headers.get("cookie") || "")
@@ -132,7 +174,11 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
         return null;
       }
       const [p, r, s] = await Promise.all([
-        client.from("profiles").select("name").eq("user_id", u.id).single(),
+        client
+          .from("profiles")
+          .select("name,seller_type")
+          .eq("user_id", u.id)
+          .single(),
         client.from("app_roles").select("role").eq("user_id", u.id).single(),
         client
           .from("account_statuses")
@@ -153,6 +199,7 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
         email: u.email || "",
         role: r.data?.role || "member",
         emailVerified: !!u.email_confirmed_at,
+        sellerType: p.data?.seller_type ?? null,
       };
     }
     async function rpc(name: string, args: Record<string, unknown>) {
@@ -205,61 +252,12 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
         );
       return respond({ status: "ok", mode: "supabase", billingEnabled: false });
     }
-    if (path === "auth/callback" && method === "GET") {
-      const code = url.searchParams.get("code");
-      if (!code) throw new ApiError(400, "Lien de confirmation invalide.");
-      const { error } = await client.auth.exchangeCodeForSession(code);
-      if (error) throw new ApiError(400, "Lien invalide ou expiré.");
-      const next = url.searchParams.get("next");
-      const location = new URL(
-        next === "/reinitialiser" ? "/reinitialiser" : "/compte",
-        effectiveOrigin(request),
-      );
-      const h = headers();
-      h.set("Location", location.toString());
-      return new Response(null, { status: 303, headers: h });
-    }
-    if (path === "auth/register" && method === "POST") {
-      const input = parse(
-        z.object({
-          name: text.min(2).max(80),
-          email: text.toLowerCase().email().max(254),
-          password,
-        }),
-        await json(request),
-      );
-      const { data, error } = await client.auth.signUp({
-        email: input.email,
-        password: input.password,
-        options: {
-          data: { name: input.name },
-          emailRedirectTo: `${effectiveOrigin(request)}/api/auth/callback?next=/compte`,
-        },
-      });
-      if (error)
-        throw new ApiError(
-          400,
-          "Inscription impossible. Vérifiez les informations ou réessayez plus tard.",
-          "AUTH_ERROR",
-        );
-      return respond(
-        data.user
-          ? {
-              id: data.user.id,
-              name: input.name,
-              email: input.email,
-              role: "member",
-              emailVerified: !!data.user.email_confirmed_at,
-            }
-          : null,
-        201,
-        {
-          mode: "supabase",
-          message:
-            "Consultez votre boîte email pour confirmer votre inscription.",
-        },
-      );
-    }
+    if (
+      (path === "auth/callback" && method === "GET") ||
+      (["auth/register", "auth/forgot", "auth/reset"].includes(path) &&
+        method === "POST")
+    )
+      return handleAuthCommands(request, path.slice("auth/".length));
     if (path === "auth/login" && method === "POST") {
       const input = parse(
         z.object({ email: text.email(), password: z.string().max(128) }),
@@ -278,36 +276,6 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
       await client.auth.signOut({ scope: "local" });
       return respond(null);
     }
-    if (path === "auth/forgot" && method === "POST") {
-      const input = parse(
-        z.object({ email: text.email() }),
-        await json(request),
-      );
-      await client.auth.resetPasswordForEmail(input.email, {
-        redirectTo: `${effectiveOrigin(request)}/api/auth/callback?next=/reinitialiser`,
-      });
-      return respond({
-        message:
-          "Si un compte correspond, un email de récupération a été envoyé.",
-      });
-    }
-    if (path === "auth/reset" && method === "POST") {
-      await user(true);
-      const input = parse(
-        z.object({ password, token: z.string().optional() }),
-        await json(request),
-      );
-      const { error } = await client.auth.updateUser({
-        password: input.password,
-      });
-      if (error)
-        throw new ApiError(
-          400,
-          "Réinitialisation impossible. Ouvrez le lien reçu par email.",
-        );
-      await client.auth.signOut();
-      return respond({ reset: true });
-    }
     if (["auth/demo", "local-mailbox"].includes(path))
       throw new ApiError(
         404,
@@ -321,15 +289,10 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
       );
     if (path === "listings" && method === "GET") {
       const { filters, limit, cursor } = parsePageQuery(url);
-      const result = await rpc("gp_catalog_page", {
-        p_query: filters.query,
-        p_type: filters.type,
-        p_price_max: filters.maxPrice,
-        p_area_min: filters.minArea,
-        p_sort: filters.sort,
+      const result = await rpc("gp_catalog_page_v2", {
+        p_filters: filters,
         p_cursor: cursor,
         p_limit: limit,
-        p_scene: filters.scene,
       });
       return respond(result.items, 200, {
         total: result.total,
@@ -357,7 +320,7 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
         input = parse(draftSchema, await json(request)),
         id = randomUUID(),
         date = new Date().toISOString();
-      const value: Listing = {
+      const value = {
         id,
         slug: "nouvelle-annonce",
         title: "",
@@ -410,9 +373,15 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
         201,
       );
     }
-    const listing = path.match(/^listings\/([^/]+)(?:\/(submit|lifecycle))?$/);
+    const listing = path.match(
+      /^listings\/([^/]+)(?:\/(submit|lifecycle|preview))?$/,
+    );
     if (listing) {
       const [, id, action] = listing;
+      if (method === "GET" && action === "preview") {
+        await user(true);
+        return respond(await rpc("gp_listing_preview", { p_id: id }));
+      }
       if (method === "GET") {
         if (url.searchParams.get("draft") === "1") {
           const u = (await user(true))!;
@@ -443,9 +412,8 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
             "Cette annonce n’est plus disponible.",
             "NOT_FOUND",
           );
-        const scene = await rpc("gp_scene_public", {
+        const scene = await rpc("gp_effective_scene_available", {
           p_listing_id: id,
-          p_level: null,
         });
         return respond({ ...data.payload, sceneAvailable: !!scene });
       }
@@ -513,6 +481,67 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
               .eq("listing_id", favorite[1]);
       schemaError(result.error);
       return respond({ saved: method === "PUT" });
+    }
+    if (
+      path === "admin/users" ||
+      path === "admin/audit" ||
+      /^admin\/users\/[^/]+\/decision$/.test(path)
+    ) {
+      const actor = await moderationUser();
+      if (actor.role !== "admin")
+        throw new ApiError(
+          403,
+          "Accès réservé aux administrateurs.",
+          "FORBIDDEN",
+        );
+      if (path === "admin/users" && method === "GET")
+        return respond(await rpc("gp_admin_users", {}));
+      const decision = path.match(/^admin\/users\/([^/]+)\/decision$/);
+      if (decision && method === "POST") {
+        const input = parse(
+          z
+            .object({
+              version: z.number().int().positive(),
+              status: z.enum(["active", "suspended"]).optional(),
+              role: z.enum(["member", "moderator", "admin"]).optional(),
+              reason: text.min(15).max(2000),
+            })
+            .strict()
+            .refine((x) => x.status !== undefined || x.role !== undefined),
+          await json(request),
+        );
+        return respond(
+          await rpc("gp_admin_user_decision", {
+            p_id: decision[1],
+            p_version: input.version,
+            p_status: input.status ?? null,
+            p_role: input.role ?? null,
+            p_reason: input.reason,
+          }),
+        );
+      }
+      if (path === "admin/audit" && method === "GET") {
+        const { limit, after } = parseHistoryQuery(url, "admin:audit");
+        const result = await rpc("gp_admin_audit_page", {
+          p_after: after ? { id: after.id, createdAt: after.createdAt } : null,
+          p_limit: limit,
+        });
+        const rows = result.items;
+        return respond(
+          rows.slice(0, limit).map((r: any) => ({
+            id: r.id,
+            actorId: r.actor_id,
+            requestId: r.request_id ?? null,
+            before: r.state_before ?? null,
+            after: r.state_after ?? null,
+            action: r.action,
+            targetId: r.target_id,
+            createdAt: r.created_at,
+          })),
+          200,
+          { nextCursor: historyCursor("admin:audit", rows, limit) },
+        );
+      }
     }
     if (path === "admin/publications" && method === "GET") {
       await moderationUser();
@@ -683,21 +712,20 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
     if (messages) {
       await user(true, true);
       if (method === "GET") {
-        const { data, error } = await client
-          .from("messages")
-          .select("*")
-          .eq("conversation_id", messages[1])
-          .order("created_at")
-          .limit(500);
-        schemaError(error);
-        const { data: c } = await client
-          .from("conversations")
-          .select("id")
-          .eq("id", messages[1])
-          .maybeSingle();
-        if (!c) throw new ApiError(404, "Conversation introuvable.");
+        const { limit, after } = parseHistoryQuery(
+          url,
+          `messages:${messages[1]}`,
+        );
+        const result = await rpc("gp_messages_page", {
+          p_conversation_id: messages[1],
+          p_after: after ? { id: after.id, createdAt: after.createdAt } : null,
+          p_limit: limit,
+        });
         await rpc("gp_messages_read", { p_conversation_id: messages[1] });
-        return respond(data?.map(message) || []);
+        const rows = result.items;
+        return respond(rows.slice(0, limit).reverse().map(message), 200, {
+          nextCursor: historyCursor(`messages:${messages[1]}`, rows, limit),
+        });
       }
       if (method === "POST") {
         const input = parse(
@@ -830,9 +858,11 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
       }
       const id = randomUUID(),
         objectKey = `${u.id}/${listingId}/${id}.webp`;
+      await assertRemoteUploadQuota(client, output.length);
       const { error } = await client.storage
         .from("private-uploads")
         .upload(objectKey, output, { contentType: "image/webp" });
+      if (error) await assertRemoteUploadQuota(client, output.length);
       schemaError(error);
       const insert = await client.from("media_assets").insert({
         id,
@@ -1120,61 +1150,35 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
     if (path === "me/profile" && method === "PATCH") {
       const u = (await user(true))!;
       const input = parse(
-        z.object({ name: text.min(2).max(80) }).strict(),
+        z
+          .object({
+            name: text.min(2).max(80).optional(),
+            sellerType: z
+              .enum(["private", "professional"])
+              .nullable()
+              .optional(),
+          })
+          .strict()
+          .refine((x) => Object.keys(x).length > 0),
         await json(request),
       );
+      const patch = {
+        ...(input.name ? { name: input.name } : {}),
+        ...(input.sellerType !== undefined
+          ? { seller_type: input.sellerType }
+          : {}),
+      };
       const { error } = await client
         .from("profiles")
-        .update(input)
+        .update(patch)
         .eq("user_id", u.id);
       schemaError(error);
       return respond({ ...u, ...input });
     }
-    if (path === "me/export" && ["GET", "POST"].includes(method)) {
-      const u = (await user(true))!,
-        listings = await client
-          .from("listings")
-          .select("draft")
-          .eq("seller_id", u.id),
-        messages = await client
-          .from("messages")
-          .select("*")
-          .eq("sender_id", u.id);
-      schemaError(listings.error);
-      schemaError(messages.error);
-      return respond({
-        profile: u,
-        listings: listings.data?.map((l) => l.draft) || [],
-        messages: messages.data?.map(message) || [],
-      });
-    }
-    if (path === "me/delete" && method === "POST") {
-      const u = (await user(true))!;
-      const input = parse(
-        z.object({
-          password: z.string().max(128),
-          confirmation: z.literal("SUPPRIMER"),
-        }),
-        await json(request),
-      );
-      const { error } = await client.auth.signInWithPassword({
-        email: u.email,
-        password: input.password,
-      });
-      if (error)
-        throw new ApiError(
-          403,
-          "Confirmez votre mot de passe.",
-          "REAUTH_REQUIRED",
-        );
-      await rpc("gp_delete_account", {});
-      await client.auth.signOut();
-      return respond({
-        deactivated: true,
-        message:
-          "Compte désactivé et annonces retirées. La purge résiduelle suit la politique de conservation.",
-      });
-    }
+    if (path === "me/export" && ["GET", "POST"].includes(method))
+      return handlePrivacyCommands(request, "export");
+    if (path === "me/delete" && method === "POST")
+      return handlePrivacyCommands(request, "delete");
     if (path === "reports" && method === "POST") {
       const u = (await user(true, true))!;
       const input = parse(
@@ -1198,11 +1202,14 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
     }
     throw new ApiError(404, "Ressource introuvable.", "NOT_FOUND");
   } catch (e) {
-    if (e instanceof ApiError)
+    if (e instanceof ApiError) {
+      const h = headers();
+      if (e.status === 429) h.set("Retry-After", String(e.retryAfter ?? 60));
       return Response.json(
         { error: e.message, code: e.code },
-        { status: e.status, headers: headers() },
+        { status: e.status, headers: h },
       );
+    }
     console.error(
       "[gp-supabase]",
       e instanceof Error ? e.name : "UnknownError",

@@ -1,17 +1,54 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import {
+  QaStrongSession,
+  qaInventoryMatchesUsers,
+  confirmQaLocation,
+  linkQaPublication,
+  type QaAdmin,
+} from "./qa-publication-contract";
 /** Opt-in connected scene QA. Reads ignored coordinator config. No signup, external emails, global signout, secrets in reports, or unrelated data changes. */
 import assert from "node:assert/strict";
-import { randomUUID, createHmac } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import sharp from "sharp";
 import type { SceneManifest } from "../src/lib/scene-contract";
+function inertPdf() {
+  const bodies = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 100] /Resources << >> /Contents 4 0 R >>",
+  ];
+  const content = "0.7 g 10 10 100 50 re f\n";
+  bodies.push(
+    `<< /Length ${Buffer.byteLength(content)} >>\nstream\n${content}endstream`,
+  );
+  let output = "%PDF-1.4\n",
+    offsets = [0];
+  for (let i = 0; i < bodies.length; i++) {
+    offsets.push(Buffer.byteLength(output));
+    output += `${i + 1} 0 obj\n${bodies[i]}\nendobj\n`;
+  }
+  const xref = Buffer.byteLength(output);
+  output +=
+    `xref\n0 ${bodies.length + 1}\n0000000000 65535 f \n` +
+    offsets
+      .slice(1)
+      .map((n) => String(n).padStart(10, "0") + " 00000 n \n")
+      .join("") +
+    `trailer\n<< /Size ${bodies.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(output);
+}
 type Persona = "seller" | "buyer" | "outsider" | "moderator";
 type Config = {
   origin: string;
   supabaseUrl: string;
   publishableKey: string;
-  users: Record<Persona, { id: string; email: string; password: string }>;
+  users: Record<Persona, { id: string; email: string; password: string }> & {
+    admin?: QaAdmin;
+  };
 };
-type Reply = { status: number; data: any; code?: string; raw: any };
+type Reply = { status: number; data: any; code?: string; raw?: any };
 let config: Config;
 const checks: {
   name: string;
@@ -129,23 +166,6 @@ async function direct(
   const raw = await response.json().catch(() => null);
   return { status: response.status, data: raw, raw, code: raw?.code };
 }
-function totp(secret: string) {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  let bits = "";
-  for (const c of secret.toUpperCase().replace(/=+$/, ""))
-    bits += alphabet.indexOf(c).toString(2).padStart(5, "0");
-  const bytes = Buffer.alloc(Math.floor(bits.length / 8));
-  for (let i = 0; i < bytes.length; i++)
-    bytes[i] = parseInt(bits.slice(i * 8, i * 8 + 8), 2);
-  const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000)));
-  const h = createHmac("sha1", bytes).update(counter).digest(),
-    offset = h[h.length - 1] & 15;
-  return String((h.readUInt32BE(offset) & 0x7fffffff) % 1000000).padStart(
-    6,
-    "0",
-  );
-}
 function manifest(spaces: any[]): SceneManifest {
   return {
     schemaVersion: "1.0",
@@ -245,35 +265,65 @@ async function main() {
     !process.argv.includes("--resume")
   ) {
     console.log(
-      "Prepared. Coordinator may use --run [--keep-for-visual] or --resume [--keep-for-visual] or --withdraw.",
+      "Prepared. --run defaults to connected quarantine smoke; --run --worker additionally processes sources with a configured operator. --resume and --withdraw reuse recorded fixture IDs.",
     );
     return;
   }
+  const quarantineOnly =
+    !process.argv.includes("--worker") &&
+    !process.argv.includes("--resume") &&
+    !process.argv.includes("--withdraw");
   let failure: string | null = null,
-    factorId: string | null = null,
+    moderatorMfa: QaStrongSession | undefined,
+    adminMfa: QaStrongSession | undefined,
     moderator: Client | undefined,
     seller: Client | undefined;
   try {
     config = JSON.parse(await readFile(".data/supabase-qa.json", "utf8"));
+    assert.ok(
+      !process.argv.includes("--worker") ||
+        (process.env.GP_QA_SOURCE_ISOLATED_HOST_CONFIRMED === "true" &&
+          process.env.GP_SOURCE_SERVICE_ROLE_KEY &&
+          process.env.GP_SOURCE_SUPABASE_URL === config.supabaseUrl),
+      "023 source worker requires explicit isolated-host confirmation and private operator configuration before remote QA",
+    );
+    assert.ok(
+      config.users.admin?.id,
+      "Current019 recipe needs a separately provisioned dedicated QA admin identity",
+    );
     assert.match(config.origin, /^http:\/\/(127\.0\.0\.1|localhost):\d+$/);
     config.origin = config.origin.replace(/\/$/, "");
-    assert.ok(config.supabaseUrl.startsWith("https://"));
+    assert.ok(
+      config.supabaseUrl.startsWith("https://"),
+      "qa_supabase_url_invalid",
+    );
     assert.ok(
       config.publishableKey && !config.publishableKey.startsWith("sb_secret_"),
+      "qa_publishable_key_invalid",
     );
     const priorInventory = JSON.parse(
       await readFile(".data/supabase-scenes-qa-result.json", "utf8").catch(
         () => "null",
       ),
     );
-    if (priorInventory) {
-      if (priorInventory.userIds?.length)
-        assert.ok(
-          priorInventory.userIds.every((id: string) =>
-            Object.values(config.users).some((user) => user.id === id),
-          ),
-        );
+    const currentUserIds = Object.values(config.users).map((user) => user.id);
+    const reuse =
+      process.argv.includes("--resume") || process.argv.includes("--withdraw");
+    if (reuse) {
+      assert.ok(
+        qaInventoryMatchesUsers(priorInventory, currentUserIds),
+        "qa_scene_inventory_scope_mismatch",
+      );
       Object.assign(inventory, priorInventory);
+    } else if (qaInventoryMatchesUsers(priorInventory, currentUserIds)) {
+      Object.assign(inventory, priorInventory);
+    } else if (priorInventory) {
+      // Preserve the local evidence; never adopt its remote IDs into this run.
+      await writeFile(
+        `.data/supabase-scenes-qa-previous-${Date.now()}.json`,
+        JSON.stringify(priorInventory, null, 2) + "\n",
+        { mode: 0o600 },
+      );
     }
     inventory.userIds = Object.values(config.users).map((user) => user.id);
     inventory.status = "running";
@@ -292,6 +342,35 @@ async function main() {
       });
       checks.push(...prior.checks.filter((c: any) => c.passed));
     }
+    const qaAdmin = new Client();
+    const recordFixture = async (kind: string, value: string) => {
+      const target = inventory as any;
+      target[kind] ||= [];
+      if (!target[kind].includes(value)) target[kind].push(value);
+      await save();
+    };
+    adminMfa = new QaStrongSession(
+      qaAdmin.request.bind(qaAdmin),
+      config.users.admin!,
+      "admin_mfa",
+      recordFixture,
+      check,
+    );
+    const linkSceneQa = async (listing: any) => {
+      await adminMfa!.establish("admin");
+      const version = await linkQaPublication(
+        qaAdmin.request.bind(qaAdmin),
+        config.users.admin,
+        listing,
+        (kind, id) => {
+          const target = inventory as any;
+          target[kind] ||= [];
+          target[kind].push(id);
+        },
+      );
+      await save();
+      return version;
+    };
     const clients = {
         seller: new Client(),
         buyer: new Client(),
@@ -358,26 +437,14 @@ async function main() {
       return;
     }
     await save();
-    const assurance = await moderator.request("mfa");
-    status("moderator_assurance_available", assurance, 200);
-    if (assurance.data.requiredForAdmin) {
-      const enrolled = await moderator.request("mfa/enroll", "POST", {});
-      status("qa_private_factor_created", enrolled, 200);
-      factorId = enrolled.data.factorId;
-      const challenge = await moderator.request("mfa/challenge", "POST", {
-        factorId,
-      });
-      status("qa_mfa_challenge", challenge, 200);
-      status(
-        "qa_mfa_verification",
-        await moderator.request("mfa/verify", "POST", {
-          factorId,
-          challengeId: challenge.data.challengeId,
-          code: totp(enrolled.data.secret),
-        }),
-        200,
-      );
-    }
+    moderatorMfa = new QaStrongSession(
+      moderator.request.bind(moderator),
+      config.users.moderator,
+      "moderator_mfa",
+      recordFixture,
+      check,
+    );
+    await moderatorMfa.establish("moderator");
     let listingId: string, spaces: any[], approved: Reply;
     if (process.argv.includes("--resume")) {
       listingId = inventory.listingIds[inventory.listingIds.length - 1];
@@ -474,6 +541,10 @@ async function main() {
         address: "Adresse technique fictive, aucun bien réel",
       });
       status("scene_listing_saved", patched, 200);
+      patched.data = await confirmQaLocation(
+        seller.request.bind(seller),
+        patched.data,
+      );
       const submitted = await seller.request(
         `listings/${listingId}/submit`,
         "POST",
@@ -483,16 +554,17 @@ async function main() {
       approved = await moderator.request(
         `admin/revisions/${listingId}/decision`,
         "POST",
-        { version: submitted.data.version, decision: "approve" },
+        {
+          version: await linkSceneQa(submitted.data),
+          decision: "approve",
+        },
       );
       status("scene_listing_published", approved, 200);
       const sources = [
         {
           name: "inert-plan.pdf",
           type: "application/pdf",
-          bytes: Buffer.from(
-            "%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Count 0 /Kids [] >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n",
-          ),
+          bytes: inertPdf(),
         },
         {
           name: "inert-plan.png",
@@ -526,7 +598,69 @@ async function main() {
           objectKey: `${config.users.seller.id}/${listingId}/${id}.${uploaded.data.mime === "application/pdf" ? "pdf" : "webp"}`,
         });
         await save();
-        const privateDownload = await seller.file(uploaded.data.url);
+        const pending = await seller.file(
+          uploaded.data.url + "&download=acknowledged",
+        );
+        check("quarantined_original_not_readable", pending.status === 409);
+        for (const [name, client] of [
+          ["guest", guest],
+          ["outsider", clients.outsider],
+        ] as const) {
+          check(
+            `${name}_quarantined_source_hidden`,
+            [401, 403, 404].includes(
+              (await client.file(uploaded.data.url + "&download=acknowledged"))
+                .status,
+            ),
+          );
+        }
+        const sourceList = await seller.request(
+          `scenes/sources?listingId=${listingId}`,
+        );
+        status("owner_quarantine_metadata", sourceList, 200);
+        const quarantined = sourceList.data.find((item: any) => item.id === id);
+        check(
+          "source_processing_without_preview",
+          quarantined?.processing_state === "processing" &&
+            quarantined.previewUrls?.length === 0,
+        );
+        if (quarantineOnly) continue;
+        await promisify(execFile)(
+          process.execPath,
+          [
+            "node_modules/tsx/dist/cli.mjs",
+            "scripts/process-scene-sources.ts",
+            "--execute",
+            "--isolated-host-confirmed",
+            "--ids",
+            id,
+          ],
+          { env: process.env, maxBuffer: 1024 * 1024, timeout: 120000 },
+        );
+        const readySources = await seller.request(
+          `scenes/sources?listingId=${listingId}`,
+        );
+        const readySource = readySources.data.find(
+          (item: any) => item.id === id,
+        );
+        check(
+          "source_processing_ready",
+          readySource?.processing_state === "ready",
+        );
+        check(
+          "source_png_preview_present",
+          Array.isArray(readySource?.previewUrls) &&
+            readySource.previewUrls.length > 0,
+        );
+        const preview = await seller.file(readySource.previewUrls[0]);
+        check(
+          "owner_private_png_preview",
+          preview.status === 200 &&
+            preview.headers.get("content-type") === "image/png",
+        );
+        const privateDownload = await seller.file(
+          uploaded.data.url + "&download=acknowledged",
+        );
         check(
           "owner_source_attachment",
           privateDownload.status === 200 &&
@@ -537,13 +671,18 @@ async function main() {
         check(
           "guest_source_hidden",
           [401, 403, 404].includes(
-            (await guest.file(uploaded.data.url)).status,
+            (await guest.file(uploaded.data.url + "&download=acknowledged"))
+              .status,
           ),
         );
         check(
           "outsider_source_hidden",
           [401, 403, 404].includes(
-            (await clients.outsider.file(uploaded.data.url)).status,
+            (
+              await clients.outsider.file(
+                uploaded.data.url + "&download=acknowledged",
+              )
+            ).status,
           ),
         );
       }
@@ -551,6 +690,60 @@ async function main() {
           .filter((s) => s.listingId === listingId)
           .map((s) => s.id),
         geometry = manifest(spaces);
+      if (quarantineOnly) {
+        const blocked = await seller.request("scenes", "POST", {
+          listingId,
+          manifest: geometry,
+          evidenceIds,
+          rightsAttested: true,
+        });
+        status("quarantine_cannot_support_public_model", blocked, [400, 409]);
+        check(
+          "quarantine_model_error_code",
+          ["SOURCE_NOT_READY", "SCENE_ERROR"].includes(blocked.code || ""),
+        );
+        const directBlocked = await direct(
+          "/rest/v1/rpc/gp_scene_create",
+          "seller",
+          "POST",
+          {
+            p_listing_id: listingId,
+            p_manifest: geometry,
+            p_evidence_ids: evidenceIds,
+            p_rights_attested: true,
+          },
+        );
+        status("direct_quarantine_scene_refused", directBlocked, 400);
+        check(
+          "direct_quarantine_source_not_ready",
+          String(directBlocked.data?.message || "").includes(
+            "SOURCE_NOT_READY",
+          ),
+        );
+        status(
+          "quarantine_fixture_no_public_scene",
+          await guest.request(`scenes?listingId=${listingId}`),
+          404,
+        );
+        const privateRows = await direct(
+          `/rest/v1/parking_scene_sources?listing_id=eq.${listingId}&select=id,object_key`,
+          "outsider",
+        );
+        status("direct_source_other_user_query", privateRows, 200);
+        check("rls_no_other_user_sources", privateRows.data.length === 0);
+        status(
+          "quarantine_fixture_withdrawn",
+          await seller.request(`listings/${listingId}/lifecycle`, "POST", {
+            version: approved.data.version,
+            action: "withdraw",
+          }),
+          200,
+        );
+        inventory.withdrawn = true;
+        inventory.keptForVisualQA = false;
+        inventory.status = "passed";
+        return;
+      }
       const proposal = await seller.request("scenes", "POST", {
         listingId,
         manifest: geometry,
@@ -670,6 +863,10 @@ async function main() {
       { version: approved.data.version, spaces: changedSpaces },
     );
     status("published_mapping_revision_saved", geometryEdit, 200);
+    geometryEdit.data = await confirmQaLocation(
+      seller.request.bind(seller),
+      geometryEdit.data,
+    );
     const geometrySubmit = await seller.request(
       `listings/${listingId}/submit`,
       "POST",
@@ -679,7 +876,10 @@ async function main() {
     const geometryPublished = await moderator.request(
       `admin/revisions/${listingId}/decision`,
       "POST",
-      { version: geometrySubmit.data.version, decision: "approve" },
+      {
+        version: await linkSceneQa(geometrySubmit.data),
+        decision: "approve",
+      },
     );
     status("mapping_revision_published", geometryPublished, 200);
     status(
@@ -692,6 +892,10 @@ async function main() {
       spaces,
     });
     status("mapping_restore_saved", restore, 200);
+    restore.data = await confirmQaLocation(
+      seller.request.bind(seller),
+      restore.data,
+    );
     const restoreSubmit = await seller.request(
       `listings/${listingId}/submit`,
       "POST",
@@ -701,7 +905,10 @@ async function main() {
     const restorePublished = await moderator.request(
       `admin/revisions/${listingId}/decision`,
       "POST",
-      { version: restoreSubmit.data.version, decision: "approve" },
+      {
+        version: await linkSceneQa(restoreSubmit.data),
+        decision: "approve",
+      },
     );
     status("mapping_restore_published", restorePublished, 200);
     status(
@@ -714,6 +921,7 @@ async function main() {
       locationPrecision: "area",
     });
     status("area_revision_saved", area, 200);
+    area.data = await confirmQaLocation(seller.request.bind(seller), area.data);
     const areaSubmit = await seller.request(
       `listings/${listingId}/submit`,
       "POST",
@@ -723,7 +931,10 @@ async function main() {
     const areaPublished = await moderator.request(
       `admin/revisions/${listingId}/decision`,
       "POST",
-      { version: areaSubmit.data.version, decision: "approve" },
+      {
+        version: await linkSceneQa(areaSubmit.data),
+        decision: "approve",
+      },
     );
     status("area_revision_published", areaPublished, 200);
     status(
@@ -736,6 +947,10 @@ async function main() {
       locationPrecision: "exact_opt_in",
     });
     status("exact_restore_saved", exact, 200);
+    exact.data = await confirmQaLocation(
+      seller.request.bind(seller),
+      exact.data,
+    );
     const exactSubmit = await seller.request(
       `listings/${listingId}/submit`,
       "POST",
@@ -745,7 +960,10 @@ async function main() {
     const exactPublished = await moderator.request(
       `admin/revisions/${listingId}/decision`,
       "POST",
-      { version: exactSubmit.data.version, decision: "approve" },
+      {
+        version: await linkSceneQa(exactSubmit.data),
+        decision: "approve",
+      },
     );
     status("exact_restore_published", exactPublished, 200);
     status(
@@ -777,13 +995,9 @@ async function main() {
       error instanceof Error ? error.message : "scene_integration_error";
     inventory.status = "failed";
   } finally {
-    if (factorId && moderator) {
+    for (const strong of [moderatorMfa, adminMfa]) {
       try {
-        const removed = await moderator.request("mfa/unenroll", "POST", {
-          factorId,
-          password: config.users.moderator.password,
-        });
-        check("own_qa_factor_removed", removed.status === 200);
+        await strong?.cleanup();
       } catch {
         failure ||= "qa_factor_cleanup_failed";
         inventory.status = "failed";
@@ -796,14 +1010,28 @@ async function main() {
       resumed: process.argv.includes("--resume"),
       checkedAt: new Date().toISOString(),
       status: inventory.status,
+      scope: quarantineOnly
+        ? "connected-quarantine-smoke"
+        : "connected-scene-geometry",
+      remoteWorkerExecuted: process.argv.includes("--worker"),
+      limitations: quarantineOnly
+        ? [
+            "Processing, ready previews, model publication/review and navigation are not exercised by this quarantine smoke; operator worker and physical pilot remain separate",
+          ]
+        : ["Fictional geometry only; no physical parking pilot"],
       checks,
       failure,
       fixture: "explicitly fictional test inventory, no real parking pilot",
       fixtureKeptForVisualQA: inventory.keptForVisualQA,
       withdrawn: inventory.withdrawn,
       externalEmailsSent: false,
-      geometrySource:
-        "parametric JSON fixture; metric calibration and RLS tested against the configured service",
+      qrSecretOrTotpIncluded: false,
+      qaFactorsRevoked: [moderatorMfa, adminMfa].every(
+        (s) => !s?.factorId || s.factorRevoked,
+      ),
+      geometrySource: quarantineOnly
+        ? "Parametric fixture rejected while source remains quarantined; no model approved"
+        : "parametric JSON fixture; metric calibration and RLS tested against the configured service",
     };
     await writeFile(
       "docs/qa/scenes-integration.json",

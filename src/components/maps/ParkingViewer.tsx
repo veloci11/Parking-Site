@@ -9,49 +9,54 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Canvas, useThree } from "@react-three/fiber";
-import { Line, OrbitControls } from "@react-three/drei";
-import {
-  CanvasTexture,
-  SRGBColorSpace,
-  ACESFilmicToneMapping,
-  DoubleSide,
-  RepeatWrapping,
-  Shape,
-  BufferGeometry,
-  Float32BufferAttribute,
-  ShapeUtils,
-  Vector2,
-} from "three";
+import { Canvas } from "@react-three/fiber";
+import { ACESFilmicToneMapping, PCFSoftShadowMap } from "three";
 import {
   Box,
-  ChevronDown,
-  Eye,
+  ChevronLeft,
+  ChevronRight,
   ImageIcon,
   Layers3,
-  Minus,
   MousePointer2,
-  Plus,
-  RotateCcw,
 } from "lucide-react";
 import { areaLabel, type Listing, type Space } from "@/lib/types";
-import "@/styles/maps.css";
-import type { PublicScene } from "@/lib/scene-contract";
+import { parsePublicScene, type PublicScene } from "@/lib/scene-contract";
+import type {
+  PublicParkingLevelPlan,
+  PublicParkingSceneGroup,
+} from "@/lib/parking-registry";
+import {
+  readInteriorSelection,
+  writeInteriorSelection,
+} from "@/lib/interior-view";
 import ParkingPlan2D from "./ParkingPlan2D";
+import {
+  DemoParkingScene,
+  MeasuredParkingScene,
+  WebGLContextGuard,
+  type DisplaySpace,
+} from "./ParkingScene";
+import "@/styles/maps.css";
 
-interface ParkingViewerProps {
+export interface ParkingViewerProps {
   listing: Listing;
   onSpaceSelect?: (id: string) => void;
+  viewLevel?: number;
+  onViewLevelChange?: (level: number) => void;
+  selectedSpaceId?: string | null;
+  /** Only listings explicitly linked to the same canonical parking belong here. */
+  group?: PublicParkingSceneGroup | null;
+  onListingSelect?: (listingId: string, listingUnitId: string) => void;
 }
-interface DisplaySpace {
-  key: string;
-  number: string;
-  x: number;
-  z: number;
-  width: number;
-  length: number;
-  actual?: Space;
-}
+
+type Mode = "3d" | "plan" | "photo";
+type Scene = PublicScene | PublicParkingLevelPlan;
+type UnitReference = {
+  id: string;
+  listingId: string;
+  listingUnitId: string;
+  space: Space;
+};
 
 class SceneBoundary extends Component<
   { children: ReactNode; fallback: ReactNode },
@@ -66,412 +71,446 @@ class SceneBoundary extends Component<
   }
 }
 
-function concreteTexture() {
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = 256;
-  const context = canvas.getContext("2d");
-  if (!context) return null;
-  const image = context.createImageData(256, 256);
-  let seed = 417;
-  for (let i = 0; i < image.data.length; i += 4) {
-    seed = (seed * 1664525 + 1013904223) >>> 0;
-    // Fine pores plus broad tonal variation; no represented damage or defects.
-    const x = (i / 4) % 256,
-      y = Math.floor(i / 4 / 256);
-    const broad = Math.sin(x * 0.043) * Math.cos(y * 0.031) * 8;
-    const shade = 219 + ((seed >>> 24) / 255) * 25 + broad;
-    image.data[i] = shade + 3;
-    image.data[i + 1] = shade + 2;
-    image.data[i + 2] = shade;
-    image.data[i + 3] = 255;
-  }
-  context.putImageData(image, 0, 0);
-  const texture = new CanvasTexture(canvas);
-  texture.colorSpace = SRGBColorSpace;
-  texture.wrapS = texture.wrapT = RepeatWrapping;
-  texture.repeat.set(6, 6);
-  return texture;
+function floorLabel(level: number) {
+  return level === 0 ? "RDC" : String(level).replace("-", "−");
 }
 
-function numberTexture(number: string) {
-  const canvas = document.createElement("canvas");
-  canvas.width = 256;
-  canvas.height = 128;
-  const context = canvas.getContext("2d");
-  if (!context) return null;
-  context.clearRect(0, 0, 256, 128);
-  context.fillStyle = "#FFFFFF";
-  context.font = "700 80px Inter, sans-serif";
-  context.textAlign = "center";
-  context.textBaseline = "middle";
-  context.fillText(number, 128, 64);
-  return new CanvasTexture(canvas);
-}
-
-function GroundNumber({
-  number,
-  position,
-  flipped,
+function LevelSwitch({
+  levels,
+  current,
+  onChange,
 }: {
-  number: string;
-  position: [number, number, number];
-  flipped?: boolean;
+  levels: { level: number; label: string }[];
+  current: number;
+  onChange: (level: number) => void;
 }) {
-  const texture = useMemo(() => numberTexture(number), [number]);
-  useEffect(
-    () => () => {
-      texture?.dispose();
-    },
-    [texture],
-  );
+  if (!levels.length) return null;
   return (
-    <mesh
-      position={position}
-      rotation={[-Math.PI / 2, 0, flipped ? Math.PI : 0]}
+    <div
+      className="gp-level-switch"
+      role="group"
+      aria-label="Choisir le niveau du parking"
     >
-      <planeGeometry args={[1.5, 0.75]} />
-      <meshBasicMaterial map={texture} transparent depthWrite={false} />
-    </mesh>
+      <Layers3 size={16} aria-hidden="true" />
+      <span>Niveau</span>
+      <div className="gp-level-segments">
+        {levels.map(({ level, label }) => (
+          <button
+            type="button"
+            key={level}
+            className={level === current ? "is-active" : ""}
+            aria-pressed={level === current}
+            title={label}
+            onClick={() => onChange(level)}
+          >
+            {floorLabel(level)}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
-function Stall({
-  slot,
-  selected,
-  active,
-  onSelect,
+function Photos({
+  listing,
+  selectedId,
 }: {
-  slot: DisplaySpace;
-  selected: boolean;
-  active: boolean;
-  onSelect: () => void;
+  listing: Listing;
+  selectedId: string | null;
 }) {
-  const [hovered, setHovered] = useState(false);
-  const w = slot.width / 2,
-    l = slot.length / 2;
-  const corners: [number, number, number][] = [
-    [-w, 0.035, -l],
-    [w, 0.035, -l],
-    [w, 0.035, l],
-    [-w, 0.035, l],
-    [-w, 0.035, -l],
-  ];
+  const [index, setIndex] = useState(0);
+  const photos =
+    selectedId && listing.spacePhotos?.[selectedId]?.length
+      ? listing.spacePhotos[selectedId]
+      : listing.photos;
+  useEffect(() => setIndex(0), [listing.id, selectedId]);
+  const current = photos[Math.min(index, photos.length - 1)];
   return (
-    <group position={[slot.x, 0, slot.z]}>
-      <mesh
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, 0.018, 0]}
-        onClick={(event) => {
-          event.stopPropagation();
-          onSelect();
-        }}
-        onPointerOver={(event) => {
-          event.stopPropagation();
-          setHovered(true);
-          document.body.style.cursor = "pointer";
-        }}
-        onPointerOut={() => {
-          setHovered(false);
-          document.body.style.cursor = "";
-        }}
-      >
-        <planeGeometry args={[slot.width, slot.length]} />
-        <meshStandardMaterial
-          color={selected ? "#C9A558" : hovered ? "#E5E1F0" : "#FFFFFF"}
-          transparent
-          opacity={selected ? 0.28 : hovered ? 0.16 : 0}
-          depthWrite={false}
-          roughness={0.9}
-          side={DoubleSide}
+    <div className="gp-viewer-photo">
+      {current ? (
+        <img
+          src={current}
+          alt={`Parking à ${listing.city}, ${listing.district} · photo ${Math.min(index, photos.length - 1) + 1}`}
         />
-      </mesh>
-      <Line
-        points={corners}
-        color={selected ? "#6D28FF" : "#FFFFFF"}
-        lineWidth={selected ? 2.3 : 2}
-      />
-      <GroundNumber
-        number={slot.number}
-        position={[0, 0.045, slot.z < 0 ? l - 0.65 : -l + 0.65]}
-        flipped={slot.z > 0}
-      />
-    </group>
+      ) : (
+        <div className="gp-viewer-empty">
+          <ImageIcon size={32} />
+          <strong>Photos à venir</strong>
+          <p>Les photos de ce niveau ne sont pas encore disponibles.</p>
+        </div>
+      )}
+      {listing.isDemo && current ? (
+        <span>Illustration · parking de démonstration</span>
+      ) : null}
+      {photos.length > 1 ? (
+        <div className="gp-viewer-photo-controls">
+          <button
+            type="button"
+            aria-label="Photo précédente"
+            onClick={() =>
+              setIndex((value) => (value + photos.length - 1) % photos.length)
+            }
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <span>
+            {index + 1} / {photos.length}
+          </span>
+          <button
+            type="button"
+            aria-label="Photo suivante"
+            onClick={() => setIndex((value) => (value + 1) % photos.length)}
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
-function CameraControls({
-  resetKey,
-  zoom,
-  extent,
-}: {
-  resetKey: number;
-  zoom: number;
-  extent?: number;
-}) {
-  const controls = useRef<React.ComponentRef<typeof OrbitControls>>(null);
-  const { camera, invalidate } = useThree();
-  useEffect(() => {
-    if (extent)
-      camera.position
-        .set(0.6, 0.85, 1)
-        .normalize()
-        .multiplyScalar(extent * 1.45);
-    else camera.position.set(20, 24, 28);
-    controls.current?.target.set(0, 0, 0);
-    controls.current?.update();
-    invalidate();
-  }, [resetKey, camera, invalidate, extent]);
-  const lastZoom = useRef(zoom);
-  useEffect(() => {
-    if (lastZoom.current === zoom) return;
-    const factor = zoom > lastZoom.current ? 0.85 : 1.17;
-    camera.position.multiplyScalar(factor);
-    lastZoom.current = zoom;
-    controls.current?.update();
-    invalidate();
-  }, [zoom, camera, invalidate]);
-  return (
-    <OrbitControls
-      ref={controls}
-      makeDefault
-      minDistance={extent ? extent * 0.65 : 16}
-      maxDistance={extent ? extent * 4 : 55}
-      minPolarAngle={0.3}
-      maxPolarAngle={Math.PI / 2.12}
-      enableDamping
-      dampingFactor={0.12}
-    />
+/** A fictional cutaway is available only for the explicitly marked demonstration. */
+function demoSlots(units: UnitReference[]): DisplaySpace[] {
+  const slots: DisplaySpace[] = [];
+  const assigned = [2, 3, 6, 1, 5, 0, 4, 7];
+  const numbers = new Set(units.map(({ space }) => space.number));
+  const ordered = [...units].sort((a, b) =>
+    a.space.number.localeCompare(b.space.number, "fr", { numeric: true }),
   );
+  let contextNumber = 10;
+  for (let index = 0; index < 8; index++) {
+    const unitIndex = assigned.indexOf(index);
+    const unit = unitIndex >= 0 ? ordered[unitIndex] : undefined;
+    while (numbers.has(String(contextNumber))) contextNumber++;
+    slots.push({
+      id: unit?.id ?? `context-${index}`,
+      number: unit?.space.number || String(contextNumber++),
+      x: -8.9 + (index % 4) * 3.55,
+      z: index < 4 ? -5.7 : 5.7,
+      width: 3.28,
+      length: 5.7,
+      available: Boolean(unit),
+      areaM2: unit?.space.areaM2,
+    });
+  }
+  return slots;
 }
 
-function ParkingScene({
-  slots,
-  selection,
-  active,
+function DemoPlan2D({
+  spaces,
+  selected,
   onSelect,
-  resetKey,
-  zoom,
 }: {
-  slots: DisplaySpace[];
-  selection: Set<string>;
-  active: string | null;
-  onSelect: (slot: DisplaySpace) => void;
-  resetKey: number;
-  zoom: number;
+  spaces: DisplaySpace[];
+  selected: string | null;
+  onSelect: (id: string) => void;
 }) {
-  const concrete = useMemo(concreteTexture, []);
-  useEffect(
-    () => () => {
-      concrete?.dispose();
-    },
-    [concrete],
-  );
   return (
-    <>
-      <color attach="background" args={["#F8F9FC"]} />
-      <ambientLight intensity={0.32} />
-      <hemisphereLight args={["#F3F5FF", "#9A9589", 0.65]} />
-      <directionalLight
-        position={[-8, 15, 10]}
-        intensity={2.7}
-        castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-18}
-        shadow-camera-right={18}
-        shadow-camera-top={18}
-        shadow-camera-bottom={-18}
-        shadow-normalBias={0.025}
-        shadow-bias={-0.0001}
-        shadow-radius={3}
-        shadow-camera-near={0.5}
-        shadow-camera-far={65}
-      />
-      <directionalLight
-        position={[10, 8, -9]}
-        intensity={0.28}
-        color="#ECEBFF"
-      />
-      <group>
-        <mesh position={[0, -0.18, 0]} receiveShadow castShadow>
-          <boxGeometry args={[21.5, 0.36, 18.4]} />
-          <meshStandardMaterial
-            color="#D0CDC6"
-            map={concrete}
-            bumpMap={concrete}
-            bumpScale={0.035}
-            roughness={0.95}
-          />
-        </mesh>
-        <mesh position={[0, 1.4, -9.1]} receiveShadow castShadow>
-          <boxGeometry args={[21.5, 2.8, 0.3]} />
-          <meshStandardMaterial
-            color="#D6D2C8"
-            map={concrete}
-            bumpMap={concrete}
-            bumpScale={0.035}
-            roughness={1}
-          />
-        </mesh>
-        <mesh position={[-10.6, 1.4, 0]} receiveShadow castShadow>
-          <boxGeometry args={[0.3, 2.8, 18.4]} />
-          <meshStandardMaterial
-            color="#D6D2C8"
-            map={concrete}
-            bumpMap={concrete}
-            bumpScale={0.035}
-            roughness={1}
-          />
-        </mesh>
-        <mesh position={[0, 0.43, 9.1]} receiveShadow castShadow>
-          <boxGeometry args={[21.5, 0.86, 0.3]} />
-          <meshStandardMaterial
-            color="#D6D2C8"
-            map={concrete}
-            bumpMap={concrete}
-            bumpScale={0.035}
-            roughness={1}
-          />
-        </mesh>
-        <mesh position={[10.6, 0.8, 0]} receiveShadow castShadow>
-          <boxGeometry args={[0.3, 1.6, 18.4]} />
-          <meshStandardMaterial
-            color="#D6D2C8"
-            map={concrete}
-            bumpMap={concrete}
-            bumpScale={0.035}
-            roughness={1}
-          />
-        </mesh>
-        {[-10.15, -4.65, 0.9, 5.25].map((x) =>
-          [-2.1, 2.1].map((z) => (
-            <group key={`${x}:${z}`} position={[x, 0, z]}>
-              <mesh position={[0, 1.5, 0]} castShadow receiveShadow>
-                <boxGeometry args={[0.48, 3, 0.48]} />
-                <meshStandardMaterial
-                  color="#CECBC3"
-                  map={concrete}
-                  bumpMap={concrete}
-                  bumpScale={0.035}
-                  roughness={0.95}
-                />
-              </mesh>
-              <mesh position={[0, 0.62, z < 0 ? 0.245 : -0.245]}>
-                <boxGeometry args={[0.49, 0.95, 0.02]} />
-                <meshStandardMaterial color="#C9A558" roughness={0.8} />
-              </mesh>
-              {[0.28, 0.53, 0.78].map((y) => (
-                <mesh
-                  key={y}
-                  position={[0, y, z < 0 ? 0.262 : -0.262]}
-                  rotation={[0, 0, -0.45]}
-                >
-                  <boxGeometry args={[0.5, 0.12, 0.02]} />
-                  <meshStandardMaterial color="#30333B" roughness={0.9} />
-                </mesh>
-              ))}
-            </group>
+    <figure className="gp-plan2d">
+      <svg
+        viewBox="-12 -10 24 20"
+        role="group"
+        aria-label="Plan 2D fictif du parking de démonstration"
+      >
+        <rect
+          x={-11.5}
+          y={-9.5}
+          width={23}
+          height={19}
+          fill="#DEDAD2"
+          stroke="#9E9890"
+          strokeWidth={0.12}
+        />
+        {spaces.map((space) => (
+          <g
+            key={space.id}
+            className={space.available ? "gp-plan2d-space" : undefined}
+            role={space.available ? "button" : undefined}
+            tabIndex={space.available ? 0 : undefined}
+            aria-label={space.available ? `Place ${space.number}` : undefined}
+            aria-pressed={space.available ? selected === space.id : undefined}
+            onClick={space.available ? () => onSelect(space.id) : undefined}
+            onKeyDown={
+              space.available
+                ? (event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onSelect(space.id);
+                    }
+                  }
+                : undefined
+            }
+          >
+            <rect
+              x={space.x - space.width / 2}
+              y={space.z - space.length / 2}
+              width={space.width}
+              height={space.length}
+              fill={
+                selected === space.id
+                  ? "#E5CD86"
+                  : space.available
+                    ? "#EEE3CA"
+                    : "none"
+              }
+              stroke={
+                selected === space.id
+                  ? "#6D28FF"
+                  : space.available
+                    ? "#C9A558"
+                    : "#FFFFFF"
+              }
+              strokeWidth={selected === space.id ? 0.13 : 0.09}
+            />
+            <text
+              x={space.x}
+              y={space.z + 1.8}
+              fill={space.available ? "#6A4A16" : "#77716A"}
+              fontSize={0.7}
+              fontWeight="650"
+              textAnchor="middle"
+            >
+              {space.number}
+            </text>
+          </g>
+        ))}
+        <rect
+          x={7.2}
+          y={-9.2}
+          width={3.5}
+          height={16}
+          fill="#B9B4AC"
+          stroke="#AAA59C"
+          strokeWidth={0.12}
+        />
+        <text
+          x={8.95}
+          y={-0.8}
+          fill="#69625B"
+          fontSize={0.58}
+          textAnchor="middle"
+          transform="rotate(90 8.95 -.8)"
+        >
+          Rampe
+        </text>
+        {[-10.1, -4.45, 1.55, 5.65].flatMap((x) =>
+          [-2.15, 2.15].map((z) => (
+            <rect
+              key={`${x}:${z}`}
+              x={x - 0.27}
+              y={z - 0.27}
+              width={0.54}
+              height={0.54}
+              fill="#928B80"
+            />
           )),
         )}
-        {slots.map((slot) => (
-          <Stall
-            key={slot.key}
-            slot={slot}
-            selected={selection.has(slot.key)}
-            active={active === slot.key}
-            onSelect={() => onSelect(slot)}
-          />
-        ))}
-        {[-7, -2, 3].map((x) => (
-          <group key={`lamp${x}`}>
-            <mesh position={[x, 2.3, -8.88]}>
-              <boxGeometry args={[1.6, 0.12, 0.12]} />
-              <meshStandardMaterial
-                color="#FFFFFF"
-                emissive="#FFF7E3"
-                emissiveIntensity={2}
-              />
-            </mesh>
-            <pointLight
-              position={[x, 2.1, -7]}
-              intensity={12}
-              distance={6}
-              decay={2}
-              color="#FFF7E3"
-            />
-          </group>
-        ))}
-        <group position={[8, 0.8, -1.1]} rotation={[-0.1, 0, 0]}>
-          <mesh receiveShadow castShadow>
-            <boxGeometry args={[3.6, 0.25, 15.5]} />
-            <meshStandardMaterial
-              color="#B9B6B0"
-              map={concrete}
-              bumpMap={concrete}
-              bumpScale={0.035}
-              roughness={1}
-            />
-          </mesh>
-          {[-1.85, 1.85].map((x) => (
-            <group key={x}>
-              <mesh position={[x, 0.6, 0]} castShadow>
-                <boxGeometry args={[0.12, 1.2, 15.7]} />
-                <meshStandardMaterial color="#D5D1C6" roughness={0.9} />
-              </mesh>
-              <mesh position={[x, 1.22, 0]}>
-                <boxGeometry args={[0.06, 0.06, 15.7]} />
-                <meshStandardMaterial
-                  color="#8992A5"
-                  metalness={0.65}
-                  roughness={0.4}
-                />
-              </mesh>
-            </group>
-          ))}
-        </group>
-        <mesh
-          position={[0, -0.41, 0]}
-          rotation={[-Math.PI / 2, 0, 0]}
-          receiveShadow
-        >
-          <planeGeometry args={[200, 200]} />
-          <shadowMaterial opacity={0.22} />
-        </mesh>
-      </group>
-      <CameraControls resetKey={resetKey} zoom={zoom} />
-    </>
+      </svg>
+      <figcaption>
+        Organisation fictive, identique à la vue 3D de démonstration. Plan
+        indicatif, non coté.
+      </figcaption>
+    </figure>
   );
 }
 
-function DemoParkingViewer({ listing, onSpaceSelect }: ParkingViewerProps) {
+function PublicPlan({
+  scene,
+  units,
+  selected,
+  onSelect,
+  demo,
+}: {
+  scene: Scene | null;
+  units: UnitReference[];
+  selected: string | null;
+  onSelect: (id: string) => void;
+  demo?: DisplaySpace[];
+}) {
+  return (
+    <div className="gp-semantic-plan">
+      {demo ? (
+        <DemoPlan2D spaces={demo} selected={selected} onSelect={onSelect} />
+      ) : scene ? (
+        <ParkingPlan2D
+          manifest={scene.manifest}
+          selectedId={selected || ""}
+          onSelect={onSelect}
+        />
+      ) : (
+        <div className="gp-semantic-header">
+          <Layers3 size={22} />
+          <h3>Places de ce niveau</h3>
+        </div>
+      )}
+      {!scene && !demo ? (
+        <p>
+          Consultez chaque place et ses dimensions. Le plan de ce niveau n’est
+          pas encore disponible.
+        </p>
+      ) : null}
+      <div className="gp-semantic-spaces">
+        {units.map(({ id, space }) => (
+          <button
+            type="button"
+            key={id}
+            className={`gp-semantic-space${selected === id ? " is-selected" : ""}`}
+            aria-pressed={selected === id}
+            onClick={() => onSelect(id)}
+          >
+            <strong>Place {space.number || "non numérotée"}</strong>
+            <span>{areaLabel([space])}</span>
+            {space.lengthM && space.widthM ? (
+              <small>
+                {space.lengthM} × {space.widthM} m
+              </small>
+            ) : null}
+          </button>
+        ))}
+      </div>
+      {!units.length ? (
+        <p>Aucune place proposée à ce niveau pour le moment.</p>
+      ) : null}
+    </div>
+  );
+}
+
+export default function ParkingViewer(props: ParkingViewerProps) {
+  const { listing, group } = props;
+  const units = useMemo<UnitReference[]>(
+    () =>
+      group
+        ? group.levels.flatMap((floor) => floor.spaces)
+        : listing.spaces.map((space) => ({
+            id: space.id,
+            listingId: listing.id,
+            listingUnitId: space.id,
+            space,
+          })),
+    [group, listing.id, listing.spaces],
+  );
   const levels = useMemo(
     () =>
-      [...new Set(listing.spaces.map((space) => space.level))].sort(
-        (a, b) => b - a,
-      ),
-    [listing.spaces],
+      group
+        ? group.levels
+            .map(({ level, label }) => ({ level, label }))
+            .sort((a, b) => b.level - a.level)
+        : [...new Set(listing.spaces.map(({ level }) => level))]
+            .sort((a, b) => b - a)
+            .map((level) => ({ level, label: `Niveau ${floorLabel(level)}` })),
+    [group, listing.spaces],
   );
-  const [level, setLevel] = useState(levels[0] ?? -1);
-  const [active, setActive] = useState<string | null>(
-    listing.spaces[0]?.id ?? null,
+  const selectionListing = useMemo(
+    () => ({
+      ...listing,
+      spaces: units.map(({ id, space }) => ({ ...space, id })),
+    }),
+    [listing, units],
   );
-  const [mode, setMode] = useState<"3d" | "plan" | "photo">("3d");
-  const [resetKey, setResetKey] = useState(0);
-  const [zoom, setZoom] = useState(0);
-  const [selectionVisible, setSelectionVisible] = useState(true);
-  const [message, setMessage] = useState("");
+  const defaultLevel =
+    props.viewLevel ??
+    units.find((unit) => unit.listingId === listing.id)?.space.level ??
+    levels[0]?.level ??
+    -1;
+  const [level, setLevel] = useState(defaultLevel);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [mode, setMode] = useState<Mode>("3d");
+  const [individualScene, setIndividualScene] = useState<PublicScene | null>(
+    null,
+  );
+  const [loadingScene, setLoadingScene] = useState(false);
   const [supported, setSupported] = useState<boolean | null>(null);
+  const levelLayer = useRef<HTMLDivElement>(null);
+  const firstLookup = useRef(true);
+  const contextId = group?.parkingId || listing.id;
+  const currentLevel = group?.levels.find((floor) => floor.level === level);
+  const scene: Scene | null = group
+    ? (currentLevel?.scene ?? null)
+    : individualScene?.manifest.level === level
+      ? individualScene
+      : null;
+  const levelUnits = units.filter((unit) => unit.space.level === level);
+  const selectedReference = units.find((unit) => unit.id === selected);
+  const photoListing =
+    group?.listings.find((item) => item.id === selectedReference?.listingId) ||
+    listing;
+  const demoAllowed =
+    listing.isDemo &&
+    listing.sceneAvailable &&
+    listing.locationPrecision === "exact_opt_in" &&
+    (!group || group.listings.every((item) => item.isDemo));
+  const hasModel = Boolean(scene) || (demoAllowed && levelUnits.length <= 8);
+  const effectiveMode =
+    mode === "3d" && !hasModel && !loadingScene ? "photo" : mode;
+  const slots = useMemo(() => demoSlots(levelUnits), [levelUnits]);
+  const sceneTooLarge = Boolean(
+    scene &&
+    scene.manifest.spaces.length + scene.manifest.obstacles.length > 180,
+  );
+
+  const persistSelection = (nextLevel: number, unit: string | null) => {
+    setLevel(nextLevel);
+    setSelected(unit);
+    const params = writeInteriorSelection(
+      window.location.search,
+      selectionListing,
+      nextLevel,
+      unit,
+    );
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${window.location.pathname}?${params}${window.location.hash}`,
+    );
+    try {
+      sessionStorage.setItem(
+        `gp:interior-selection:v1:${contextId}`,
+        params.toString(),
+      );
+      if (window.location.pathname === "/")
+        sessionStorage.setItem(
+          "gp:explore:href",
+          `${window.location.pathname}?${params}`,
+        );
+    } catch {}
+  };
+  const chooseUnit = (id: string) => {
+    const reference = units.find((unit) => unit.id === id);
+    if (!reference || reference.space.level !== level) return;
+    persistSelection(level, id);
+    if (reference.listingId === listing.id)
+      props.onSpaceSelect?.(reference.listingUnitId);
+    props.onListingSelect?.(reference.listingId, reference.listingUnitId);
+  };
+  const chooseLevel = (next: number) => {
+    if (next === level) return;
+    firstLookup.current = false;
+    const nextUnit =
+      units.find(
+        (unit) => unit.space.level === next && unit.listingId === listing.id,
+      ) ?? units.find((unit) => unit.space.level === next);
+    persistSelection(next, nextUnit?.id ?? null);
+    props.onViewLevelChange?.(next);
+  };
+
   useEffect(() => {
-    setLevel(levels[0] ?? -1);
-    setActive(listing.spaces[0]?.id ?? null);
-    setMessage("");
-  }, [listing.id, listing.spaces, levels]);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const animation = levelLayer.current?.animate(
+      [
+        { opacity: 0.2, transform: "translateY(18px)" },
+        { opacity: 1, transform: "translateY(0)" },
+      ],
+      { duration: 380, easing: "cubic-bezier(.2,.65,.25,1)" },
+    );
+    return () => animation?.cancel();
+  }, [level]);
+
   useEffect(() => {
     try {
       const canvas = document.createElement("canvas");
-      const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
+      const gl = canvas.getContext("webgl2");
       setSupported(Boolean(gl));
-      const extension = gl?.getExtension("WEBGL_lose_context");
-      extension?.loseContext();
+      gl?.getExtension("WEBGL_lose_context")?.loseContext();
     } catch {
       setSupported(false);
     }
@@ -479,116 +518,146 @@ function DemoParkingViewer({ listing, onSpaceSelect }: ParkingViewerProps) {
       document.body.style.cursor = "";
     };
   }, []);
-  const actualSpaces = useMemo(
-    () => listing.spaces.filter((space) => space.level === level),
-    [listing.spaces, level],
-  );
-  const slots = useMemo(() => {
-    const positions: DisplaySpace[] = [];
-    const usedNumbers = new Set(actualSpaces.map((space) => space.number));
-    let contextNumber = 10;
-    for (let row = 0; row < 2; row++)
-      for (let col = 0; col < 4; col++) {
-        const index = row * 4 + col;
-        const actual =
-          actualSpaces[
-            index === 2
-              ? 0
-              : index === 5
-                ? 1
-                : index === 6
-                  ? 2
-                  : index === 7
-                    ? 3
-                    : 20
-          ];
-        while (usedNumbers.has(String(contextNumber))) contextNumber++;
-        const number = actual?.number ?? String(contextNumber++);
-        positions.push({
-          key: actual?.id ?? `context-${row}-${col}`,
-          number,
-          x: -7.4 + col * 3.1,
-          z: row === 0 ? -5.15 : 5.15,
-          width: Math.min(actual?.widthM ?? 2.8, 2.9),
-          length: Math.min(actual?.lengthM ?? 5, 5.5),
-          actual,
-        });
+
+  useEffect(() => {
+    firstLookup.current = true;
+    const restore = () => {
+      const params = new URLSearchParams(window.location.search);
+      let source = window.location.search;
+      if (
+        params.get("parking") !== listing.id &&
+        params.get("parking") !== contextId
+      ) {
+        try {
+          source =
+            sessionStorage.getItem(`gp:interior-selection:v1:${contextId}`) ||
+            source;
+        } catch {}
       }
-    // Bundles larger than this schematic use the complete semantic view below.
-    return positions;
-  }, [actualSpaces]);
-  const selection = useMemo(
-    () =>
-      new Set(selectionVisible ? actualSpaces.map((space) => space.id) : []),
-    [actualSpaces, selectionVisible],
-  );
-  const select = (slot: DisplaySpace) => {
-    if (slot.actual) {
-      setActive(slot.actual.id);
-      onSpaceSelect?.(slot.actual.id);
-      setMessage(`Place ${slot.actual.number} sélectionnée`);
-    } else {
-      setMessage(
-        "Place de contexte non proposée à la vente sur la plateforme.",
+      const sourceParams = new URLSearchParams(source);
+      // Old listing-unit links and the canonical physical aliases both remain valid.
+      const rawUnit = sourceParams.get("unit");
+      const alias = units.find(
+        (unit) =>
+          unit.id === rawUnit ||
+          (unit.listingId === listing.id && unit.listingUnitId === rawUnit),
       );
+      if (alias) sourceParams.set("unit", alias.id);
+      if (sourceParams.get("parking") === contextId)
+        sourceParams.set("parking", listing.id);
+      const restored = readInteriorSelection(
+        sourceParams.toString(),
+        selectionListing,
+      );
+      const requested = units.find(
+        (unit) =>
+          unit.id === props.selectedSpaceId ||
+          (unit.listingId === listing.id &&
+            unit.listingUnitId === props.selectedSpaceId),
+      );
+      let nextLevel =
+        sourceParams.get("parking") === listing.id
+          ? restored.level
+          : defaultLevel;
+      if (
+        props.viewLevel !== undefined &&
+        levels.some((floor) => floor.level === props.viewLevel)
+      )
+        nextLevel = props.viewLevel;
+      if (requested && props.viewLevel === undefined)
+        nextLevel = requested.space.level;
+      const restoredUnit = units.find(
+        (unit) => unit.id === restored.unit && unit.space.level === nextLevel,
+      )?.id;
+      const nextSelected =
+        requested?.space.level === nextLevel
+          ? requested.id
+          : (restoredUnit ??
+            units.find(
+              (unit) =>
+                unit.listingId === listing.id && unit.space.level === nextLevel,
+            )?.id ??
+            units.find((unit) => unit.space.level === nextLevel)?.id ??
+            null);
+      firstLookup.current = !sourceParams.has("floor");
+      persistSelection(nextLevel, nextSelected);
+    };
+    restore();
+    window.addEventListener("popstate", restore);
+    return () => window.removeEventListener("popstate", restore);
+  }, [
+    listing.id,
+    contextId,
+    selectionListing,
+    props.viewLevel,
+    props.selectedSpaceId,
+  ]);
+
+  useEffect(() => {
+    setIndividualScene(null);
+    if (
+      group ||
+      listing.locationPrecision !== "exact_opt_in" ||
+      !listing.sceneAvailable ||
+      demoAllowed
+    ) {
+      setLoadingScene(false);
+      return;
     }
-  };
-  const schematicAllowed =
-    listing.isDemo &&
-    listing.sceneAvailable &&
-    listing.locationPrecision === "exact_opt_in";
-  const semanticPlan = (
-    <div className="gp-semantic-plan">
-      <div className="gp-semantic-header">
-        <Layers3 size={24} />
-        <h3>Places du niveau {level === 0 ? "extérieur" : level}</h3>
-      </div>
-      <p>
-        Schéma indicatif, non coté. L’organisation de ce parking est fictive.
-      </p>
-      <div className="gp-semantic-spaces">
-        {actualSpaces.map((space) => (
-          <button
-            type="button"
-            key={space.id}
-            className={`gp-semantic-space${active === space.id ? " is-selected" : ""}`}
-            onClick={() => {
-              setActive(space.id);
-              onSpaceSelect?.(space.id);
-            }}
-          >
-            <strong>Place {space.number}</strong>
-            <span>{areaLabel([space])}</span>
-          </button>
-        ))}
-      </div>
-      <p className="gp-semantic-unknown">
-        Les autres emplacements sont du contexte et ne sont pas proposés à la
-        vente.
-      </p>
-    </div>
+    const controller = new AbortController();
+    setLoadingScene(true);
+    void (async () => {
+      let response = await fetch(
+        `/api/scenes?listingId=${encodeURIComponent(listing.id)}&level=${level}`,
+        { signal: controller.signal },
+      );
+      if (!response.ok && firstLookup.current && levels.length > 1)
+        response = await fetch(
+          `/api/scenes?listingId=${encodeURIComponent(listing.id)}`,
+          { signal: controller.signal },
+        );
+      firstLookup.current = false;
+      if (!response.ok) return;
+      const result = await response.json();
+      const parsed = parsePublicScene(result.data);
+      if (parsed && !controller.signal.aborted) {
+        setIndividualScene(parsed);
+        if (parsed.manifest.level !== level)
+          persistSelection(parsed.manifest.level, null);
+      }
+    })()
+      .catch(() => {})
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingScene(false);
+      });
+    return () => controller.abort();
+  }, [
+    group,
+    listing.id,
+    listing.locationPrecision,
+    listing.sceneAvailable,
+    level,
+    demoAllowed,
+  ]);
+
+  const plan = (
+    <PublicPlan
+      scene={scene}
+      units={levelUnits}
+      selected={selected}
+      onSelect={chooseUnit}
+      demo={demoAllowed && levelUnits.length <= 8 ? slots : undefined}
+    />
   );
-  if (!schematicAllowed)
-    return (
-      <section className="gp-parking-unavailable">
-        <ImageIcon size={32} />
-        <h3>Le parking en photos</h3>
-        <p>
-          Un modèle intérieur sera disponible après contrôle du plan, des
-          mesures et des correspondances avec les places.
-        </p>
-        {listing.photos[0] ? (
-          <img
-            src={listing.photos[0]}
-            alt={`Vue du parking à ${listing.city}, ${listing.district}`}
-          />
-        ) : null}
-      </section>
-    );
+  const title = selectedReference
+    ? `Place ${selectedReference.space.number || "non numérotée"}`
+    : `Niveau ${floorLabel(level)}`;
   return (
     <section
       className="gp-parking-viewer"
-      aria-label="Plan intérieur du parking de démonstration"
+      aria-label={
+        group ? `Plan intérieur de ${group.name}` : "Plan intérieur du parking"
+      }
     >
       <div className="gp-viewer-heading">
         <div
@@ -598,596 +667,201 @@ function DemoParkingViewer({ listing, onSpaceSelect }: ParkingViewerProps) {
         >
           <button
             type="button"
-            className={mode === "3d" ? "is-active" : ""}
+            className={effectiveMode === "3d" ? "is-active" : ""}
+            disabled={!hasModel && !loadingScene}
+            aria-pressed={effectiveMode === "3d"}
             onClick={() => setMode("3d")}
           >
-            <Box size={18} />
+            <Box size={17} />
             Plan 3D
           </button>
           <button
             type="button"
-            className={mode === "plan" ? "is-active" : ""}
+            className={effectiveMode === "plan" ? "is-active" : ""}
+            aria-pressed={effectiveMode === "plan"}
             onClick={() => setMode("plan")}
           >
-            <Layers3 size={18} />
-            Places
+            <Layers3 size={17} />
+            {scene ? "Plan 2D" : "Places"}
           </button>
           <button
             type="button"
-            className={mode === "photo" ? "is-active" : ""}
+            className={effectiveMode === "photo" ? "is-active" : ""}
+            aria-pressed={effectiveMode === "photo"}
             onClick={() => setMode("photo")}
           >
-            <ImageIcon size={18} />
+            <ImageIcon size={17} />
             Photos
           </button>
         </div>
-        <label className="gp-level-select">
-          Niveau{" "}
-          <select
-            aria-label="Choisir le niveau du parking"
-            value={level}
-            onChange={(event) => {
-              setLevel(Number(event.target.value));
-              setMessage("");
-            }}
-          >
-            {levels.map((value) => (
-              <option value={value} key={value}>
-                {value === 0 ? "Extérieur" : value}
-              </option>
-            ))}
-          </select>
-          <ChevronDown size={14} />
-        </label>
+        <LevelSwitch levels={levels} current={level} onChange={chooseLevel} />
       </div>
-      <div className="gp-viewer-stage">
-        {mode === "3d" && (
-          <div className="gp-scene-selection" aria-live="polite">
-            <strong>
-              Place{" "}
-              {actualSpaces.find((space) => space.id === active)?.number ||
-                actualSpaces[0]?.number ||
-                "—"}
-            </strong>
-            <span>Plan de démonstration</span>
-          </div>
-        )}
-        {mode === "photo" ? (
-          <div className="gp-viewer-photo">
-            <img
-              src={listing.photos[0] || "/demo/covered.png"}
-              alt="Illustration du parking de démonstration"
+      <div className="gp-viewer-level-layer" ref={levelLayer}>
+        <div className="gp-viewer-stage">
+          {effectiveMode === "photo" ? (
+            <Photos
+              listing={photoListing}
+              selectedId={selectedReference?.listingUnitId || null}
             />
-            <span>Illustration générée · bien fictif</span>
-          </div>
-        ) : mode === "plan" ||
-          supported === false ||
-          actualSpaces.length > 4 ? (
-          semanticPlan
-        ) : supported === null ? (
-          <div className="gp-map-loading" role="status">
-            Chargement du plan…
-          </div>
-        ) : (
-          <SceneBoundary fallback={semanticPlan}>
-            <Suspense
-              fallback={
-                <div className="gp-map-loading" role="status">
-                  Chargement du plan…
-                </div>
-              }
-            >
-              <Canvas
-                shadows
-                camera={{
-                  position: [20, 24, 28],
-                  fov: 38,
-                  near: 0.1,
-                  far: 200,
-                }}
-                dpr={[1, 1.5]}
-                frameloop="demand"
-                gl={{
-                  antialias: true,
-                  alpha: true,
-                  powerPreference: "default",
-                }}
-                onCreated={({ gl }) => {
-                  gl.toneMapping = ACESFilmicToneMapping;
-                  gl.toneMappingExposure = 0.95;
-                  gl.domElement.setAttribute(
-                    "aria-label",
-                    "Vue 3D du parking. Les places sont aussi disponibles dans le mode Places.",
-                  );
-                  gl.domElement.addEventListener(
-                    "webglcontextlost",
-                    () => setSupported(false),
-                    { once: true },
-                  );
-                }}
-              >
-                <ParkingScene
-                  slots={slots}
-                  selection={selection}
-                  active={active}
-                  onSelect={select}
-                  resetKey={resetKey}
-                  zoom={zoom}
-                />
-              </Canvas>
-            </Suspense>
-          </SceneBoundary>
-        )}
-        {mode === "3d" && supported && actualSpaces.length <= 4 ? (
-          <>
-            <div className="gp-viewer-tools" aria-label="Commandes du plan 3D">
-              <button
-                type="button"
-                onClick={() => setZoom((value) => value + 1)}
-                aria-label="Agrandir le plan"
-              >
-                <Plus size={20} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setZoom((value) => value - 1)}
-                aria-label="Réduire le plan"
-              >
-                <Minus size={20} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setResetKey((value) => value + 1)}
-                aria-label="Recentrer le plan"
-              >
-                <RotateCcw size={20} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectionVisible((value) => !value)}
-                aria-label={
-                  selectionVisible
-                    ? "Masquer le voile de sélection"
-                    : "Afficher le voile de sélection"
-                }
-                aria-pressed={selectionVisible}
-              >
-                <Eye size={20} />
-              </button>
+          ) : effectiveMode === "plan" ||
+            supported === false ||
+            sceneTooLarge ? (
+            plan
+          ) : (loadingScene && !hasModel) || supported === null ? (
+            <div className="gp-map-loading" role="status">
+              <span className="gp-map-spinner" />
+              Chargement du plan…
             </div>
-            <span className="gp-viewer-gesture">
-              <MousePointer2 size={14} />
-              Glisser pour tourner · défiler pour zoomer
-            </span>
-          </>
-        ) : null}
-        <div className="gp-viewer-disclaimer">
-          Plan 3D de démonstration · schéma indicatif, non coté
+          ) : (
+            <SceneBoundary key={contextId} fallback={plan}>
+              <Suspense
+                fallback={
+                  <div className="gp-map-loading" role="status">
+                    Chargement du plan…
+                  </div>
+                }
+              >
+                <Canvas
+                  className="gp-parking-canvas"
+                  orthographic
+                  shadows
+                  camera={{
+                    position: [19, 25, 31],
+                    zoom: 20,
+                    near: 0.1,
+                    far: 250,
+                  }}
+                  dpr={[1, 1.75]}
+                  frameloop="demand"
+                  gl={{
+                    antialias: true,
+                    alpha: false,
+                    powerPreference: "default",
+                  }}
+                  onCreated={({ gl }) => {
+                    gl.toneMapping = ACESFilmicToneMapping;
+                    gl.toneMappingExposure = 1.08;
+                    gl.shadowMap.type = PCFSoftShadowMap;
+                    gl.domElement.setAttribute(
+                      "aria-label",
+                      "Vue isométrique fixe du parking. Cliquez sur une place pour la consulter. Le mode Places permet aussi de la sélectionner au clavier.",
+                    );
+                  }}
+                >
+                  <WebGLContextGuard
+                    onUnavailable={() => setSupported(false)}
+                  />
+                  {demoAllowed ? (
+                    <DemoParkingScene
+                      spaces={slots}
+                      selectedId={selected}
+                      onSelect={chooseUnit}
+                      level={level}
+                    />
+                  ) : scene ? (
+                    <MeasuredParkingScene
+                      manifest={scene.manifest}
+                      selectedId={selected}
+                      onSelect={chooseUnit}
+                    />
+                  ) : null}
+                </Canvas>
+              </Suspense>
+            </SceneBoundary>
+          )}
+          {effectiveMode === "3d" && supported && hasModel && !sceneTooLarge ? (
+            <>
+              <div className="gp-viewer-gesture">
+                <MousePointer2 size={14} />
+                Sélectionnez une place pour la découvrir
+              </div>
+              <div className="gp-viewer-disclaimer">
+                {demoAllowed
+                  ? "Parking et plan d’exemple"
+                  : `Plan contrôlé · niveau ${floorLabel(level)}`}
+              </div>
+            </>
+          ) : null}
+          {effectiveMode === "photo" && !hasModel ? (
+            <div className="gp-viewer-model-note">
+              <Layers3 size={15} />
+              <span>Le plan de ce niveau n’est pas encore disponible.</span>
+            </div>
+          ) : null}
         </div>
       </div>
+      {effectiveMode === "3d" && levelUnits.length ? (
+        <div
+          className="gp-viewer-spaces"
+          role="group"
+          aria-label="Places proposées à ce niveau"
+        >
+          {levelUnits.map(({ id, space }) => (
+            <button
+              type="button"
+              key={id}
+              className={selected === id ? "is-selected" : ""}
+              aria-pressed={selected === id}
+              onClick={() => chooseUnit(id)}
+            >
+              <i aria-hidden="true" />
+              Place {space.number || "non numérotée"}
+              <span>{space.areaM2 ? `${space.areaM2} m²` : ""}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
       <div className="gp-viewer-footer">
         <span className="gp-selection-key">
           <i aria-hidden="true" />
-          {actualSpaces.length > 1
-            ? `${actualSpaces.length} places dans ce lot`
-            : `Place ${actualSpaces[0]?.number ?? ""}`}
+          {title}
+          {selectedReference?.space.areaM2
+            ? ` · ${selectedReference.space.areaM2} m²`
+            : ""}
         </span>
         <span role="status" aria-live="polite">
-          {message || "Consultez les photos pour apprécier l’état réel."}
+          {demoAllowed
+            ? "Démonstration fictive · organisation et dimensions indicatives"
+            : scene
+              ? `Relevé du ${new Date(scene.manifest.provenance.observedAt).toLocaleDateString("fr-FR")} · ±${Math.round(scene.manifest.provenance.accuracyM * 100)} cm`
+              : "Les photos et dimensions renseignées restent consultables."}
         </span>
       </div>
-    </section>
-  );
-}
-
-function MetricShape({
-  points,
-  base = 0,
-  height = 0.2,
-  endHeight,
-  color = "#D0CDC6",
-  transparent = false,
-}: {
-  points: [number, number][];
-  base?: number;
-  height?: number;
-  endHeight?: number;
-  color?: string;
-  transparent?: boolean;
-}) {
-  const shape = useMemo(() => {
-    const result = new Shape();
-    points.forEach((point, index) => {
-      if (index === 0) result.moveTo(point[0], -point[1]);
-      else result.lineTo(point[0], -point[1]);
-    });
-    result.closePath();
-    return result;
-  }, [points]);
-  const ramp = useMemo(() => {
-    if (endHeight === undefined) return null;
-    const vertices: number[] = [],
-      indices: number[] = [];
-    const min = Math.min(...points.map((p) => p[1])),
-      range = Math.max(...points.map((p) => p[1])) - min || 1;
-    for (const point of points) vertices.push(point[0], base, point[1]);
-    for (const point of points)
-      vertices.push(
-        point[0],
-        base + height + ((endHeight - height) * (point[1] - min)) / range,
-        point[1],
-      );
-    const count = points.length;
-    const triangles = ShapeUtils.triangulateShape(
-      points.map((p) => new Vector2(p[0], p[1])),
-      [],
-    );
-    for (const t of triangles)
-      indices.push(t[0] + count, t[2] + count, t[1] + count, t[0], t[1], t[2]);
-    for (let i = 0; i < count; i++) {
-      const j = (i + 1) % count;
-      indices.push(i, j, j + count, i, j + count, i + count);
-    }
-    const geometry = new BufferGeometry();
-    geometry.setAttribute("position", new Float32BufferAttribute(vertices, 3));
-    geometry.setIndex(indices);
-    geometry.computeVertexNormals();
-    return geometry;
-  }, [points, base, height, endHeight]);
-  useEffect(
-    () => () => {
-      ramp?.dispose();
-    },
-    [ramp],
-  );
-  return ramp ? (
-    <mesh geometry={ramp} castShadow receiveShadow>
-      <meshStandardMaterial color={color} roughness={0.95} side={DoubleSide} />
-    </mesh>
-  ) : (
-    <mesh
-      rotation={[-Math.PI / 2, 0, 0]}
-      position={[0, base, 0]}
-      castShadow={!transparent}
-      receiveShadow
-    >
-      <extrudeGeometry
-        args={[shape, { depth: height, bevelEnabled: false, steps: 1 }]}
-      />
-      <meshStandardMaterial
-        color={color}
-        roughness={0.95}
-        transparent={transparent}
-        opacity={transparent ? 0.26 : 1}
-        depthWrite={!transparent}
-      />
-    </mesh>
-  );
-}
-function MeasuredParking({
-  scene,
-  listing,
-  onSpaceSelect,
-}: ParkingViewerProps & { scene: PublicScene }) {
-  const [mode, setMode] = useState<"3d" | "places" | "photos">("3d"),
-    [selected, setSelected] = useState(scene.manifest.spaces[0]?.id || ""),
-    [reset, setReset] = useState(0),
-    [zoom, setZoom] = useState(0),
-    [showSelection, setShowSelection] = useState(true);
-  const floor = scene.manifest.floor.footprintXZ;
-  const center: [number, number] = [
-    (Math.min(...floor.map((p) => p[0])) +
-      Math.max(...floor.map((p) => p[0]))) /
-      2,
-    (Math.min(...floor.map((p) => p[1])) +
-      Math.max(...floor.map((p) => p[1]))) /
-      2,
-  ];
-  const size = Math.max(
-    Math.max(...floor.map((p) => p[0])) - Math.min(...floor.map((p) => p[0])),
-    Math.max(...floor.map((p) => p[1])) - Math.min(...floor.map((p) => p[1])),
-  );
-  const scale = Math.min(1, 18 / Math.max(size, 1));
-  const selectMeasuredSpace = (id: string) => {
-    setSelected(id);
-    onSpaceSelect?.(id);
-  };
-  const alternative = (
-    <div className="gp-semantic-plan">
-      <h3>Niveau {scene.manifest.level} · plan métrique contrôlé</h3>
-      <ParkingPlan2D
-        manifest={scene.manifest}
-        selectedId={selected}
-        onSelect={selectMeasuredSpace}
-      />
-      <p>
-        Relevé du{" "}
-        {new Date(scene.manifest.provenance.observedAt).toLocaleDateString(
-          "fr-FR",
-        )}{" "}
-        · précision déclarée ±
-        {Math.round(scene.manifest.provenance.accuracyM * 100)} cm.
-      </p>
-      <div className="gp-semantic-spaces">
-        {scene.manifest.spaces.map((space) => (
-          <button
-            key={space.id}
-            className={`gp-semantic-space${selected === space.id ? " is-selected" : ""}`}
-            onClick={() => {
-              selectMeasuredSpace(space.id);
-            }}
-          >
-            <strong>Place {space.displayNumber}</strong>
-            <span>
-              {space.dimensions.lengthM ?? "—"} ×{" "}
-              {space.dimensions.widthM ?? "—"} m
-            </span>
-          </button>
-        ))}
-      </div>
-      {scene.manifest.observations.map((note, i) => (
-        <p key={i}>
-          {note.category} : {note.description}
-        </p>
-      ))}
-    </div>
-  );
-  return (
-    <section
-      className="gp-parking-viewer"
-      aria-label="Plan métrique du parking"
-    >
-      <div className="gp-viewer-heading">
-        <div className="gp-viewer-tabs">
-          <button
-            className={mode === "3d" ? "is-active" : ""}
-            onClick={() => setMode("3d")}
-          >
-            <Box size={18} />
-            Plan 3D
-          </button>
-          <button
-            className={mode === "places" ? "is-active" : ""}
-            onClick={() => setMode("places")}
-          >
-            <Layers3 size={18} />
-            Places
-          </button>
-          <button
-            className={mode === "photos" ? "is-active" : ""}
-            onClick={() => setMode("photos")}
-          >
-            <ImageIcon size={18} />
-            Photos
-          </button>
-        </div>
-        <label className="gp-level-select">Niveau {scene.manifest.level}</label>
-      </div>
-      <div className="gp-viewer-stage">
-        {mode === "3d" && (
-          <div className="gp-scene-selection" aria-live="polite">
-            <strong>
-              Place{" "}
-              {scene.manifest.spaces.find((space) => space.id === selected)
-                ?.displayNumber || "—"}
-            </strong>
-            <span>Plan métrique contrôlé · choisir une place dans la vue</span>
-          </div>
-        )}
-        {mode === "photos" ? (
-          <div className="gp-viewer-photo">
-            <img src={listing.photos[0]} alt="Photo du parking" />
-          </div>
-        ) : mode === "places" ||
-          scene.manifest.spaces.length + scene.manifest.obstacles.length >
-            100 ? (
-          alternative
-        ) : (
-          <SceneBoundary fallback={alternative}>
-            <Canvas
-              shadows
-              camera={{ position: [20, 24, 28], fov: 38, near: 0.1, far: 300 }}
-              dpr={[1, 1.5]}
-              frameloop="demand"
-              gl={{ antialias: true }}
-            >
-              <color attach="background" args={["#F8F9FC"]} />
-              <ambientLight intensity={1.4} />
-              <hemisphereLight args={["#FFFFFF", "#B5B1A8", 1.3]} />
-              <directionalLight
-                position={[8, 20, 12]}
-                intensity={2.4}
-                castShadow
-              />
-              <group scale={scale}>
-                <group position={[-center[0], 0, -center[1]]}>
-                  <MetricShape
-                    points={floor}
-                    base={-scene.manifest.floor.thicknessM}
-                    height={scene.manifest.floor.thicknessM}
-                  />
-                  {scene.manifest.obstacles.map((obstacle, i) => (
-                    <MetricShape
-                      key={i}
-                      points={obstacle.footprintXZ}
-                      base={obstacle.baseM}
-                      height={obstacle.heightM}
-                      endHeight={
-                        obstacle.kind === "ramp"
-                          ? obstacle.endHeightM
-                          : undefined
-                      }
-                      color="#D6D2C8"
-                    />
-                  ))}
-                  {scene.manifest.contextSpaces.map((space, i) => (
-                    <Line
-                      key={i}
-                      points={[...space.footprintXZ, space.footprintXZ[0]].map(
-                        (p) => [p[0], 0.03, p[1]],
-                      )}
-                      color="#FFFFFF"
-                      lineWidth={2}
-                    />
-                  ))}
-                  {scene.manifest.spaces.map((space) => {
-                    const x =
-                        space.footprintXZ.reduce((a, p) => a + p[0], 0) /
-                        space.footprintXZ.length,
-                      z =
-                        space.footprintXZ.reduce((a, p) => a + p[1], 0) /
-                        space.footprintXZ.length;
-                    return (
-                      <group
-                        key={space.id}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          selectMeasuredSpace(space.id);
-                        }}
-                      >
-                        <MetricShape
-                          points={space.footprintXZ}
-                          base={0.015}
-                          height={0.005}
-                          color={showSelection ? "#C9A558" : "#FFFFFF"}
-                          transparent
-                        />
-                        <Line
-                          points={[
-                            ...space.footprintXZ,
-                            space.footprintXZ[0],
-                          ].map((p) => [p[0], 0.04, p[1]])}
-                          color={showSelection ? "#6D28FF" : "#FFFFFF"}
-                          lineWidth={2}
-                        />
-                        <GroundNumber
-                          number={space.displayNumber}
-                          position={[x, 0.05, z]}
-                        />
-                      </group>
-                    );
-                  })}
-                </group>
-              </group>
-              <CameraControls
-                resetKey={reset}
-                zoom={zoom}
-                extent={Math.max(size * scale, 1)}
-              />
-            </Canvas>
-          </SceneBoundary>
-        )}
-        {mode === "3d" &&
-        scene.manifest.spaces.length + scene.manifest.obstacles.length <=
-          100 ? (
-          <div className="gp-viewer-tools">
-            <button
-              onClick={() => setZoom((v) => v + 1)}
-              aria-label="Agrandir le plan"
-            >
-              <Plus size={20} />
-            </button>
-            <button
-              onClick={() => setZoom((v) => v - 1)}
-              aria-label="Réduire le plan"
-            >
-              <Minus size={20} />
-            </button>
-            <button
-              onClick={() => setReset((v) => v + 1)}
-              aria-label="Recentrer le plan"
-            >
-              <RotateCcw size={20} />
-            </button>
-            <button
-              onClick={() => setShowSelection((v) => !v)}
-              aria-label="Afficher ou masquer la sélection"
-              aria-pressed={showSelection}
-            >
-              <Eye size={20} />
-            </button>
-          </div>
-        ) : null}
-        <div className="gp-viewer-disclaimer">
-          Relevé du{" "}
-          {new Date(scene.manifest.provenance.observedAt).toLocaleDateString(
-            "fr-FR",
-          )}{" "}
-          · contrôlé le {new Date(scene.reviewedAt).toLocaleDateString("fr-FR")}{" "}
-          · ±{Math.round(scene.manifest.provenance.accuracyM * 100)} cm
-        </div>
-      </div>
-      <div className="gp-viewer-footer">
-        <span>{scene.manifest.provenance.publicSummary}</span>
-        <span>
-          Le contrôle du plan ne constitue pas une expertise immobilière.
-        </span>
-      </div>
-    </section>
-  );
-}
-export default function ParkingViewer(props: ParkingViewerProps) {
-  const [scene, setScene] = useState<PublicScene | null>(null),
-    [level, setLevel] = useState(props.listing.spaces[0]?.level ?? -1);
-  const firstLookup = useRef(true);
-  const levels = [...new Set(props.listing.spaces.map((space) => space.level))];
-  useEffect(() => {
-    firstLookup.current = true;
-    setLevel(props.listing.spaces[0]?.level ?? -1);
-  }, [props.listing.id, props.listing.spaces]);
-  useEffect(() => {
-    const controller = new AbortController();
-    setScene(null);
-    if (props.listing.locationPrecision === "exact_opt_in")
-      void (async () => {
-        let response = await fetch(
-          `/api/scenes?listingId=${encodeURIComponent(props.listing.id)}&level=${level}`,
-          { signal: controller.signal },
-        );
-        if (!response.ok && firstLookup.current && levels.length > 1)
-          response = await fetch(
-            `/api/scenes?listingId=${encodeURIComponent(props.listing.id)}`,
-            { signal: controller.signal },
-          );
-        firstLookup.current = false;
-        if (!response.ok) return;
-        const result = await response.json();
-        if (result.data && !controller.signal.aborted) {
-          setScene(result.data);
-          if (result.data.manifest.level !== level)
-            setLevel(result.data.manifest.level);
-        }
-      })().catch(() => {});
-    return () => controller.abort();
-  }, [props.listing.id, props.listing.locationPrecision, level]);
-  return (
-    <div
-      className="gp-viewer-root"
-      style={{ height: "100%", display: "flex", flexDirection: "column" }}
-    >
-      {levels.length > 1 && props.listing.sceneAvailable ? (
-        <label className="gp-level-select">
-          Niveau
-          <select
-            value={level}
-            onChange={(event) => {
-              firstLookup.current = false;
-              setLevel(Number(event.target.value));
-            }}
-          >
-            {levels.map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-        </label>
+      {scene && !demoAllowed ? (
+        <details className="gp-viewer-provenance">
+          <summary>À propos de ce plan</summary>
+          <p>{scene.manifest.provenance.publicSummary}</p>
+          <p>
+            Contrôlé le {new Date(scene.reviewedAt).toLocaleDateString("fr-FR")}{" "}
+            · version {scene.version}. Le contrôle du plan ne constitue pas une
+            expertise immobilière.
+          </p>
+          {scene.manifest.observations.map((note, index) => (
+            <p key={note.id || index}>
+              {note.category} : {note.description}
+              <small>
+                {note.observedAt
+                  ? ` Relevé du ${new Date(note.observedAt).toLocaleDateString("fr-FR")}.`
+                  : " Date inconnue."}{" "}
+                {note.evidenceCount || 0} pièce(s) privée(s) associée(s).
+              </small>
+            </p>
+          ))}
+          {"documentation" in scene ? (
+            <p>
+              Observations contrôlées :{" "}
+              {scene.documentation?.reviewedObservationIds?.length || 0}/
+              {scene.manifest.observations.length}. Ce périmètre ne décrit pas
+              automatiquement tout l’état des places.
+            </p>
+          ) : null}
+          {"manifestHash" in scene && scene.manifestHash ? (
+            <p title={scene.manifestHash}>
+              Empreinte du plan public : {scene.manifestHash.slice(0, 12)}…
+            </p>
+          ) : null}
+        </details>
       ) : null}
-      {scene ? (
-        <MeasuredParking {...props} scene={scene} key={scene.id} />
-      ) : (
-        <DemoParkingViewer {...props} />
-      )}
-    </div>
+    </section>
   );
 }

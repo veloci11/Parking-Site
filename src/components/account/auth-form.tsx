@@ -1,8 +1,10 @@
 "use client";
+import FilterSelect from "../FilterSelect";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { api } from "./shared";
+import { safeAuthReturn, type AuthPolicy } from "@/lib/auth-return";
 type Mode = "login" | "register" | "verify" | "forgot" | "reset";
 const config: Record<
   Mode,
@@ -46,6 +48,7 @@ const config: Record<
 export default function AuthForm({ mode }: { mode: Mode }) {
   const c = config[mode];
   const [name, setName] = useState(""),
+    [sellerType, setSellerType] = useState(""),
     [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
     [token, setToken] = useState(""),
@@ -55,21 +58,42 @@ export default function AuthForm({ mode }: { mode: Mode }) {
     [success, setSuccess] = useState(""),
     [localLink, setLocalLink] = useState(""),
     [returnTo, setReturnTo] = useState("/compte"),
-    [demo, setDemo] = useState(false);
+    [demo, setDemo] = useState(false),
+    [policy, setPolicy] = useState<AuthPolicy | null>(null),
+    [termsAccepted, setTermsAccepted] = useState(false),
+    [resetReady, setResetReady] = useState<boolean | null>(null);
+  async function loadPolicy() {
+    setTermsAccepted(false);
+    try {
+      const r = await api<{ data: AuthPolicy }>("/api/auth/commands/policy");
+      setPolicy(r.data);
+    } catch {
+      setPolicy(null);
+      setError(
+        "Les documents ne sont pas disponibles. Réessayez avant de créer votre compte.",
+      );
+    }
+  }
+  useEffect(() => {
+    if (mode === "register") void loadPolicy();
+    if (mode === "reset")
+      api<{ data: { recoveryReady: boolean } }>(
+        "/api/auth/commands/reset-status",
+      )
+        .then((r) => setResetReady(r.data.recoveryReady))
+        .catch(() => setResetReady(false));
+  }, [mode]);
   useEffect(() => {
     api<{ mode?: string }>("/api/session")
       .then((r) => setDemo(r.mode === "demo"))
       .catch(() => {});
     const q = new URLSearchParams(window.location.search);
     setToken(q.get("token") || "");
-    const next = q.get("next");
-    if (
-      next?.startsWith("/") &&
-      !next.startsWith("//") &&
-      !next.includes("\\") &&
-      !/[\u0000-\u001f]/.test(next)
-    )
-      setReturnTo(next);
+    setReturnTo(safeAuthReturn(q.get("next")));
+    if (q.get("authError"))
+      setError(
+        "Ce lien est invalide ou a expiré. Reconnectez-vous ou demandez un nouveau lien de récupération.",
+      );
   }, []);
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -99,20 +123,34 @@ export default function AuthForm({ mode }: { mode: Mode }) {
         localMail?: { url?: string };
         demoVerificationToken?: string;
         mailboxReceipt?: string;
-      }>(`/api/auth/${endpoint}`, {
-        method: "POST",
-        body: JSON.stringify(
-          mode === "register"
-            ? { name, email, password }
-            : mode === "login"
-              ? { email, password }
-              : mode === "forgot"
-                ? { email }
-                : mode === "reset"
-                  ? { token, password }
-                  : { token },
-        ),
-      });
+      }>(
+        ["register", "forgot", "reset"].includes(endpoint)
+          ? `/api/auth/commands/${endpoint}`
+          : `/api/auth/${endpoint}`,
+        {
+          method: "POST",
+          body: JSON.stringify(
+            mode === "register"
+              ? {
+                  name,
+                  email,
+                  password,
+                  sellerType,
+                  termsAccepted,
+                  termsVersion: policy?.termsVersion,
+                  privacyVersion: policy?.privacyVersion,
+                  next: returnTo,
+                }
+              : mode === "login"
+                ? { email, password }
+                : mode === "forgot"
+                  ? { email, next: returnTo }
+                  : mode === "reset"
+                    ? { token, password }
+                    : { token },
+          ),
+        },
+      );
       window.dispatchEvent(new Event("gp:session"));
       if (demo && (result as { mailboxReceipt?: string }).mailboxReceipt) {
         const receipt = (result as { mailboxReceipt: string }).mailboxReceipt;
@@ -374,8 +412,38 @@ export default function AuthForm({ mode }: { mode: Mode }) {
               </label>
             ) : null}
             {mode === "register" ? (
+              <div className="field">
+                <span>{"Vous publiez en tant que"}</span>
+                <FilterSelect
+                  label={"Vous publiez en tant que"}
+                  variant="field"
+                  value={sellerType}
+                  required={true}
+                  onChange={(selectedValue) => setSellerType(selectedValue)}
+                  options={[
+                    {
+                      value: "",
+                      label: "Choisir mon statut déclaré",
+                      disabled: true,
+                    },
+                    { value: "private", label: "Particulier" },
+                    { value: "professional", label: "Professionnel" },
+                  ]}
+                />
+                <span className="muted">
+                  Cette déclaration ne vaut pas vérification et n’accorde aucun
+                  droit administratif.
+                </span>
+              </div>
+            ) : null}
+            {mode === "register" ? (
               <label className="account-checkbox">
-                <input type="checkbox" required />
+                <input
+                  type="checkbox"
+                  required
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                />
                 <span>
                   J’accepte les{" "}
                   <Link href="/conditions-utilisation">
@@ -386,10 +454,48 @@ export default function AuthForm({ mode }: { mode: Mode }) {
                     politique de confidentialité
                   </Link>
                   .
+                  {policy ? (
+                    <span className="muted">
+                      {" "}
+                      Versions affichées : conditions {policy.termsVersion} ;
+                      confidentialité {policy.privacyVersion}. Documents de
+                      préparation, à compléter par l’opérateur avant ouverture.
+                    </span>
+                  ) : null}
                 </span>
               </label>
             ) : null}
-            <button className="button button-primary" disabled={busy}>
+            {mode === "register" ? (
+              <button
+                className="account-link-button"
+                type="button"
+                disabled={busy}
+                onClick={() => void loadPolicy()}
+              >
+                Actualiser les versions des documents
+              </button>
+            ) : null}
+            {mode === "reset" && resetReady === false && !demo ? (
+              <p className="notice">
+                Ce parcours nécessite un nouveau lien de récupération ouvert
+                dans cet onglet.{" "}
+                <Link
+                  href={`/mot-de-passe-oublie?next=${encodeURIComponent(returnTo)}`}
+                >
+                  Demander un lien
+                </Link>
+                . Pour changer un mot de passe connu, utilisez vos paramètres et
+                confirmez le mot de passe actuel.
+              </p>
+            ) : null}
+            <button
+              className="button button-primary"
+              disabled={
+                busy ||
+                (mode === "register" && (!policy || !termsAccepted)) ||
+                (mode === "reset" && !demo && resetReady !== true)
+              }
+            >
               {busy ? "Un instant…" : c.button}
               <ArrowRight size={18} />
             </button>

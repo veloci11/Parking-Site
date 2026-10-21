@@ -1,4 +1,5 @@
 "use client";
+import { apiErrorMessage } from "./api-error";
 import { useCallback, useEffect, useState } from "react";
 import type { User } from "./types";
 export async function api<T>(
@@ -11,7 +12,12 @@ export async function api<T>(
   const response = await fetch(path, { ...options, headers });
   const result = await response.json();
   if (!response.ok || result.error)
-    throw new Error(result.error || "Une erreur est survenue. Réessayez.");
+    throw new Error(
+      apiErrorMessage(
+        response,
+        result.error || "Une erreur est survenue. Réessayez.",
+      ),
+    );
   return result.data as T;
 }
 export function useSession() {

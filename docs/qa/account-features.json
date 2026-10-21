@@ -1,7 +1,7 @@
 {
-  "timestamp": "2026-10-21T17:12:59.914Z",
+  "timestamp": "2026-10-21T19:48:03.594Z",
   "status": "passed",
-  "passed": 74,
+  "passed": 110,
   "failedCheck": null,
   "context": {
     "mfaGlobalPolicyChanged": false,
@@ -9,7 +9,7 @@
     "totpFactorRevoked": true,
     "emailsSent": false,
     "verificationAttempts": 1,
-    "fixtureScope": "four coordinator-created QA identities only"
+    "fixtureScope": "five coordinator-created QA identities only"
   },
   "checks": [
     {
@@ -75,39 +75,44 @@
       "passed": true
     },
     {
-      "name": "mfa_factor_enrolled",
-      "passed": true,
-      "httpStatus": 200
-    },
-    {
-      "name": "mfa_private_qr_contract",
+      "name": "moderator_role",
       "passed": true
     },
     {
-      "name": "mfa_private_secret_contract",
+      "name": "moderator_mfa_available",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "moderator_no_preexisting_verified_factor",
       "passed": true
     },
     {
-      "name": "mfa_challenge_1",
+      "name": "moderator_factor_enrolled",
       "passed": true,
       "httpStatus": 200
     },
     {
-      "name": "mfa_code_verified",
-      "passed": true,
-      "httpStatus": 200
-    },
-    {
-      "name": "mfa_assurance_after_verify",
-      "passed": true,
-      "httpStatus": 200
-    },
-    {
-      "name": "mfa_session_is_aal2",
+      "name": "moderator_private_factor_contract",
       "passed": true
     },
     {
-      "name": "mfa_factor_confirmed",
+      "name": "moderator_challenge_1",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "moderator_code_verified",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "moderator_session_aal2",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "moderator_own_factor_verified",
       "passed": true
     },
     {
@@ -187,6 +192,137 @@
       "httpStatus": 200
     },
     {
+      "name": "admin_login",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_identity",
+      "passed": true
+    },
+    {
+      "name": "admin_role",
+      "passed": true
+    },
+    {
+      "name": "admin_mfa_available",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_no_preexisting_verified_factor",
+      "passed": true
+    },
+    {
+      "name": "admin_registry_rejects_aal1",
+      "passed": true,
+      "httpStatus": 403
+    },
+    {
+      "name": "admin_factor_enrolled",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_private_factor_contract",
+      "passed": true
+    },
+    {
+      "name": "admin_challenge_1",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_code_verified",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_session_aal2",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_own_factor_verified",
+      "passed": true
+    },
+    {
+      "name": "real_storage_usage_readable",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "real_storage_objects_charged_once",
+      "passed": true
+    },
+    {
+      "name": "admin_read_qa_override",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "qa_override_not_preexisting_active",
+      "passed": true
+    },
+    {
+      "name": "quota_fixture_draft_created",
+      "passed": true,
+      "httpStatus": 201
+    },
+    {
+      "name": "qa_only_zero_upload_override",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "real_storage_quota_http_refused",
+      "passed": true,
+      "httpStatus": 429,
+      "code": "RATE_LIMITED"
+    },
+    {
+      "name": "real_storage_quota_code",
+      "passed": true
+    },
+    {
+      "name": "real_storage_retry_after",
+      "passed": true
+    },
+    {
+      "name": "direct_storage_fixture_login",
+      "passed": true
+    },
+    {
+      "name": "direct_storage_path_authorized_before_quota",
+      "passed": true
+    },
+    {
+      "name": "direct_storage_trigger_refused",
+      "passed": true
+    },
+    {
+      "name": "direct_storage_rejected_object_absent",
+      "passed": true
+    },
+    {
+      "name": "rejected_upload_not_charged",
+      "passed": true
+    },
+    {
+      "name": "qa_upload_override_cleared",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "qa_upload_override_inactive",
+      "passed": true
+    },
+    {
+      "name": "quota_fixture_withdrawn",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
       "name": "gallery_listing_approved",
       "passed": true,
       "httpStatus": 200
@@ -195,6 +331,28 @@
       "name": "gallery_public_listing",
       "passed": true,
       "httpStatus": 200
+    },
+    {
+      "name": "rent_published_monthly_amount",
+      "passed": true
+    },
+    {
+      "name": "rent_catalog_filter",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "rent_catalog_includes_fixture",
+      "passed": true
+    },
+    {
+      "name": "sale_catalog_filter",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "sale_catalog_excludes_rent",
+      "passed": true
     },
     {
       "name": "unit_photos_present_in_public_projection",
@@ -343,27 +501,34 @@
       "passed": true
     },
     {
-      "name": "qa_mfa_factor_removed_after_reauthentication",
+      "name": "moderator_own_factor_removed",
       "passed": true,
       "httpStatus": 200
     },
     {
-      "name": "mfa_state_after_removal",
+      "name": "moderator_own_factor_absent",
       "passed": true,
       "httpStatus": 200
     },
     {
-      "name": "qa_factor_absent_after_removal",
-      "passed": true
+      "name": "admin_own_factor_removed",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_own_factor_absent",
+      "passed": true,
+      "httpStatus": 200
     }
   ],
   "credentialsIncluded": false,
   "qrSecretOrTotpIncluded": false,
   "cleanupInventory": ".data/supabase-qa-result.json",
+  "adminFactorRevoked": true,
   "limitations": [
     "Email delivery not exercised",
     "No global MFA policy toggle",
-    "Administrator mandatory-MFA gate asserted only when configured as required",
+    "Administrator/moderator AAL2 established through real TOTP; AAL1 gate asserted when configured as required",
     "No real parking or production deployment"
   ],
   "sources": [

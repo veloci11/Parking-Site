@@ -1,4 +1,5 @@
 "use client";
+import FilterSelect from "@/components/FilterSelect";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -32,6 +33,8 @@ interface SourceEntry {
   listing_id: string;
   mime: string;
   byte_size: number;
+  processing_state?: "processing" | "ready" | "rejected";
+  previewUrls?: string[];
   url: string;
 }
 async function api<T>(path: string, options?: RequestInit): Promise<T> {
@@ -66,6 +69,9 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
     [json, setJSON] = useState(""),
     [rights, setRights] = useState(false),
     [checks, setChecks] = useState<Record<string, boolean>>({}),
+    [observationChecks, setObservationChecks] = useState<
+      Record<string, boolean>
+    >({}),
     [reason, setReason] = useState<Record<string, string>>({}),
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState(""),
@@ -153,6 +159,7 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
         id: string;
         mime: string;
         byteSize: number;
+        processing_state: "processing" | "ready" | "rejected";
         url: string;
       }>("/api/scenes/sources", { method: "POST", body });
       setSources((current) => [
@@ -162,10 +169,12 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
           listing_id: selected.id,
           mime: source.mime,
           byte_size: source.byteSize,
+          processing_state: source.processing_state,
           url: source.url,
         },
       ]);
-      setEvidence((current) => [...current, source.id]);
+      if (source.processing_state === "ready")
+        setEvidence((current) => [...current, source.id]);
       setNotice(
         "Source conservée en privé. Elle ne sera pas affichée sur l’annonce.",
       );
@@ -229,6 +238,7 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
                   numbersAndLevelChecked: true,
                   conditionMatchesPhotos: true,
                   locationConsentChecked: true,
+                  observationEvidenceChecked: !!observationChecks[entry.id],
                 }
               : undefined,
         }),
@@ -330,21 +340,22 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
             ) : (
               <label className="field">
                 Annonce concernée
-                <select
-                  className="input"
+                <FilterSelect
+                  variant="field"
+                  label="Annonce concernée"
                   value={selected?.id || ""}
-                  onChange={(e) => {
-                    const item = listings.find((l) => l.id === e.target.value);
+                  onChange={(value) => {
+                    const item = listings.find((l) => l.id === value);
                     if (item) void choose(item);
                   }}
-                >
-                  <option value="">Choisir une annonce</option>
-                  {listings.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.city} · {l.district} — {l.title || "Brouillon"}
-                    </option>
-                  ))}
-                </select>
+                  options={[
+                    { value: "", label: "Choisir une annonce" },
+                    ...listings.map((l) => ({
+                      value: l.id,
+                      label: `${l.city} · ${l.district} — ${l.title || "Brouillon"}`,
+                    })),
+                  ]}
+                />
               </label>
             )}
             {selected ? (
@@ -368,7 +379,7 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
                   />
                 </label>
                 <p className="muted">
-                  10 Mo maximum. Images nettoyées des métadonnées ; PDF simple
+                  25 Mio maximum. Images nettoyées des métadonnées ; PDF simple
                   téléchargé comme pièce privée. Incluez l’autorisation de
                   publication et deux mesures indépendantes.
                 </p>
@@ -390,6 +401,7 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
                     <label>
                       <input
                         type="checkbox"
+                        disabled={source.processing_state !== "ready"}
                         checked={evidence.includes(source.id)}
                         onChange={(e) =>
                           setEvidence((current) =>
@@ -402,18 +414,46 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
                       Joindre au modèle
                     </label>
                   ) : null}
-                  <a
-                    href={source.url}
-                    download
-                    className="button button-secondary"
-                  >
-                    <FileText size={16} />
-                    {source.mime === "application/pdf"
-                      ? "Plan PDF"
-                      : "Plan en image"}{" "}
-                    · {Math.ceil(source.byte_size / 1024)} Ko{" "}
-                    <ExternalLink size={14} />
-                  </a>
+                  <p>
+                    {source.processing_state === "ready"
+                      ? "Aperçus disponibles"
+                      : source.processing_state === "rejected"
+                        ? "Document refusé — exportez un plan simple"
+                        : "En traitement — document privé en quarantaine"}
+                  </p>
+                  {(source.previewUrls || []).map((preview, index) => (
+                    <a
+                      key={preview}
+                      href={preview}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="button button-secondary"
+                    >
+                      Aperçu {index + 1}
+                    </a>
+                  ))}
+                  {source.processing_state === "ready" ? (
+                    <a
+                      href={`${source.url}&download=acknowledged`}
+                      onClick={(event) => {
+                        if (
+                          !window.confirm(
+                            "Télécharger le document original privé ? Le contrôle technique ne constitue pas un antivirus. Préférez les aperçus PNG.",
+                          )
+                        )
+                          event.preventDefault();
+                      }}
+                      download
+                      className="button button-secondary"
+                    >
+                      <FileText size={16} />
+                      {source.mime === "application/pdf"
+                        ? "Plan PDF"
+                        : "Plan en image"}{" "}
+                      · {Math.ceil(source.byte_size / 1024)} Ko{" "}
+                      <ExternalLink size={14} />
+                    </a>
+                  ) : null}
                   {review && !selected ? (
                     <button
                       type="button"
@@ -571,6 +611,22 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
                         J’ai contrôlé la géométrie sur les sources, les
                         numéros/niveaux, l’état sur les photos et le
                         consentement exact de l’annonce publiée.
+                      </label>
+                      <label className="scene-manager-check">
+                        <input
+                          type="checkbox"
+                          checked={!!observationChecks[entry.id]}
+                          onChange={(event) =>
+                            setObservationChecks((current) => ({
+                              ...current,
+                              [entry.id]: event.target.checked,
+                            }))
+                          }
+                        />{" "}
+                        J’ai comparé les observations datées à leurs preuves
+                        privées liées. Ce contrôle porte uniquement sur les
+                        observations documentées, pas sur tout l’état du
+                        parking.
                       </label>
                       <label className="field">
                         Motif de décision

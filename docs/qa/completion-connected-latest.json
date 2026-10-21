@@ -1,0 +1,60 @@
+{
+  "checkedAt": "2026-10-21T19:57:38.727775+00:00",
+  "status": "passed",
+  "scope": "dedicated-five-fictional-identity-connected-qa-after-001-024",
+  "reports": [
+    {
+      "file": "supabase-integration.json",
+      "status": "passed",
+      "scope": "Next HTTP + confirmed GoTrue accounts + direct PostgREST/Storage with publishable key",
+      "passed": 155,
+      "failed": 0,
+      "timestamp": "2026-10-21T19:46:20.304Z"
+    },
+    {
+      "file": "account-features.json",
+      "status": "passed",
+      "scope": "connected-account-gallery-rent-quota-notifications-reports",
+      "passed": 110,
+      "failed": 0,
+      "timestamp": "2026-10-21T19:48:03.594Z"
+    },
+    {
+      "file": "privacy-export-integration.json",
+      "status": "passed",
+      "scope": "connected-queued-history-reauth-smoke",
+      "passed": 11,
+      "failed": 0,
+      "timestamp": null
+    },
+    {
+      "file": "scenes-integration.json",
+      "status": "passed",
+      "scope": "connected-quarantine-smoke",
+      "passed": 66,
+      "failed": 0,
+      "timestamp": "2026-10-21T19:54:02.069Z"
+    }
+  ],
+  "passed": 342,
+  "failed": 0,
+  "externalEmailsSent": false,
+  "physicalParkingTested": false,
+  "publicDeployment": false,
+  "remoteSourceWorkerExecuted": false,
+  "remoteArchiveWorkerExecuted": false,
+  "cleanup": "executed_and_verified_by_coordinator",
+  "limitations": [
+    "Scene smoke proves quarantine/access/source gating, not a ready-source model or remote raster worker",
+    "Export smoke proves reauthentication/queue/history/ownership, not remote ZIP construction/download/expiry/purge",
+    "No email roundtrip, physical parking or public launch proof"
+  ],
+  "advisorsReportedByCoordinator": {
+    "rlsTablesWithoutPoliciesInfo": 23,
+    "anonSecurityDefinerExposedWarnings": 4,
+    "authenticatedSecurityDefinerExposedWarnings": 53,
+    "securityDefinerContext": "Guarded RPC architecture and deliberately private RLS tables; requires review, not a zero-warning claim",
+    "authLeakedPasswordProtectionWarning": true
+  },
+  "cleanupReport": "completion-cleanup.json"
+}
