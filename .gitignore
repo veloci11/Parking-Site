@@ -6,3 +6,6 @@ node_modules/
 coverage/
 *.tsbuildinfo
 .DS_Store
+
+# Supabase CLI discovery cache
+supabase/.temp/
