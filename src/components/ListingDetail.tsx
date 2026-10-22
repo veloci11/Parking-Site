@@ -60,6 +60,13 @@ export default function ListingDetail({
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
   const [focusedListingId, setFocusedListingId] = useState(initialListing.id);
   const [viewLevel, setViewLevel] = useState<number>();
+  const offersHeading = useRef<HTMLHeadingElement>(null);
+  function showOffers() {
+    const heading = offersHeading.current;
+    if (!heading) return;
+    heading.focus({ preventScroll: true });
+    heading.scrollIntoView({ block: "start", behavior: "auto" });
+  }
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const space = initialListing.spaces.find(
@@ -685,7 +692,13 @@ export default function ListingDetail({
               </details>
             );
           })}
-          <h2 style={{ marginTop: 32 }}>Places, prix et dimensions</h2>
+          <h2
+            ref={offersHeading}
+            tabIndex={-1}
+            style={{ marginTop: 32, scrollMarginTop: 24 }}
+          >
+            Places, prix et dimensions
+          </h2>
           <p className="muted small">{pricingScope(listing)}</p>
           <div className="table-scroll">
             <table className="compare-table">
@@ -777,7 +790,7 @@ export default function ListingDetail({
                 <button
                   type="button"
                   className="button button-secondary"
-                  onClick={() => setSelectedSpaceId(null)}
+                  onClick={showOffers}
                 >
                   Voir toutes les offres
                 </button>
@@ -949,12 +962,10 @@ export default function ListingDetail({
               ? spaceOfferStatus(focusedListing, selectedSpace)
               : pricingScope(focusedListing)}
           </p>
-          {selectedSpace && focusedListing.pricingMode === "per_space" ? (
-            <button
-              type="button"
-              className="text-button"
-              onClick={() => setSelectedSpaceId(null)}
-            >
+          {!relatedSelected &&
+          selectedSpace &&
+          focusedListing.pricingMode === "per_space" ? (
+            <button type="button" className="text-button" onClick={showOffers}>
               Voir toutes les offres
             </button>
           ) : null}

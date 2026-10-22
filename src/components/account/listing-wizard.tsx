@@ -189,12 +189,25 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
     [locationConfirmed, setLocationConfirmed] = useState(false),
     [busy, setBusy] = useState(false);
   const cachedOffers = useRef(new Map<string, NonNullable<Space["offer"]>>());
+  const stepHeading = useRef<HTMLHeadingElement>(null),
+    submittedHeading = useRef<HTMLHeadingElement>(null),
+    previousStep = useRef(step);
   const latest = useRef<Listing | null>(null),
     dirty = useRef(false),
     saving = useRef(false),
     queued = useRef(false),
     seq = useRef(0),
     mounted = useRef(true);
+  useEffect(() => {
+    if (submitted) {
+      submittedHeading.current?.focus({ preventScroll: true });
+      window.scrollTo({ top: 0, behavior: "instant" });
+    } else if (previousStep.current !== step) {
+      stepHeading.current?.focus({ preventScroll: true });
+      window.scrollTo({ top: 0, behavior: "instant" });
+    }
+    previousStep.current = step;
+  }, [step, submitted]);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -698,7 +711,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
       <main id="main" className="page-shell account-submitted">
         <CheckCircle2 size={48} />
         <p className="account-eyebrow">BIEN REÇU</p>
-        <h1>
+        <h1 ref={submittedHeading} tabIndex={-1}>
           Votre annonce est
           <br />
           entre de bonnes mains.
@@ -888,7 +901,9 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
           aria-labelledby="wizard-step-title"
         >
           <span className="account-eyebrow">ÉTAPE {step + 1} SUR 3</span>
-          <h1 id="wizard-step-title">{steps[step]}</h1>
+          <h1 id="wizard-step-title" ref={stepHeading} tabIndex={-1}>
+            {steps[step]}
+          </h1>
           {(showIssues || step === 2) && missing.length ? (
             <div className="notice" role="status">
               <p>

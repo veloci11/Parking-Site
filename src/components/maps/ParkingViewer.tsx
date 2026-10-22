@@ -31,7 +31,10 @@ import {
 import ParkingPlan2D from "./ParkingPlan2D";
 import type { DisplaySpace } from "./ParkingScene";
 import RenderedParkingLevel from "./RenderedParkingLevel";
-import { parkingListingGroups } from "@/lib/parking-lots";
+import {
+  parkingListingGroups,
+  preferredParkingLotUnit,
+} from "@/lib/parking-lots";
 import { listingPrice } from "@/lib/listing-price";
 import "@/styles/maps.css";
 
@@ -522,12 +525,7 @@ export default function ParkingViewer(props: ParkingViewerProps) {
   const chooseLot = (lotKey: string) => {
     const lot = lots.find((item) => item.key === lotKey);
     if (!lot) return;
-    const belongs = (unit: UnitReference) =>
-      unit.listingId === lot.listing.id &&
-      lot.spaces.some((space) => space.id === unit.listingUnitId);
-    const reference =
-      units.find((unit) => belongs(unit) && unit.space.level === level) ??
-      units.find(belongs);
+    const reference = preferredParkingLotUnit(lot, units, level);
     if (!reference) return;
     persistSelection(reference.space.level, reference.id);
     props.onViewLevelChange?.(reference.space.level);

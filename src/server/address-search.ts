@@ -29,7 +29,11 @@ export async function searchAddresses(
       headers: { Accept: "application/json" },
     });
     if (!response.ok) throw new Error("geocoder unavailable");
-    const found = parseAddressSuggestions(await response.json());
+    const requestedPostalCode = query.match(/\b\d{5}\b/)?.[0];
+    const found = parseAddressSuggestions(await response.json()).filter(
+      (suggestion) =>
+        !requestedPostalCode || suggestion.postalCode === requestedPostalCode,
+    );
     const combined = [
       ...found,
       ...local.filter(

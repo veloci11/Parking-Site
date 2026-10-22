@@ -17,6 +17,10 @@ import { type Listing, type User } from "@/lib/types";
 import { listingPrice, offerLabel } from "@/lib/listing-price";
 import { pricingScope, ListingOffersTable } from "../ListingOffers";
 import { AdminModelingRequests } from "./modeling-request";
+import {
+  isRevisionReviewed,
+  type ReviewedRevision,
+} from "@/lib/moderation-review";
 function Content({ user }: { user: User }) {
   const [items, setItems] = useState<Listing[]>([]),
     [loading, setLoading] = useState(true),
@@ -25,7 +29,9 @@ function Content({ user }: { user: User }) {
     [selected, setSelected] = useState<string | null>(null),
     [reason, setReason] = useState(""),
     [busy, setBusy] = useState(false),
-    [reviewed, setReviewed] = useState(false);
+    [reviewedRevision, setReviewedRevision] = useState<ReviewedRevision | null>(
+      null,
+    );
   function load() {
     setLoading(true);
     return api<{ data: Listing[] }>("/api/admin/revisions")
@@ -37,6 +43,7 @@ function Content({ user }: { user: User }) {
     void load();
   }, []);
   const item = items.find((l) => l.id === selected);
+  const reviewed = isRevisionReviewed(item, reviewedRevision);
   async function decide(decision: "approve" | "changes_requested" | "reject") {
     if (!item) return;
     if (decision !== "approve" && !reason.trim()) {
@@ -65,7 +72,7 @@ function Content({ user }: { user: User }) {
       );
       setSelected(null);
       setReason("");
-      setReviewed(false);
+      setReviewedRevision(null);
       await load();
     } catch (e) {
       setError((e as Error).message);
@@ -148,7 +155,7 @@ function Content({ user }: { user: User }) {
               onClick={() => {
                 setSelected(l.id);
                 setReason("");
-                setReviewed(false);
+                setReviewedRevision(null);
               }}
             >
               <div>
@@ -296,7 +303,13 @@ function Content({ user }: { user: User }) {
             <input
               type="checkbox"
               checked={reviewed}
-              onChange={(e) => setReviewed(e.target.checked)}
+              onChange={(e) =>
+                setReviewedRevision(
+                  e.target.checked
+                    ? { id: item.id, version: item.version }
+                    : null,
+                )
+              }
             />
             <span>
               J’ai relu{" "}

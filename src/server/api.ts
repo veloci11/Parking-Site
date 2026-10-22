@@ -122,11 +122,24 @@ function saveDraft(
 ) {
   const version = Number(row.version) + 1;
   const value = { ...draft, version, status, updatedAt: now() };
-  db()
+  const result = db()
     .prepare(
-      "UPDATE listings SET draft_json=?,status=?,version=?,updated_at=? WHERE id=?",
+      "UPDATE listings SET draft_json=?,status=?,version=?,updated_at=? WHERE id=? AND version=?",
     )
-    .run(JSON.stringify(value), status, version, value.updatedAt, draft.id);
+    .run(
+      JSON.stringify(value),
+      status,
+      version,
+      value.updatedAt,
+      draft.id,
+      Number(row.version),
+    );
+  if (Number(result.changes) !== 1)
+    throw new ApiError(
+      409,
+      "Cette annonce a changé. Rechargez sa dernière version.",
+      "VERSION_CONFLICT",
+    );
   return value;
 }
 function validatePhotos(photos: string[], userId: string, listingId: string) {
@@ -518,8 +531,8 @@ export async function handleApi(request: Request): Promise<Response> {
         return respond(listing);
       }
       const user = requireUser(request, action === "submit");
-      const row = ownListing(id, user);
       const input = await body(request);
+      const row = ownListing(id, user);
       checkVersion(row, input.version);
       if (method === "PATCH" && !action) {
         if (row.status === "pending")

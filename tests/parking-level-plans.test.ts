@@ -9,12 +9,15 @@ import {
   localRegistryCommand,
   localPublicParking,
   localRegistryAdmin,
+  handleParkingRegistry,
 } from "../src/server/parking-registry";
 import { sceneDB } from "../src/server/scenes/local";
 import { getLocalPublicScene } from "../src/server/scenes/local";
+import { localLevelPlanHistory } from "../src/server/parking-level-plans";
 import { getPublicListing, loadPublicListing } from "../src/server/catalog";
 import { parsePageQuery, localCatalogPage } from "../src/server/pagination";
 import { handleApi } from "../src/server/api";
+import { sessionCookie } from "../src/server/security";
 import {
   parkingSceneGroup,
   registryCommandSchema,
@@ -70,6 +73,32 @@ test("shared demo has only its two related listings, three public units and two 
       ),
     ),
   );
+});
+
+test("legacy states are captured once without inventing a new approval", () => {
+  const sql = db();
+  const old = sql
+    .prepare(
+      "SELECT * FROM parking_level_plans WHERE is_demo=1 ORDER BY level_id LIMIT 1",
+    )
+    .get()!;
+  const history = localLevelPlanHistory(String(old.level_id));
+  assert.equal(history.items.length, 1);
+  assert.equal(history.items[0].action, "legacy_snapshot");
+  assert.equal(history.items[0].createdAt, old.reviewed_at);
+  assert.equal(history.items[0].reason, old.reason);
+  assert.equal(history.items[0].isDemo, true);
+  const auditCount = () =>
+    Number(
+      sql
+        .prepare(
+          "SELECT count(*) AS n FROM audit WHERE action='registry.level_plan_history_backfill' AND target_id=?",
+        )
+        .get(old.level_id)!.n,
+    );
+  assert.equal(auditCount(), 1);
+  localLevelPlanHistory(String(old.level_id));
+  assert.equal(auditCount(), 1);
 });
 
 test("one administered frame maps every physical unit, filters private offers and withdraws stale/missing-source plans", async () => {
@@ -385,6 +414,191 @@ test("one administered frame maps every physical unit, filters private offers an
   assert.equal(getPublicListing(first.id)!.sceneAvailable, false);
   assert.equal((await loadPublicListing(second.id))!.sceneAvailable, false);
   assert.equal(scenePage().total, 0);
+  const beforeHistory = localLevelPlanHistory(level1);
+  assert.deepEqual(
+    beforeHistory.items.map((item) => [item.version, item.state]),
+    [
+      [2, "withdrawn"],
+      [1, "published"],
+    ],
+  );
+  const privateRevision = sql
+    .prepare(
+      "SELECT * FROM parking_level_plan_revisions WHERE level_id=? AND row_version=1",
+    )
+    .get(level1)!;
+  assert.deepEqual(JSON.parse(String(privateRevision.manifest)), manifest);
+  assert.equal(JSON.parse(String(privateRevision.physical_mapping)).length, 3);
+  assert.equal(
+    JSON.parse(String(privateRevision.evidence_snapshot))[0].sha256,
+    "a".repeat(64),
+  );
+  assert.throws(
+    () =>
+      sql
+        .prepare(
+          "UPDATE parking_level_plan_revisions SET reason='changed' WHERE level_id=?",
+        )
+        .run(level1),
+    /PLAN_HISTORY_IMMUTABLE/,
+  );
+  assert.throws(
+    () =>
+      sql
+        .prepare("DELETE FROM parking_level_plan_revisions WHERE level_id=?")
+        .run(level1),
+    /PLAN_HISTORY_IMMUTABLE/,
+  );
+  const restore: Extract<RegistryCommand, { action: "restore_level_plan" }> = {
+    action: "restore_level_plan",
+    levelId: level1,
+    version: 2,
+    sourceVersion: 1,
+    reason: "Restauration contrôlée des sources et autorisations actuelles.",
+    rightsAttested: true,
+    checks: publish.checks,
+  };
+  assert.throws(
+    () => command({ ...restore, sourceVersion: 2 }),
+    /révision publiée/,
+  );
+  assert.throws(() => command({ ...restore, version: 1 }), /version/);
+  sql
+    .prepare("UPDATE scene_sources SET sha256=? WHERE id=?")
+    .run("b".repeat(64), evidence);
+  assert.throws(() => command(restore), /empreintes/);
+  sql
+    .prepare("UPDATE scene_sources SET sha256=? WHERE id=?")
+    .run("a".repeat(64), evidence);
+  sql
+    .prepare("UPDATE scene_sources SET processing_state='failed' WHERE id=?")
+    .run(evidence);
+  assert.throws(() => command(restore), /Sources prêtes/);
+  sql
+    .prepare("UPDATE scene_sources SET processing_state='ready' WHERE id=?")
+    .run(evidence);
+  const originalDimensions = sql
+    .prepare("SELECT dimensions FROM parking_spaces WHERE id=?")
+    .get(ids[0])!.dimensions;
+  sql
+    .prepare("UPDATE parking_spaces SET dimensions=? WHERE id=?")
+    .run(
+      JSON.stringify({ lengthM: 5, widthM: 2.8, clearanceM: 2.1, areaM2: 14 }),
+      ids[0],
+    );
+  assert.throws(() => command(restore), /registre physique/);
+  sql
+    .prepare("UPDATE parking_spaces SET dimensions=? WHERE id=?")
+    .run(originalDimensions, ids[0]);
+  for (const item of [first, second])
+    sql
+      .prepare("UPDATE listings SET public_json=? WHERE id=?")
+      .run(JSON.stringify({ ...item, locationPrecision: "area" }), item.id);
+  assert.throws(() => command(restore), /publication actuelle/);
+  for (const item of [first, second])
+    sql
+      .prepare("UPDATE listings SET public_json=? WHERE id=?")
+      .run(JSON.stringify(item), item.id);
+  sql
+    .prepare("UPDATE users SET status='suspended' WHERE id=?")
+    .run(personas.seller);
+  assert.throws(() => command(restore), /publication actuelle|Sources prêtes/);
+  sql
+    .prepare("UPDATE users SET status='active' WHERE id=?")
+    .run(personas.seller);
+  assert.equal(
+    localLevelPlanHistory(level1).currentVersion,
+    2,
+    "failed restores create no revision",
+  );
+  assert.equal(command(restore).version, 3);
+  assert.equal(localLevelPlanHistory(level1).items[0].restoredFromVersion, 1);
+  assert.equal(
+    localLevelPlanHistory(level1).items[0].action,
+    "restore_level_plan",
+  );
+  assert.deepEqual(
+    JSON.parse(
+      String(
+        sql
+          .prepare("SELECT manifest FROM parking_level_plans WHERE level_id=?")
+          .get(level1)!.manifest,
+      ),
+    ),
+    manifest,
+  );
+  sql
+    .prepare("UPDATE listings SET status='withdrawn' WHERE id=?")
+    .run(second.id);
+  assert.equal(command({ ...restore, version: 3 }).version, 4);
+  assert.equal(
+    sql.prepare("SELECT status FROM listings WHERE id=?").get(second.id)!
+      .status,
+    "withdrawn",
+  );
+  const remaining = localPublicParking(undefined, first.id)!;
+  assert.deepEqual(
+    remaining.listings.map((item) => item.id),
+    [first.id],
+    "restore never reactivates another listing",
+  );
+  assert.equal(remaining.levels[0].commonPlan!.manifest.spaces.length, 1);
+  assert.ok(!JSON.stringify(remaining).includes(evidence));
+  const summary = JSON.stringify(localLevelPlanHistory(level1));
+  for (const secret of [
+    evidence,
+    file,
+    ...ids,
+    "manifest",
+    "evidenceIds",
+    "reviewerId",
+  ])
+    assert.ok(!summary.includes(secret), secret);
+  assert.ok(
+    sql
+      .prepare(
+        "SELECT id FROM audit WHERE action='registry.restore_level_plan' AND target_id=?",
+      )
+      .get(level1),
+  );
+  for (let version = 4; version < 31; version++)
+    command({ ...publish, version });
+  const firstPage = localLevelPlanHistory(level1);
+  assert.equal(firstPage.items.length, 25);
+  assert.equal(firstPage.hasMore, true);
+  assert.equal(firstPage.items[0].version, 31);
+  const previousPage = localLevelPlanHistory(
+    level1,
+    firstPage.nextBeforeVersion,
+  );
+  assert.deepEqual(
+    previousPage.items.map((item) => item.version),
+    [6, 5, 4, 3, 2, 1],
+  );
+  assert.equal(previousPage.hasMore, false);
+  assert.equal(localLevelPlanHistory(level2).items.length, 0);
+  const readHistory = (cookie?: string, query = "") =>
+    handleParkingRegistry(
+      new Request(
+        `http://127.0.0.1:3000/api/admin/parking-registry?levelPlanHistory=${level1}${query}`,
+        { headers: { ...(cookie ? { cookie } : {}) } },
+      ),
+    );
+  assert.equal((await readHistory()).status, 401);
+  assert.equal((await readHistory(sessionCookie(personas.seller))).status, 403);
+  assert.equal(
+    (await readHistory(sessionCookie(personas.moderator))).status,
+    403,
+  );
+  const adminCookie = sessionCookie(adminId);
+  assert.equal(
+    (await readHistory(adminCookie, "&beforeVersion=-1")).status,
+    400,
+  );
+  const response = await readHistory(adminCookie);
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).data, firstPage);
+  assert.equal(response.headers.get("Cache-Control"), "private, no-store");
 });
 
 test("an ungrouped approved individual scene remains available only while its source, mapping and consent are valid", () => {

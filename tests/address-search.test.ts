@@ -91,3 +91,34 @@ test("geocoder outages preserve local municipality search and never invent stree
   assert.equal(success.data[0].id, "fixture-address");
   assert.equal(success.addressSearchAvailable, true);
 });
+
+test("a postal code typed with a city is preserved and excludes a different district from the provider", async () => {
+  assert.equal(municipalitySuggestions("Paris 75012")[0]?.postalCode, "75012");
+  const result = await searchAddresses("Paris 75012", async () =>
+    Response.json({
+      features: [
+        {
+          ...paris,
+          properties: {
+            ...paris.properties,
+            label: "Paris",
+            postcode: "75001",
+            type: "municipality",
+          },
+        },
+        paris,
+      ],
+    }),
+  );
+  assert.ok(result.data.length > 0);
+  assert.ok(
+    result.data.every((suggestion) => suggestion.postalCode === "75012"),
+  );
+  assert.ok(
+    result.data.some(
+      (suggestion) =>
+        suggestion.kind === "municipality" &&
+        suggestion.label.includes("75012"),
+    ),
+  );
+});

@@ -41,6 +41,36 @@ export function parkingListingGroups(group: Group | null | undefined) {
       }),
     );
 }
+export type ParkingListingGroup = ReturnType<
+  typeof parkingListingGroups
+>[number];
+
+/** Prefer available offers, then the current floor, among this parking's units. */
+export function preferredParkingLotUnit<
+  T extends {
+    listingId: string;
+    listingUnitId: string;
+    space: { level: number };
+  },
+>(lot: ParkingListingGroup, units: readonly T[], level: number): T | undefined {
+  const spacesById = new Map(lot.spaces.map((space) => [space.id, space]));
+  const candidates = units.filter(
+    (unit) =>
+      unit.listingId === lot.listing.id && spacesById.has(unit.listingUnitId),
+  );
+  const available = candidates.filter(
+    (unit) =>
+      spaceOffer(lot.listing, spacesById.get(unit.listingUnitId)!).status ===
+      "available",
+  );
+  return (
+    available.find((unit) => unit.space.level === level) ??
+    available[0] ??
+    candidates.find((unit) => unit.space.level === level) ??
+    candidates[0]
+  );
+}
+
 export function parkingListingGroupLabel(
   group: Group | null | undefined,
   listingId: string,

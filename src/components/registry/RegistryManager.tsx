@@ -1,6 +1,6 @@
 "use client";
 import FilterSelect from "@/components/FilterSelect";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, useRef, type FormEvent } from "react";
 import Link from "next/link";
 import { RefreshCw, Building2, Layers3, Link2, UsersRound } from "lucide-react";
 import { api } from "@/lib/client";
@@ -10,10 +10,248 @@ import {
   type RegistryCommand,
   type RegistryAdminData,
   type RegistryMutationResult,
+  type RegistryLevel,
+  type RegistryLevelPlanHistory,
 } from "@/lib/parking-registry";
 import type { Listing, User, AdminUser } from "@/lib/types";
 import "@/styles/registry.css";
 const empty: RegistryAdminData = { sites: [], links: [], conflicts: [] };
+function LevelPlanHistory({
+  level,
+  busy,
+  mutate,
+}: {
+  level: RegistryLevel;
+  busy: boolean;
+  mutate: (command: RegistryCommand) => Promise<void>;
+}) {
+  const [history, setHistory] = useState<RegistryLevelPlanHistory | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [reason, setReason] = useState("");
+  const [selected, setSelected] = useState("");
+  const [checks, setChecks] = useState<boolean[]>([false, false, false, false]);
+  const [attempt, setAttempt] = useState(0);
+  const pending = useRef<AbortController | null>(null);
+  async function load(before?: number) {
+    pending.current?.abort();
+    const controller = new AbortController();
+    pending.current = controller;
+    setLoading(true);
+    setError("");
+    try {
+      const page = await api<RegistryLevelPlanHistory>(
+        `/api/admin/parking-registry?levelPlanHistory=${encodeURIComponent(level.id)}${before ? `&beforeVersion=${before}` : ""}`,
+        { signal: controller.signal },
+      );
+      if (controller.signal.aborted) return;
+      setHistory((current) =>
+        before && current
+          ? {
+              ...page,
+              items: [
+                ...current.items,
+                ...page.items.filter(
+                  (item) =>
+                    !current.items.some((old) => old.version === item.version),
+                ),
+              ],
+            }
+          : page,
+      );
+    } catch (error) {
+      if (!controller.signal.aborted) setError((error as Error).message);
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
+    }
+  }
+  useEffect(() => {
+    setHistory(null);
+    setSelected("");
+    setChecks([false, false, false, false]);
+    setReason("");
+    void load();
+    return () => pending.current?.abort();
+  }, [level.id, level.planVersion, attempt]);
+  const revision = history?.items.find(
+    (item) => item.version === Number(selected),
+  );
+  const currentVersion = history?.currentVersion ?? level.planVersion ?? 0;
+  return (
+    <details className="account-fieldset">
+      <summary>
+        Versions du plan commun · version {currentVersion || "absente"}
+      </summary>
+      <p className="muted small">
+        Une restauration crée une nouvelle version après contrôle du registre,
+        des sources et des autorisations actuelles. Elle ne remet aucune
+        ancienne annonce en ligne.
+      </p>
+      {loading ? <p role="status">Chargement des versions…</p> : null}
+      {error ? (
+        <p className="notice error" role="alert">
+          {error}{" "}
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => setAttempt((v) => v + 1)}
+          >
+            Réessayer
+          </button>
+        </p>
+      ) : null}
+      {history && !history.items.length ? (
+        <p>Aucune version enregistrée pour ce niveau.</p>
+      ) : null}
+      {history?.items.length ? (
+        <>
+          <label className="field">
+            Version à consulter
+            <FilterSelect
+              variant="field"
+              label="Version du plan commun"
+              value={selected}
+              onChange={(value) => {
+                setSelected(value);
+                setChecks([false, false, false, false]);
+              }}
+              options={[
+                { value: "", label: "Choisir une version" },
+                ...history.items.map((item) => ({
+                  value: String(item.version),
+                  label: `Version ${item.version} · ${item.state === "published" ? "publiée" : "retirée"} · ${new Date(item.createdAt).toLocaleDateString("fr-FR", { timeZone: "UTC" })}`,
+                })),
+              ]}
+            />
+          </label>
+          {revision ? (
+            <div className="notice">
+              <strong>
+                Version {revision.version} ·{" "}
+                {revision.state === "published" ? "publiée" : "retirée"}
+              </strong>
+              <p>
+                {revision.spaceCount} place(s) rapprochée(s) ·{" "}
+                {revision.evidenceCount} source(s)
+                {revision.restoredFromVersion
+                  ? ` · restaurée depuis la version ${revision.restoredFromVersion}`
+                  : ""}
+              </p>
+              <p style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+                {revision.reason}
+              </p>
+              {revision.action === "legacy_snapshot" ? (
+                <p className="small">
+                  État antérieur repris lors de l’activation de l’historique.
+                  Aucune nouvelle vérification n’est attestée à cette date.
+                </p>
+              ) : null}
+              {revision.isDemo ? (
+                <p className="small">
+                  Plan fictif de démonstration, non restaurable comme relevé
+                  réel.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+          {history.hasMore ? (
+            <button
+              type="button"
+              className="button button-secondary"
+              disabled={loading}
+              onClick={() => void load(history.nextBeforeVersion)}
+            >
+              Versions précédentes
+            </button>
+          ) : null}
+          <label className="field">
+            Motif de restauration ou de retrait
+            <textarea
+              className="input"
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              minLength={15}
+              maxLength={2000}
+            />
+          </label>
+          {revision?.state === "published" && !revision.isDemo ? (
+            <>
+              {[
+                "Je confirme les droits actuels de publication des sources.",
+                "J’ai vérifié le repère calibré du niveau.",
+                "J’ai rapproché les places et dimensions du registre actuel.",
+                "J’ai contrôlé les sources actuelles et leurs empreintes.",
+              ].map((label, index) => (
+                <label className="registry-check" key={label}>
+                  <input
+                    type="checkbox"
+                    checked={checks[index]}
+                    disabled={busy}
+                    onChange={(event) =>
+                      setChecks((current) =>
+                        current.map((value, i) =>
+                          i === index ? event.target.checked : value,
+                        ),
+                      )
+                    }
+                  />
+                  {label}
+                </label>
+              ))}
+              <button
+                type="button"
+                className="button button-primary"
+                disabled={
+                  busy ||
+                  loading ||
+                  Boolean(error) ||
+                  !checks.every(Boolean) ||
+                  reason.trim().length < 15
+                }
+                onClick={() =>
+                  void mutate({
+                    action: "restore_level_plan",
+                    levelId: level.id,
+                    version: currentVersion,
+                    sourceVersion: revision.version,
+                    reason: reason.trim(),
+                    rightsAttested: true,
+                    checks: {
+                      coordinateFrameConfirmed: true,
+                      mappingChecked: true,
+                      sourcesChecked: true,
+                    },
+                  })
+                }
+              >
+                Restaurer en version {currentVersion + 1}
+              </button>
+            </>
+          ) : null}
+          {level.planState === "published" ? (
+            <button
+              type="button"
+              className="button button-secondary"
+              disabled={
+                busy || loading || Boolean(error) || reason.trim().length < 15
+              }
+              onClick={() =>
+                void mutate({
+                  action: "withdraw_level_plan",
+                  levelId: level.id,
+                  version: currentVersion,
+                  reason: reason.trim(),
+                })
+              }
+            >
+              Retirer le plan actuel
+            </button>
+          ) : null}
+        </>
+      ) : null}
+    </details>
+  );
+}
 function Content({
   user,
   initialListingId,
@@ -134,9 +372,11 @@ function Content({
       );
       setNotice(
         result.message ||
-          (result.status === "conflict"
-            ? "Un conflit de correspondance est ouvert. Aucun rapprochement concurrent n’est forcé."
-            : "Le registre a été enregistré."),
+          (parsed.data.action === "restore_level_plan"
+            ? `Le plan commun a été restauré en version ${result.version}.`
+            : result.status === "conflict"
+              ? "Un conflit de correspondance est ouvert. Aucun rapprochement concurrent n’est forcé."
+              : "Le registre a été enregistré."),
       );
       if (result.status === "saved" && parsed.data.action === "link_listing") {
         setChecked(false);
@@ -392,6 +632,7 @@ function Content({
           </details>
           {level ? (
             <>
+              <LevelPlanHistory level={level} busy={busy} mutate={mutate} />
               <p className="muted">
                 {level.spaces.length} place(s) physique(s) référencée(s). Les
                 dimensions inconnues restent vides.

@@ -14,9 +14,10 @@ export interface AddressSuggestion {
 }
 
 export function municipalitySuggestions(query: string): AddressSuggestion[] {
-  return idfGeocode(query).map((item) => {
+  const requestedPostalCode = query.match(/\b\d{5}\b/)?.[0];
+  return idfGeocode(requestedPostalCode || query).map((item) => {
     const postalCode =
-      item.postalCodes.find((code) => code === query.trim()) ||
+      item.postalCodes.find((code) => code === requestedPostalCode) ||
       item.postalCodes[0];
     return {
       id: `commune:${item.code}:${postalCode}`,

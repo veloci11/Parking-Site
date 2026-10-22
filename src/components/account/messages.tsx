@@ -19,6 +19,10 @@ import {
 } from "lucide-react";
 import { AccountGate, AccountShell, api } from "./shared";
 import { mergeMessageHistory } from "./message-history";
+import {
+  visitRequestDraft,
+  type VisitRequestDraft,
+} from "./visit-request-draft";
 import ContextReportForm from "./context-report-form";
 import type { Conversation, Listing, Message, User, Visit } from "@/lib/types";
 const visitLabels: Record<Visit["status"], string> = {
@@ -60,6 +64,7 @@ function Content({ user, id }: { user: User; id?: string }) {
     id: string;
   } | null>(null);
   const requestId = useRef("");
+  const pendingVisit = useRef<VisitRequestDraft | null>(null);
   const feed = useRef<HTMLDivElement>(null),
     currentId = useRef(id),
     initializedCursor = useRef(false),
@@ -100,6 +105,7 @@ function Content({ user, id }: { user: User; id?: string }) {
     setVisits([]);
     setLoadingHistory(false);
     requestId.current = "";
+    pendingVisit.current = null;
   }, [id]);
   async function loadOlder() {
     if (!id || !historyCursor || loadingHistory) return;
@@ -230,13 +236,21 @@ function Content({ user, id }: { user: User; id?: string }) {
     setBusyVisit("new");
     setError("");
     try {
+      const draft = visitRequestDraft(
+        pendingVisit.current,
+        id,
+        proposed ? new Date(proposed).toISOString() : null,
+      );
+      pendingVisit.current = draft;
       await api(`/api/conversations/${id}/visits`, {
         method: "POST",
         body: JSON.stringify({
-          proposedAt: proposed ? new Date(proposed).toISOString() : null,
-          clientRequestId: crypto.randomUUID(),
+          proposedAt: draft.proposedAt,
+          clientRequestId: draft.clientRequestId,
         }),
       });
+      if (pendingVisit.current === draft) pendingVisit.current = null;
+      if (currentId.current !== id) return;
       setShowVisit(false);
       setProposed("");
       await load();

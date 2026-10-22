@@ -1,5 +1,6 @@
 "use client";
 import { listingPrice, availableOffers } from "@/lib/listing-price";
+import { searchOfferSpaces } from "@/lib/search-offers";
 import { pricingScope } from "./ListingOffers";
 import Image from "./SafePhoto";
 import { Heart, Layers3, ScanEye } from "lucide-react";
@@ -84,7 +85,8 @@ export default function ListingCard({
           {listingPrice(listing, transactionType)}
         </strong>
         <span className="listing-meta">
-          {typeLabels[listing.type]} · {areaLabel(listing.spaces)}
+          {typeLabels[listing.type]} ·{" "}
+          {areaLabel(searchOfferSpaces(listing, transactionType))}
         </span>
       </button>
       <div className="listing-card-footer">

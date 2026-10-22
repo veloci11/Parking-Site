@@ -119,7 +119,9 @@ export default function LocationPicker({
           aria-expanded={open && results.length > 0}
           aria-controls={`${id}-results`}
           aria-activedescendant={
-            active >= 0 ? `${id}-result-${active}` : undefined
+            open && !loading && query.trim().length >= 3 && results[active]
+              ? `${id}-result-${active}`
+              : undefined
           }
           value={query}
           autoComplete="off"
@@ -139,7 +141,7 @@ export default function LocationPicker({
               setActive((v) => Math.min(results.length - 1, v + 1));
             } else if (e.key === "ArrowUp") {
               e.preventDefault();
-              setActive((v) => Math.max(0, v - 1));
+              setActive((v) => (results.length ? Math.max(0, v - 1) : -1));
             } else if (e.key === "Enter" && open) {
               e.preventDefault();
               if (results[active >= 0 ? active : 0])

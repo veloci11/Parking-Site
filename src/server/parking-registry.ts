@@ -7,6 +7,7 @@ import { listPublicListingSnapshots } from "./catalog";
 import { getLocalPublicScene } from "./scenes/local";
 import {
   levelPlanDB,
+  localLevelPlanHistory,
   mutateLocalLevelPlan,
   publicLocalLevelPlan,
 } from "./parking-level-plans";
@@ -14,6 +15,7 @@ import { seedSharedDemoParking } from "./parking-registry-demo";
 import type { Listing, User } from "@/lib/types";
 import {
   registryCommandSchema,
+  levelPlanHistoryQuerySchema,
   type RegistryCommand,
   type RegistryAdminData,
   type RegistryMutationResult,
@@ -342,7 +344,11 @@ export function localRegistryCommand(
     admin(actor);
     let id: string = randomUUID();
     const c = command;
-    if (c.action === "publish_level_plan" || c.action === "withdraw_level_plan")
+    if (
+      c.action === "publish_level_plan" ||
+      c.action === "withdraw_level_plan" ||
+      c.action === "restore_level_plan"
+    )
       return mutateLocalLevelPlan(c, actor);
     if (c.action === "create_site")
       sql.prepare("INSERT INTO parking_sites VALUES(?,?,?,?,?)").run(
@@ -709,6 +715,27 @@ export async function handleParkingRegistry(
         "FORBIDDEN",
       );
     if (path === "/api/admin/parking-registry" && request.method === "GET") {
+      if (query.has("levelPlanHistory")) {
+        const parsed = levelPlanHistoryQuerySchema.safeParse({
+          levelId: query.get("levelPlanHistory"),
+          ...(query.has("beforeVersion")
+            ? { beforeVersion: Number(query.get("beforeVersion")) }
+            : {}),
+        });
+        if (!parsed.success)
+          throw new ApiError(400, "Niveau ou pagination invalide.");
+        if (ctx.client) {
+          const r = await ctx.client.rpc("gp_level_plan_history", {
+            p_level: parsed.data.levelId,
+            p_before_version: parsed.data.beforeVersion ?? null,
+          });
+          if (r.error) throw r.error;
+          return respond(r.data);
+        }
+        return respond(
+          localLevelPlanHistory(parsed.data.levelId, parsed.data.beforeVersion),
+        );
+      }
       if (ctx.client) {
         const r = await ctx.client.rpc("gp_admin_parking_registry", {
           p_listing_id: query.get("listingId"),
@@ -745,6 +772,11 @@ export async function handleParkingRegistry(
         "NOT_FOUND",
         "MFA_OR_PERMISSION_REQUIRED",
         "MFA_REQUIRED",
+        "PLAN_HISTORY_STALE",
+        "PLAN_REVISION_INVALID",
+        "COMMON_PLAN_CONSENT_REQUIRED",
+        "SCENE_EVIDENCE_REQUIRED",
+        "COMMON_PLAN_INVALID",
         "UNAUTHENTICATED",
       ].find((c) => e.message?.includes(c)) ||
       (error instanceof ApiError ? error.code : undefined) ||
@@ -756,6 +788,8 @@ export async function handleParkingRegistry(
               "VERSION_CONFLICT",
               "REGISTRY_DUPLICATE_SAME_SELLER",
               "REGISTRY_LINK_REQUIRED",
+              "PLAN_HISTORY_STALE",
+              "COMMON_PLAN_CONSENT_REQUIRED",
             ].includes(code)
           ? 409
           : [

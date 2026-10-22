@@ -1,5 +1,6 @@
 "use client";
 import { listingPrice } from "@/lib/listing-price";
+import { searchOfferSpaces } from "@/lib/search-offers";
 import { pricingScope } from "./ListingOffers";
 import Image from "./SafePhoto";
 import { ParkingKindIcon } from "./ParkingKindIcon";
@@ -97,7 +98,7 @@ export default function ListingInspector({
         <div className="feature-row">
           <span>
             <Maximize size={19} />
-            {areaLabel(listing.spaces)}
+            {areaLabel(searchOfferSpaces(listing, transactionType))}
           </span>
           <span>
             <ParkingKindIcon type={listing.type} size={20} />

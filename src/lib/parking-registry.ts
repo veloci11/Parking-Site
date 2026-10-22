@@ -5,7 +5,25 @@ const uuid = z.string().uuid(),
   text = z.string().trim();
 const dimension = (max: number) =>
   z.number().positive().max(max).nullable().default(null);
+const planChecks = z
+  .object({
+    coordinateFrameConfirmed: z.literal(true),
+    mappingChecked: z.literal(true),
+    sourcesChecked: z.literal(true),
+  })
+  .strict();
 export const registryCommandSchema = z.discriminatedUnion("action", [
+  z
+    .object({
+      action: z.literal("restore_level_plan"),
+      levelId: uuid,
+      version: z.number().int().positive().max(2147483646),
+      sourceVersion: z.number().int().positive().max(2147483646),
+      rightsAttested: z.literal(true),
+      checks: planChecks,
+      reason: text.min(15).max(2000),
+    })
+    .strict(),
   z
     .object({
       action: z.literal("publish_level_plan"),
@@ -27,13 +45,7 @@ export const registryCommandSchema = z.discriminatedUnion("action", [
         .max(20)
         .refine((ids) => new Set(ids).size === ids.length),
       rightsAttested: z.literal(true),
-      checks: z
-        .object({
-          coordinateFrameConfirmed: z.literal(true),
-          mappingChecked: z.literal(true),
-          sourcesChecked: z.literal(true),
-        })
-        .strict(),
+      checks: planChecks,
       reason: text.min(15).max(2000),
     })
     .strict(),
@@ -101,6 +113,34 @@ export const registryCommandSchema = z.discriminatedUnion("action", [
     .strict(),
 ]);
 export type RegistryCommand = z.infer<typeof registryCommandSchema>;
+export const levelPlanHistoryQuerySchema = z
+  .object({
+    levelId: uuid,
+    beforeVersion: z.number().int().positive().max(2147483647).optional(),
+  })
+  .strict();
+export interface RegistryLevelPlanRevisionSummary {
+  version: number;
+  state: "published" | "withdrawn";
+  action:
+    | "publish_level_plan"
+    | "withdraw_level_plan"
+    | "restore_level_plan"
+    | "legacy_snapshot";
+  reason: string;
+  createdAt: string;
+  spaceCount: number;
+  evidenceCount: number;
+  restoredFromVersion?: number;
+  isDemo: boolean;
+}
+export interface RegistryLevelPlanHistory {
+  levelId: string;
+  currentVersion: number;
+  items: RegistryLevelPlanRevisionSummary[];
+  hasMore: boolean;
+  nextBeforeVersion?: number;
+}
 export interface RegistrySpace {
   id: string;
   publicAlias: string;

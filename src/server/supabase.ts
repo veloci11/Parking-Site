@@ -1,4 +1,5 @@
 import { handlePrivacyCommands } from "./privacy-commands";
+import { requireModerationMfa } from "./moderation-mfa";
 import { PARIS_CENTER, REGION_MESSAGE } from "@/lib/paris-region";
 import { handleAuthCommands } from "./auth-commands";
 import { assertRemoteUploadQuota } from "./upload-quota";
@@ -217,16 +218,10 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
       const u = (await user(true, true))!;
       if (!["moderator", "admin"].includes(u.role))
         throw new ApiError(403, "Accès réservé à la modération.", "FORBIDDEN");
-      if (process.env.GP_REQUIRE_ADMIN_MFA === "true") {
-        const { data, error } =
-          await client.auth.mfa.getAuthenticatorAssuranceLevel();
-        if (error || data.currentLevel !== "aal2")
-          throw new ApiError(
-            403,
-            "Confirmez votre double authentification avant de continuer.",
-            "MFA_REQUIRED",
-          );
-      }
+      await requireModerationMfa(
+        client,
+        process.env.GP_REQUIRE_ADMIN_MFA === "true",
+      );
       return u;
     }
     const visit = (r: any): Visit => ({
@@ -664,6 +659,7 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
             .from("public-approved")
             .upload(`${id}.webp`, clean, {
               contentType: "image/webp",
+              cacheControl: "0",
               upsert: false,
             });
           if (
