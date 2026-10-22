@@ -1,0 +1,94 @@
+{
+  "checkedAt": "2026-10-22T13:56:59.888Z",
+  "listingId": "a3eca9b9-a87c-47f6-9b53-ea65bee22ae5",
+  "phases": [
+    {
+      "name": "republish_approved_fixture",
+      "status": 200
+    },
+    {
+      "name": "published_same_session_default",
+      "status": 200,
+      "bytes": 15038,
+      "headers": {
+        "cache-control": "private, max-age=3600",
+        "age": null,
+        "cf-cache-status": "HIT",
+        "x-cache": null,
+        "date": "Thu, 22 Oct 2026 13:57:17 GMT",
+        "etag": "\"ef9a0ea2246d07a2c5bef6e6da42d65a\""
+      }
+    },
+    {
+      "name": "withdraw",
+      "status": 200
+    },
+    {
+      "name": "withdrawn_same_token_default",
+      "status": 200,
+      "bytes": 15038,
+      "headers": {
+        "cache-control": "private, max-age=3600",
+        "age": null,
+        "cf-cache-status": "HIT",
+        "x-cache": null,
+        "date": "Thu, 22 Oct 2026 13:57:18 GMT",
+        "etag": "\"ef9a0ea2246d07a2c5bef6e6da42d65a\""
+      }
+    },
+    {
+      "name": "withdrawn_same_token_nonce_no_store",
+      "status": 400,
+      "bytes": 88,
+      "headers": {
+        "cache-control": null,
+        "age": null,
+        "cf-cache-status": "BYPASS",
+        "x-cache": null,
+        "date": "Thu, 22 Oct 2026 13:57:18 GMT",
+        "etag": null
+      }
+    },
+    {
+      "name": "withdrawn_same_sdk_default",
+      "error": false,
+      "bytes": 15038
+    },
+    {
+      "name": "withdrawn_same_sdk_nonce_no_store",
+      "error": true,
+      "bytes": 0
+    }
+  ],
+  "resumed": true,
+  "withdrawn": true,
+  "credentialsIncluded": false,
+  "buyer": {
+    "serverRole": "member",
+    "jwtRole": "authenticated",
+    "aal": "aal1"
+  },
+  "factorRevoked": true,
+  "status": "reproduced-real-storage-cdn-cache-after-withdrawal",
+  "scope": "Synthetic fixture only; same member AAL1 token and object path before/after ordinary application withdrawal",
+  "conclusion": "Default SDK URL returns cached image after withdrawal (HTTP200 CF HIT/private max-age3600); same token plus cacheNonce and no-store reaches origin and is denied (HTTP400 CF BYPASS). No persistent RLS bypass inferred.",
+  "newSessionProbe": {
+    "sdkDenied": true,
+    "returnedBytes": 0,
+    "publishedRows": 0,
+    "externalEmailSent": false
+  },
+  "fixVerified": false,
+  "publicDeployment": false,
+  "mitigation": {
+    "source": "src/server/supabase.ts",
+    "change": "cacheControl: \"0\" for new approved image copies",
+    "implemented": true,
+    "liveVerified": true,
+    "existingObjectUpsertChanged": false,
+    "instantRevocationOfAlreadyCachedBytesClaimed": false,
+    "effectiveForImmediateDefaultUrlRevocation": false,
+    "followupProof": "docs/qa/storage-cache-zero.json"
+  },
+  "fixtureCleanup": "completed-real-supabase-and-storage-sdk"
+}

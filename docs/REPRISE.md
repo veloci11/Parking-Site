@@ -1,4 +1,29 @@
-# Point de reprise — pause demandée le 21 octobre 2026
+# Point de reprise — 22 octobre 2026
+
+Le travail a repris avec **15 missions spécialisées par vagues**, répertoriées dans `QA_TEAM_15.md`. Code poussé : `819f32a`, branche `codex/build-parking-platform`, [PR1 en brouillon](https://github.com/veloci11/Parking-Site/pull/1). Les rapports et captures de cette reprise accompagnent le code ; aucun déploiement public n’a été effectué. L’archive21octobre ci-dessous décrit l’ancien état et ne prévaut pas sur ce bilan.
+
+## Résultat actuel
+
+- Dernier build `HOV-my8LrO43UDFk0VAKI` réussi, typage et format réussis, **189 tests :186 réussis,0échec,3ignorés**. Deux recettes HTTP sont conditionnelles dans cette commande ; le parcours complet176 est exercé séparément. Le raster Docker réel a été vérifié dans la CI dédiée, pas sur le daemon local indisponible.
+- **176 contrôles HTTP en production locale**, dépôt mobile complet et contre-vérifications UI sur le dernier frontend. `design-qa.md` est maintenant passed dans son périmètre visuel explicite ; logo, couleurs, police et rendus approuvés sont conservés. Les comparaisons côte à côte et captures sont dans `qa/resume-captures/`.
+- **224/225 contrôles sur Supabase réel**, avec véritables TOTP admin/modérateur. Les conversations et demandes privées de modélisation restent accessibles aux bons utilisateurs après retrait. Un contrôle échoue : ancienne réponse CDN encore lisible après retrait, alors que l’origine fraîche et la route applicative refusent. Ne pas reclasser cet échec en succès.
+- Une sonde neuve31/32 confirme que `cacheControl:0` réduit le cache navigateur mais ne garantit pas la révocation immédiate du CDN. `OPS_MEDIA_CACHE.md` prépare une purge opérateur bornée par une seule annonce, sans suppression de fichier. Aucun appel distant de cet outil n’est effectué : offre et clé secrète restent à configurer/vérifier.
+- Migrations **001–034 appliquées** ; recettes032/033/034 réelles intégralement réussies en rollback. Historique/restauration, rétention bornée avec contrôles de références, et verrou commun du dernier administrateur. Les politiques de rétention restent désactivées sans décision explicite de durées.
+- Photos : outil **local opérateur avant téléversement**, `scripts/prepare-photo.ts` et `OPS_PHOTO_PRIVACY.md`, source intacte, masques opaques et trace privée, revue séparée. Ce n’est pas un éditeur de photo dans le wizard ni une preuve de revue humaine déjà faite.
+- Nettoyage final réel revérifié14:36UTC :0Auth,0facteur,0annonce/publication,0média/objetStorage/site/demande3D,0politique/job de rétention ; politique MFA configurée true,1réservation humaine intacte. Le RPC `gp_mfa_required()` sans utilisateur retourne false par construction : lire la configuration privée pour cet inventaire.
+- Dossier SQLite de recette et ses images/sessions supprimés par `--cleanup`. Aucun serveur de cette tâche ne reste sur3000/3001/3002/55429 ; onglet IAB temporaire fermé et viewport restauré.
+
+## Continuer ici
+
+1. Lire `qa/resume-delivery.json`, `qa/final-acceptance-resume.md` et les rapports courants ; les historiques221/1 et31/1 restent distincts du224/1. Ne pas reprendre des identifiants de fixture supprimés.
+2. Vérifier `git status` et les vérifications CI du **dernier SHA**, sans confondre l’étatqueued d’un résumé Actions et le résultat réel de ses jobs. Les six checks du commit2d51ec8 étaient verts et incluent032/033/034 ; les nouveaux SHA ont leur propre exécution.
+3. La question de l’offre Supabase est en attente. La documentation de purge CDN exige une clé secrète opérateur et une offre compatible ; le connecteur expose seulement les clés publiques. Ne jamais coller cette clé dans le chat, le navigateur, une réponse ou le dépôt. Procédure privée dans `OPS_MEDIA_CACHE.md`, simulation par défaut. Ne pas promettre révocation globale instantanée : propagation fournisseur et copies déjà enregistrées restent distinctes.
+4. Après réponse/configuration, décider du traitement de ce point avant ouverture, puis vérifier seulement la contre-preuve nécessaire avec de nouvelles fixtures synthétiques et nettoyage exact. Ne pas rejouer les225 contrôles uniquement pour obtenir une autre fois le même HIT attendu sans changer de configuration.
+5. Le propriétaire demande l’arrêt à **7% de quota restant**. Dernier relevé de ce point :11% ; surveiller et sauvegarder avant ce seuil. Aucune réinitialisation de quota n’a été consommée. Ne pas annoncer que le seuil est atteint ou que l’objectif entier est terminé sans preuve.
+6. Les vrais plans/photos/mesures et le vrai parking pilote, premier compte humain/MFA, email reçu et paramètres d’hébergement/ordonnancement/restauration restent différés. Forfaits/paiements enV2. Ne pas modifier les rendus approuvés ni créer un compte humain à sa place.
+
+
+## Archive — pause demandée le 21 octobre 2026
 
 Le propriétaire a demandé de préparer la coupure et de pousser le travail sur GitHub. Le site n’est pas déployé publiquement. Branche de travail : `codex/build-parking-platform`, PR existante : https://github.com/veloci11/Parking-Site/pull/1.
 

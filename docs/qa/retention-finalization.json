@@ -1,0 +1,138 @@
+{
+  "checkedAt": "2026-10-22T13:50:41+00:00",
+  "scope": "operator-retention-finalization-033",
+  "status": "applied-remotely-sql-rollback-validated",
+  "migration": "supabase/migrations/20261022084414_retention_finalization.sql",
+  "migrationSha256": "da59c817694fd2244bbd9c7d60c8fbc2566d902a60f0056776ad4b4500b2dac3",
+  "migrationCreatedWith": "Supabase CLI 2.121.0 migration new",
+  "policy": {
+    "insertedByMigration": false,
+    "defaultDurations": false,
+    "allFourDurationsRequired": true,
+    "purgeDefault": "disabled / dry-run only",
+    "humanPolicyActivated": false
+  },
+  "typescript": {
+    "tests": 9,
+    "passed": 9,
+    "failed": 0,
+    "skipped": 0,
+    "typecheck": "passed",
+    "targetedFormat": "passed",
+    "testFile": "tests/retention-policy.test.ts",
+    "adapter": "controlled; not live Storage/Auth"
+  },
+  "sql": {
+    "environment": "isolated PostgreSQL 14 clone of privacy031, then complete migration032 and033 files",
+    "database": "privacy033final (removed after verification)",
+    "fixture": "supabase/tests/retention-finalization.sql",
+    "migrationCompile": "passed",
+    "recipe": "passed",
+    "finalAssertion": "retention_finalization_contract_closed=1",
+    "transaction": "rolled-back",
+    "checks": [
+      "service-role-only",
+      "no-policy-default",
+      "invalid-and-disabled-policy-refused",
+      "explicit-duration-enforced",
+      "account-deactivated-and-reviewed",
+      "other-user-context-preserved",
+      "versioned-hold-before-and-between-phases",
+      "graph-and-Storage-metadata-fingerprint-revalidated",
+      "null-version-and-null-lease-refused",
+      "Storage-absence-required-before-database",
+      "Auth-absence-required-before-completion",
+      "failure-release-and-auth-pending-resume",
+      "receipt-survives-Auth-removal",
+      "completed-replay-idempotent",
+      "orphan-media-source-draft-cleanup-without-Auth",
+      "withdrawn-032-history-retains-evidence",
+      "UPDATE-guard-checks-OLD-and-NEW",
+      "existing-Storage-fingerprint-rechecked-at-every-checkpoint",
+      "old-only-Storage-rename-refused"
+    ],
+    "postRollback": {
+      "policies": 0,
+      "jobs": 0,
+      "fixtureAuth": 0,
+      "fixtureStorage": 0
+    },
+    "limitation": "Historical PG14 Auth/Storage fixture schemas and inherited validator/geospatial stubs. The Storage stub did not reproduce real Supabase protect_delete and masked the earlier fixture SQL-DELETE incompatibility. The current fixture uses rollback-only Storage branches and was validated separately on real Supabase. Neither recipe proves GoTrue deletion or uploaded-byte removal.",
+    "evidenceKind": "historical isolated PostgreSQL clone; distinct from connectedSql below"
+  },
+  "concurrency": {
+    "realSeparatePostgresConnections": true,
+    "claimWins": "late favorite waits and fails RETENTION_TARGET_LOCKED; no favorite inserted",
+    "referenceWins": "claim waits then fails RETENTION_REVIEW_STALE",
+    "database": "isolated privacy033concurrency (removed after verification)",
+    "claimWinsOldOnlyRename": "rename whose NEW row contains no protected UUID waits and fails RETENTION_TARGET_LOCKED",
+    "renameWins": "claim waits then fails RETENTION_REVIEW_STALE",
+    "outOfBandMetadataChange": "checkpoint fails RETENTION_STORAGE_CHANGED before next external API",
+    "outOfBandFixtureMethod": "One inert local Storage row changed using a transaction-local replica session to simulate an operator bypass; no live bytes, schema or real account touched.",
+    "retestedAfterFinalGuardChange": true
+  },
+  "cleanup": {
+    "ownClonesRemoved": [
+      "privacy033",
+      "privacy033v2",
+      "privacy033v3",
+      "privacy033concurrency",
+      "privacy033final"
+    ],
+    "remainingOwnClones": 0,
+    "taskPostgresPort": 55429,
+    "taskPostgresStopped": true,
+    "portHasListener": false,
+    "baselineTemplateAndOtherAgentClonePreserved": true,
+    "userPostgres5432Touched": false
+  },
+  "remote": {
+    "ddlApplied": true,
+    "sdkErasureExecuted": false,
+    "humanPurged": false,
+    "newAccountCreated": false,
+    "serviceRoleKeyRequested": false,
+    "newAccountCreatedMeaning": "No GoTrue or human account created for033; synthetic Auth SQL rows existed only inside the rolled-back recipe."
+  },
+  "remainingProof": [
+    "Actual external worker Storage/Auth SDK exercise needs exclusively authorized fixtures and private operator configuration; no success is inferred from mocks, SQL metadata or a rolled-back synthetic Auth DELETE."
+  ],
+  "receipt": {
+    "activeSystemErased": true,
+    "completeErasure": false,
+    "retainedCategories": [
+      "minimal_receipt",
+      "audit",
+      "backups_external_rotation"
+    ],
+    "condition": "Only after independent database post-absence, never emitted for a partial purge."
+  },
+  "fixtureSha256": "c5d211d2b23f4e78a69d154acf58100304236f1fffa179e63200cfa6a068e844",
+  "connectedSql": {
+    "project": "srrmysturoloovpuuojp",
+    "reportedBy": "coordinator",
+    "date": "2026-10-22",
+    "postRollbackCheckedAt": "2026-10-22T13:50:41+00:00",
+    "environment": "real Supabase Auth/Storage schemas, actual PostGIS validator, Storage guards and upload quota active",
+    "fixture": "supabase/tests/retention-finalization.sql",
+    "fixtureSha256": "c5d211d2b23f4e78a69d154acf58100304236f1fffa179e63200cfa6a068e844",
+    "finalAssertion": "retention_finalization_contract_closed=1",
+    "completed": true,
+    "transaction": "rolled-back",
+    "storageEvidence": "Inert metadata presence, fingerprint, lock and old-reference rename tested inside savepoints then rolled back; finalization paths run on graphs without uploaded Storage objects.",
+    "admissionEvidence": "Synthetic owner active at inert Storage INSERT, real quota receipt100 verified, owner deletion_pending before retention review; rollback absence checked.",
+    "guardBypass": false,
+    "sqlStorageDelete": false,
+    "postRollback": {
+      "retentionPolicies": 0,
+      "retentionJobs": 0,
+      "retentionHolds": 0,
+      "fixtureAuthF33Prefix": 0,
+      "fixtureStorageF33Paths": 0
+    },
+    "scopeExclusion": "Other concurrent connected-recipe fixtures are excluded from033 cleanup; total project Auth is not claimed zero.",
+    "sdkByteDeletionExecuted": false,
+    "goTrueDeletionExecuted": false,
+    "limitation": "Synthetic Auth row DELETE proves SQL FK/post-absence only. Storage metadata rollback does not exercise Storage remove or actual byte deletion. Worker SDK end-to-end remains distinct."
+  }
+}

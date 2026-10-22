@@ -1,0 +1,50 @@
+{
+  "date": "2026-10-22",
+  "scope": "production-loopback-targeted-final-ui",
+  "origin": "http://127.0.0.1:3002",
+  "frontendCommit": "0a89e7abf5fcec214a6483dd103fbf13874c24bd",
+  "buildId": "LiFv9DktYLtVHLZRc0FU9",
+  "status": "passed-with-explicit-scope",
+  "checks": {
+    "wizardStepHeadingFocused": true,
+    "mobileMenuEscapeRestoresFocus": true,
+    "paris75012MunicipalityCorrect": true,
+    "seeAllOffersFocusesTableHeading": true,
+    "saleRentExclusiveCustomMenu": true,
+    "lotAndFloorNavigationStartUnchanged": 840462.818449,
+    "mapTabAfterPhotos": true
+  },
+  "parkingWidthChecks": [
+    {
+      "viewport": 390,
+      "document": 375
+    },
+    {
+      "viewport": 768,
+      "document": 753
+    },
+    {
+      "viewport": 1024,
+      "document": 1009
+    },
+    {
+      "viewport": 1440,
+      "document": 1425
+    }
+  ],
+  "fullMobileSubmission": "Earlier production build d2c3266, recorded separately in resume-mobile-deposit.json",
+  "notClaimed": [
+    "screen-reader certification",
+    "200-percent zoom pass",
+    "actual property fidelity",
+    "public deployment",
+    "final confirmation resubmitted on last build"
+  ],
+  "screenshots": [
+    "resume-captures/03-desktop-city.png",
+    "resume-captures/05-offers-focus.png",
+    "resume-captures/06-rent-filter.png",
+    "resume-captures/07-parking-level-minus2.png",
+    "resume-captures/08-mobile-keyboard.png"
+  ]
+}

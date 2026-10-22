@@ -1,5 +1,7 @@
 # Plans communs de parking — migration026
 
+La [migration032 préparée localement](OPS_COMMON_PARKING_PLAN_HISTORY.md) ajoute l’historique immuable, la restauration contrôlée en nouvelle version et son interface admin. Ses preuves historiques restent conservées même après retrait. Les constatations d’application distante026/027 ci-dessous gardent leur portée propre ;032 n’est pas annoncée appliquée ici.
+
 `GET /api/parkings?listingId=...` et `GET /api/parkings/:alias` renvoient toutes les annonces publiques actives, en localisation exacte, réellement rattachées au même parking canonique. Les niveaux conservent leurs alias et leur numéro, dont −1 et −2. Une annonce en `area`, inactive ou expirée ne peut pas ouvrir le contexte public. Une ville ou des coordonnées proches ne constituent jamais un regroupement.
 
 Chaque niveau expose `commonPlan` ou `null`. Le loader `loadPublicParkingGroup(listingId, signal)` transforme cette projection en `PublicParkingSceneGroup` pour le viewer. Une place possède son alias physique public, son `listingId` et son `listingUnitId` public ; choisir une place d’une autre annonce doit ouvrir cette annonce avant toute prise de contact. Les prix, photos et démarches restent ceux de l’annonce concernée.

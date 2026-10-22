@@ -2,6 +2,20 @@
 
 État de travail du 21 octobre 2026. **L’addendum courant ci-dessous prévaut sur les tableaux historiques 001–011 conservés ensuite.** Ces tableaux étaient une photographie avant intégration ; leurs mentions « absent », « 21 tables », « 11 migrations » et les anciens compteurs de recette ne décrivent plus le dépôt courant. Ils restent utiles pour retrouver les écarts initiaux, sans constituer une nouvelle recette.
 
+## Addendum de reprise — 22 octobre 2026, migrations032–034
+
+Cet addendum et `qa/final-acceptance-resume.md` actualisent les captures historiques suivantes. Quinze missions spécialisées ont été exécutées par vagues, sous une limite de quatre agents actifs incluant le coordinateur ; leur registre est `QA_TEAM_15.md`.
+
+- **Schéma réel :001–034 appliquées.** Historique/restauration032, finalisation opérateur033 et verrou commun du dernier admin034 ont chacun passé leur recette complète sur le vrai projet Supabase en transaction annulée. Aucun compte humain n’a été créé, aucune politique de rétention n’a été activée.
+- **Application :** les sauvegardes concurrentes SQLite retournent409 au lieu d’écraser une version ; une visite rejouée conserve sa clé ; la confirmation admin porte sur id+version ; prix, surface et nombre d’offres utilisent les mêmes places disponibles. MFA serveur fondée aussi sur la politique réelle en base.
+- **Navigateur :** `qa/resume-ui-final.json` et `../design-qa.md` documentent sélection sans reload, étages, filtres exclusifs, adresse75012, focus et largeur mobile. Dépôt mobile complet antérieur conservé séparément ; rendu/logo approuvés inchangés.
+- **Recettes :**176 contrôles HTTP sur production locale ; nouvelle campagne réelle224/225, avec TOTP réel, conversation et suivi privé après retrait vérifiés. **Le225e contrôle échoue : une réponse CDN ancienne reste lisible après retrait, tandis que l’origine et la route applicative refusent.** La sonde de nouvelles copies confirme que cacheControl0 ne suffit pas à garantir une révocation CDN immédiate. Ce point n’est pas reclassé en succès.
+- **Nettoyage :** campagnes synthétiques supprimées par SDK Storage puis suppressions Auth gardées ; inventaire réel final nul, MFA obligatoire et réservation humaine conservée. Les preuves courantes sont `qa/connected-offers-modeling.json` et `qa/connected-offers-modeling-inventory.json`.
+- **Photos03.5 :** outil opérateur local `scripts/prepare-photo.ts` et `OPS_PHOTO_PRIVACY.md` : masques opaques avant téléversement, orientation EXIF, source intacte, trace privée et étape de revue séparée. Six tests synthétiques passent. Le wizard ne vérifie pas ce reçu : contrôle opérateur préalable nécessaire ; aucun visage ou parking humain n’a été traité.
+- **CI réelle :** les migrations032–034 et leurs trois recettes sont incluses au commit2d51ec8, dont six vérifications CI réussies, avec vrai Supabase/PostGIS jetable et vrai rasteriseur Docker isolé. La CI du code0a89e7a est distincte et doit être lue sur son propre SHA.
+
+Les forfaits V2, vrais plans/photos/mesures, premier compte humain, fournisseur email, hébergement et paramètres d’ouverture restent dans leurs périmètres différés. L’exécution réelle du worker033 et la restauration base+fichiers ne sont pas déduites des tests SQL ou des adaptateurs. Le seuil d’arrêt demandé de7% est surveillé séparément du verdict d’acceptation.
+
 ## Addendum courant — intégration 012–031
 
 La dernière demande inclut **la vente et la location mensuelle dès la V1**. Les abonnements, la facturation récurrente et le paiement en ligne restent V2. Une annonce peut désormais proposer des offres distinctes par place : chacune porte une transaction exclusive (`sale` ou `rent`), son prix et son statut. Les locations ont un prix mensuel. Les anciennes annonces conservent leur prix de lot ; l’absence de `transactionType` y signifie vente.

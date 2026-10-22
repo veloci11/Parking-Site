@@ -1,8 +1,8 @@
 {
-  "checkedAt": "2026-10-22T03:33:54.811Z",
+  "checkedAt": "2026-10-22T13:49:32.010Z",
   "status": "passed",
   "scope": "isolated-loopback-http-five-mixed-unit-offers-address-search-manual-modeling-publication-availability-legacy-lot",
-  "origin": "http://127.0.0.1:3000",
+  "origin": "http://127.0.0.1:3002",
   "serverMode": "production",
   "passed": 176,
   "failedCheck": null,
@@ -861,19 +861,13 @@
   "supabaseTouched": false,
   "externalEmailSent": false,
   "syntheticImages": "Three explicit fictional parking images, generated as SVG and uploaded as genuine PNG inputs through the application",
-  "cleanup": "withdrawal verified; disposable production fixture and private runtime absent at coordinator pause inventory",
+  "cleanup": "withdrawal tested; disposable database folder removal awaits coordinator shutdown",
   "limitations": [
     "HTTP route journey is separate from the browser UI recipe",
     "Local MFA explicitly unsupported; real AAL2 is not claimed by this run",
     "No real property, personal account or external email"
   ],
-  "withdrawnAt": "2026-10-22T03:47:52.294Z",
+  "withdrawnAt": "2026-10-22T13:57:26.788Z",
   "disposableDatabaseRemoved": true,
-  "qaServersStoppedBeforeCleanup": true,
-  "pauseInventory": {
-    "checkedAt": "2026-10-22T04:16:15.034316+00:00",
-    "testDatabaseFolderAbsent": true,
-    "privateRuntimeAbsent": true,
-    "taskPorts3000_3001_3002_8768_55429Closed": true
-  }
+  "qaServersStoppedBeforeCleanup": true
 }

@@ -1,0 +1,79 @@
+{
+  "date": "2026-10-22",
+  "codeCommit": "819f32a1648fd990583348e7a181b291c6a04d27",
+  "codeTreeSha256": "af652ba619e8500d078845784e07e1a8c896315c5011381f65f2df01f10741be",
+  "buildId": "HOV-my8LrO43UDFk0VAKI",
+  "build": "passed",
+  "typecheck": "passed",
+  "format": "passed",
+  "unitTests": {
+    "tests": 189,
+    "passed": 186,
+    "failed": 0,
+    "skipped": 3,
+    "skipReasons": [
+      "Two opt-in HTTP tests need separate explicit environment; separate complete HTTP journey passed176",
+      "Local Docker image/daemon unavailable; actual required isolated-worker CI passed separately"
+    ]
+  },
+  "localHttp": {
+    "checks": 176,
+    "failed": 0,
+    "serverMode": "production",
+    "fixtureWithdrawn": true,
+    "fixtureRuntimeRemoved": true
+  },
+  "connectedHttp": {
+    "checks": 225,
+    "passed": 224,
+    "failed": 1,
+    "failure": "withdrawn_approved_storage_sdk_read_denied; legacy CDN response remains HIT while fresh origin and application refuse",
+    "totpActuallyVerified": true,
+    "postWithdrawalConversationAndPrivateModelingFollowupPassed": true
+  },
+  "newCacheZeroProbe": {
+    "passed": 31,
+    "failed": 1,
+    "conclusion": "cacheControl0 does not prove immediate CDN invalidation"
+  },
+  "realSqlRollbackRecipes": {
+    "032": "passed",
+    "033": "passed",
+    "034": "passed",
+    "actualDdlAppliedThrough": 34,
+    "retentionPolicyActivated": false
+  },
+  "operatorTools": {
+    "photoPrivacy": "6 synthetic tests; local opaque mask and private review trace, no wizard receipt enforcement",
+    "cdnPurge": "12 adapter tests; no actual private operator call, requires secret key and supported provider plan",
+    "retention": "SQL contract and adapter tests; actual external SDK worker completion not claimed"
+  },
+  "cleanup": {
+    "rootInventoryAt": "2026-10-22T14:36:29Z",
+    "authUsers": 0,
+    "mfaFactors": 0,
+    "listings": 0,
+    "publications": 0,
+    "media": 0,
+    "storageObjects": 0,
+    "parkingSites": 0,
+    "modelingRequests": 0,
+    "retentionPolicies": 0,
+    "retentionJobs": 0,
+    "configuredMfaRequired": true,
+    "unclaimedOwnerReservations": 1,
+    "localTaskPorts": [
+      3000,
+      3001,
+      3002,
+      55429
+    ],
+    "localTaskListenersRemaining": 0,
+    "temporaryBrowserTabClosed": true
+  },
+  "visualReport": "../../design-qa.md",
+  "uiReport": "resume-ui-final.json",
+  "publicDeployment": false,
+  "overallAcceptance": "pending-provider-cache-arbitration-and-deferred-human-release-requirements",
+  "quotaInstruction": "Stop at7percent remaining; last read11percent, not a product completion claim"
+}
