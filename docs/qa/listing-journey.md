@@ -1,6 +1,6 @@
 # Recette du dépôt d’annonce et de l’administration
 
-**État actuel : 176 contrôles HTTP réussis sur le build de production local, dont 35 pour la demande manuelle de modélisation. L’annonce de recette a été retirée ; ses photos sont privées et sa conversation est conservée. Les contrôles IAB de production passent pour le suivi 3D, le viewer, la carte et le contact d’une place réservée. Le nettoyage final attend l’arrêt du serveur. Le dépôt complet en navigateur a été validé en développement ; ces preuves restent distinctes.**
+**État actuel : 176 contrôles HTTP réussis sur le build de production local, dont 35 pour la demande manuelle de modélisation. L’annonce de recette a été retirée ; ses photos sont privées et sa conversation est conservée. Les contrôles IAB de production passent pour le suivi 3D, le viewer, la carte et le contact d’une place réservée. Les serveurs ont été arrêtés ; le dossier jetable et le runtime privé sont absents à l’inventaire de coupure. Le dépôt complet en navigateur a été validé en développement ; ces preuves restent distinctes.**
 
 Cette recette utilise uniquement une base SQLite jetable, les rôles de démonstration et des identités `@test.invalid`. Les trois images de parking sont synthétiques et portent la mention « RECETTE FICTIVE ». Aucun email externe ni compte Supabase n’est créé. Les rapports HTTP et navigateur constituent deux preuves distinctes. La base de développement, ses médias et son runtime privé ont été supprimés après vérification de la fermeture des ports 3000 et 3002 ; une nouvelle base isolée est utilisée par le build de production local. Le rapport de développement archivé conserve ses 141 contrôles réussis, retrait et nettoyage compris.
 
@@ -44,9 +44,12 @@ L’ancien parcours a confirmé l’inscription, la vérification d’email loca
 
 Le nouveau formulaire a confirmé ses trois étapes, l’autocomplétion Paris 75012, les cinq offres mixtes, la confirmation du secteur et les conversions lot/prix par place réellement enregistrées. Dans le navigateur intégré du coordinateur, le dépôt 9e430… a ensuite reçu les numéros 18 à 22, les trois PNG synthétiques, un titre et une description de 260 caractères. L’aperçu a affiché les cinq offres exactes ; l’attestation puis la soumission ont abouti à la confirmation de transmission à la modération (capture 05). Cela ne prouve pas encore sa publication. Un autre brouillon Chrome a confirmé le blocage de deux numéros 18 au même niveau, puis le passage aux photos après correction. La saisie d’adresse et le téléversement dans l’interface sont à distinguer des appels HTTP. Les captures demandées à 1440×1000 et 390×844 doivent également conserver leurs dimensions réellement observées ; une première tentative de redimensionnement n’a pas donné les dimensions CSS demandées et n’est pas une preuve responsive exacte.
 
-
 ## Contrôles navigateur sur production locale
 
 Le coordinateur a envoyé une demande manuelle de 3D sur un box de démonstration, l’a passée à « En préparation » avec le rôle administrateur, puis a retrouvé ce statut chez le propriétaire (captures 07 et 08). Le changement 12 ↔ 13 conserve le même élément image et la route de l’annonce7 ; le niveau−2 sélectionne24. L’onglet Carte charge Paris après l’onglet Photos. Sur l’annonce de cinq offres, la place19 réservée désactive le bouton de contact (captures09,10 et12).
 
 Les captures11 et13 mesurent390×844 pixels. Le coordinateur a vérifié à cette largeur que document.scrollWidth et document.clientWidth valent390 pour le parking et les offres. Le tableau des offres reste défilant horizontalement dans son conteneur de largeur minimale640px ; la capture13 seule ne montre pas ses prix et statuts à droite. Cela prouve l’absence de débordement du document, pas la visibilité simultanée de toutes les colonnes. Un bureau exactement1440×1000 n’est pas revendiqué par ce rapport.
+
+## Pause du propriétaire
+
+Le dernier correctif CSS du dépôt mobile compile et respecte Prettier ; son contrôle navigateur reste à reprendre. Les captures13–14 représentent respectivement un viewport transitoire et le défaut du formulaire avant correction. La capture15 montre le titre du tableau dans sa colonne mobile et son défilement horizontal interne. Voir `../REPRISE.md` et `../../design-qa.md`.

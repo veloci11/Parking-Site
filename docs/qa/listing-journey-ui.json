@@ -1,6 +1,6 @@
 {
   "checkedAt": "2026-10-22T03:49:38.387367+00:00",
-  "status": "production_http_passed_browser_sanity_passed_cleanup_pending",
+  "status": "paused_after_production_http_and_browser_sanity_mobile_wizard_recheck_pending",
   "scope": "isolated-loopback-browser-ui",
   "origin": "http://127.0.0.1:3000",
   "serverMode": "mixed-development-and-production-local",
@@ -62,15 +62,8 @@
       "optional_manual_modeling_request_visible_after_photos_without_submission_requirement"
     ],
     "savedOffers": {
-      "salePriceCents": [
-        2800000,
-        2900000,
-        3000000
-      ],
-      "monthlyRentCents": [
-        15000,
-        16000
-      ]
+      "salePriceCents": [2800000, 2900000, 3000000],
+      "monthlyRentCents": [15000, 16000]
     },
     "browserFileUploadCompleted": false,
     "publicationCompleted": false,
@@ -169,5 +162,14 @@
       "docs/qa/listing-journey-captures/12-production-five-offers.jpg",
       "docs/qa/listing-journey-captures/13-production-mobile-offers.png"
     ]
+  },
+  "pauseInventory": {
+    "checkedAt": "2026-10-22T04:16:15.034316+00:00",
+    "productionFixtureAndPrivateRuntimeAbsent": true,
+    "taskServersClosed": true,
+    "lastWizardMobileCssBuildPassed": true,
+    "lastWizardMobileCssBrowserRecheckPending": true,
+    "transientCapture13NotFinalLayoutEvidence": true,
+    "stableTableCapture": "docs/qa/listing-journey-captures/15-mobile-table-layout.png"
   }
 }
