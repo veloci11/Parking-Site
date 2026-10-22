@@ -1,5 +1,17 @@
 # Point de reprise — 22 octobre 2026
 
+## Passe actuelle — parcours acheteur, vendeur et administrateur
+
+La passe terminée est documentée dans `qa/UX_FINISH_2026-10-22.md`. Elle corrige les constats de la revue ergonomique précédente : entrée anonyme courte, validation par étape visible, sélection d’adresse explicite, choix Liste/Carte sur ordinateur et mobile, favoris et messages robustes, contexte de la place dans le contact, retour administratif fondé sur le statut réel et rattachement conservé après actualisation. Les captures fraîches sont dans `qa/ux-finish/`. Les décomptes et statuts de cette passe doivent être lus dans ce rapport, et non dans les résultats historiques ci-dessous.
+
+Le parcours navigateur a été exercé avec un vendeur, un administrateur et un acheteur fictifs : deux places 18/19, vente 18 500 € et location 200 €/mois, trois photos synthétiques, soumission, refus de publication sans rattachement, création du registre puis publication, favori, contact portant sur la place 19, réponse vendeur et visite « à organiser ». Les exemples sans 3D restent utilisables ; l’annonce à deux niveaux conserve ses rendus approuvés.
+
+**Aucune nouvelle mutation Supabase dans cette passe.** La clé opérateur CDN reste différée par le propriétaire ; ne pas la redemander ni lancer de fixtures distantes pour cette finition. Les vrais plans/photos/mesures, premier compte humain/MFA, email reçu, identité opérateur et exploitation réelle restent à valider avant ouverture publique. Forfaits/paiements en V2. Conserver le seuil d’arrêt utilisateur à 7 % restant ; les relevés de quota ci-dessous sont historiques.
+
+Recette finale : **228 tests, 225 réussis, 0 échec, 3 conditionnels ignorés** ; parcours HTTP local **168/168** ; build final `A8gkDChNyNBp0fVQmdnHP`. Favoris vente/location et positions cartographiques contrôlés après correction. Runtime jetable supprimé, onglet fermé, ports de cette tâche 3000/3001/3002 fermés. Le port 8768 héberge un autre projet et reste intact. Lire les checks GitHub sur le dernier SHA ; ne pas réutiliser ceux cités dans les archives ci-dessous.
+
+## État antérieur conservé — avant cette passe
+
 **Dernière reprise après confirmation Pro.** Les 15 missions sont terminées et leurs contre-vérifications sont consignées dans `QA_TEAM_15.md`. Code courant `ff17e1f`, branche `codex/build-parking-platform`, [PR1 en brouillon](https://github.com/veloci11/Parking-Site/pull/1). Aucun déploiement public ni compte humain créé. Le bilan courant ci-dessous prévaut sur l’archive du21octobre.
 
 ## Revue ergonomique suivante

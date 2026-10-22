@@ -69,7 +69,7 @@ export function listingIssues(value: Listing): ListingIssue[] {
   if (missingPlans)
     add(
       2,
-      "listing-units",
+      "listing-unit-details",
       `Reliez le plan utilisé pour les dimensions de ${missingPlans} place(s).`,
     );
   const missingEvidence = (value.conditionObservations || []).filter(
@@ -103,7 +103,7 @@ export function listingIssues(value: Listing): ListingIssue[] {
   )
     add(
       5,
-      "listing-price",
+      "listing-financial",
       "Reliez les documents utilisés pour les montants financiers.",
     );
   if (value.title.trim().length < 15 || value.title.length > 90)

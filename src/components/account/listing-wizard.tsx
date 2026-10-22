@@ -36,10 +36,19 @@ import {
 import LocationPicker from "./location-picker";
 import { ModelRequest } from "./modeling-request";
 import "@/styles/wizard-simplified.css";
-import { listingPrice, offerLabel, spaceOffer } from "@/lib/listing-price";
+import {
+  listingPrice,
+  offerLabel,
+  spaceOffer,
+  lotOfferChange,
+} from "@/lib/listing-price";
 import { CommercialEditor } from "./commercial-editor";
 import { CommercialSummary } from "../CommercialSummary";
-import { listingIssues } from "@/lib/listing-issues";
+import {
+  wizardIssues,
+  wizardStepIssues,
+  type WizardIssue,
+} from "@/lib/listing-wizard-validation";
 import { useSession } from "@/lib/client";
 import PreparationForm from "./preparation";
 import {
@@ -68,9 +77,6 @@ const offerStatusLabels = {
   rented: "Louée",
   withdrawn: "Retirée",
 } as const;
-function issueStep(step: number) {
-  return step === 4 || step === 6 ? 1 : step === 7 ? 2 : 0;
-}
 function spaceLabel(space: Space | undefined, index: number) {
   return space?.number.trim()
     ? `Place ${space.number.trim()}`
@@ -99,25 +105,6 @@ function PaintedNumberField({
       <small>Public · facultatif si inconnu</small>
     </label>
   );
-}
-function wizardIssues(value: Listing) {
-  const issues = listingIssues(value);
-  const numbers = new Set<string>();
-  for (const space of value.spaces) {
-    const number = space.number.trim().normalize("NFKC").toLowerCase();
-    if (!number) continue;
-    const key = `${space.level}:${number}`;
-    if (numbers.has(key)) {
-      issues.push({
-        step: 2,
-        field: "listing-units",
-        message: `Le numéro « ${space.number.trim()} » est répété au même niveau. Corrigez le numéro ou précisez des niveaux différents.`,
-      });
-      break;
-    }
-    numbers.add(key);
-  }
-  return issues;
 }
 function newSpace(): Space {
   return {
@@ -170,7 +157,10 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
     [preview, setPreview] = useState<Listing | null>(null),
     [previewError, setPreviewError] = useState(""),
     [previewAttempt, setPreviewAttempt] = useState(0),
-    [showIssues, setShowIssues] = useState(false),
+    [issuesForStep, setIssuesForStep] = useState<number | null>(null),
+    [feedbackFocus, setFeedbackFocus] = useState<{
+      target: "summary" | "error" | "field";
+    } | null>(null),
     [step, setStep] = useState(0),
     [loading, setLoading] = useState(!!id),
     [creating, setCreating] = useState(false),
@@ -187,9 +177,14 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
     [submitted, setSubmitted] = useState(false),
     [attest, setAttest] = useState(false),
     [locationConfirmed, setLocationConfirmed] = useState(false),
+    [locationSelectionPending, setLocationSelectionPending] = useState(false),
+    [locationReload, setLocationReload] = useState(0),
     [busy, setBusy] = useState(false);
   const cachedOffers = useRef(new Map<string, NonNullable<Space["offer"]>>());
-  const stepHeading = useRef<HTMLHeadingElement>(null),
+  const issueSummary = useRef<HTMLDivElement>(null),
+    formError = useRef<HTMLParagraphElement>(null),
+    pendingIssue = useRef<WizardIssue | null>(null),
+    stepHeading = useRef<HTMLHeadingElement>(null),
     submittedHeading = useRef<HTMLHeadingElement>(null),
     previousStep = useRef(step);
   const latest = useRef<Listing | null>(null),
@@ -208,6 +203,26 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
     }
     previousStep.current = step;
   }, [step, submitted]);
+  useEffect(() => {
+    if (!feedbackFocus) return;
+    let target: HTMLElement | null;
+    if (feedbackFocus.target === "field") {
+      const issue = pendingIssue.current;
+      if (!issue || issue.step !== step) return;
+      pendingIssue.current = null;
+      target = document.getElementById(issue.field);
+      for (let parent = target; parent; parent = parent.parentElement)
+        if (parent instanceof HTMLDetailsElement) parent.open = true;
+    } else {
+      target =
+        feedbackFocus.target === "summary"
+          ? issueSummary.current
+          : formError.current;
+    }
+    target?.focus({ preventScroll: true });
+    target?.scrollIntoView({ block: "center", behavior: "instant" });
+    setFeedbackFocus(null);
+  }, [feedbackFocus, step]);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -638,38 +653,43 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
 
   function validateStep() {
     if (!latest.current) return false;
-    const issues = wizardIssues(latest.current).filter(
-      (issue) =>
-        issueStep(issue.step) === step && issue.field !== "location-confirmed",
+    const issues = wizardStepIssues(
+      latest.current,
+      step,
+      locationSelectionPending,
     );
-    let message = issues[0]?.message || "";
-    if (step === 0 && !latest.current.commercialDetails?.postalCode.trim())
-      message =
-        "Recherchez puis choisissez une adresse ou une commune en Île-de-France.";
-    setError(message);
-    return !message;
+    setError("");
+    if (!issues.length) return true;
+    setIssuesForStep(step);
+    setFeedbackFocus({ target: "summary" });
+    return false;
   }
   async function next() {
-    if (!validateStep()) {
-      setShowIssues(true);
+    if (!validateStep()) return;
+    const saved = await save();
+    if (!saved) {
+      setFeedbackFocus({ target: "error" });
       return;
     }
-    const saved = await save();
-    if (!saved) return;
     if (step === 0 && !saved.locationConfirmedAt) {
       change({ locationConfirmedAt: new Date().toISOString() });
       const confirmed = await save();
-      if (!confirmed?.locationConfirmedAt) return;
+      if (!confirmed?.locationConfirmedAt) {
+        setFeedbackFocus({ target: "error" });
+        return;
+      }
     }
+    setIssuesForStep(null);
     setStep((s) => Math.min(2, s + 1));
     window.scrollTo({ top: 0, behavior: "instant" });
   }
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!latest.current || !attest) return;
-    if (wizardIssues(latest.current).length) {
-      setShowIssues(true);
-      setError("Complétez les informations indiquées avant de soumettre.");
+    if (wizardIssues(latest.current, locationSelectionPending).length) {
+      setIssuesForStep(2);
+      setError("");
+      setFeedbackFocus({ target: "summary" });
       return;
     }
     if (!locationConfirmed) {
@@ -677,6 +697,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
         "Confirmez le point de localisation avant de soumettre votre annonce.",
       );
       setStep(0);
+      setFeedbackFocus({ target: "error" });
       return;
     }
     setBusy(true);
@@ -696,6 +717,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
       setSubmitted(true);
     } catch (e) {
       setError((e as Error).message);
+      setFeedbackFocus({ target: "error" });
     } finally {
       setBusy(false);
     }
@@ -776,7 +798,11 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
     photoTarget === "general"
       ? listing.photos
       : listing.spacePhotos?.[photoTarget] || [];
-  const missing = wizardIssues(listing);
+  const missing = wizardIssues(listing, locationSelectionPending);
+  const visibleIssues =
+    step === 2 || issuesForStep === step
+      ? wizardStepIssues(listing, step, locationSelectionPending)
+      : [];
   const imageUnion = new Set([
     ...listing.photos,
     ...Object.values(listing.spacePhotos || {}).flat(),
@@ -842,9 +868,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                   step === index
                     ? "active"
                     : index < step &&
-                        !missing.some(
-                          (issue) => issueStep(issue.step) === index,
-                        )
+                        !missing.some((issue) => issue.step === index)
                       ? "complete"
                       : ""
                 }
@@ -852,29 +876,25 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                 <button
                   onClick={() => {
                     setStep(index);
+                    setIssuesForStep(null);
                     setError("");
                   }}
                   aria-current={step === index ? "step" : undefined}
                 >
                   <span>
                     {index < step &&
-                    !missing.some(
-                      (issue) => issueStep(issue.step) === index,
-                    ) ? (
+                    !missing.some((issue) => issue.step === index) ? (
                       <Check size={14} />
                     ) : (
                       index + 1
                     )}
                   </span>
                   {label}
-                  {missing.some((issue) => issueStep(issue.step) === index) ? (
+                  {missing.some((issue) => issue.step === index) ? (
                     <small className="muted">
                       {" "}
-                      ·{" "}
-                      {
-                        missing.filter(
-                          (issue) => issueStep(issue.step) === index,
-                        ).length
+                      · {
+                        missing.filter((issue) => issue.step === index).length
                       }{" "}
                       à compléter
                     </small>
@@ -894,7 +914,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
             step === 0
               ? "listing-details"
               : step === 1
-                ? "listing-photos"
+                ? "listing-media-description"
                 : "listing-preview"
           }
           tabIndex={-1}
@@ -904,36 +924,33 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
           <h1 id="wizard-step-title" ref={stepHeading} tabIndex={-1}>
             {steps[step]}
           </h1>
-          {(showIssues || step === 2) && missing.length ? (
-            <div className="notice" role="status">
-              <p>
-                {missing.length} information(s) à compléter avant la soumission
-                :
+          {visibleIssues.length ? (
+            <div
+              className="notice account-wizard-errors"
+              ref={issueSummary}
+              tabIndex={-1}
+              role="region"
+              aria-labelledby="wizard-errors-title"
+            >
+              <p id="wizard-errors-title">
+                {step === 2
+                  ? "À compléter avant d’envoyer l’annonce"
+                  : "À compléter pour continuer"}
               </p>
               <ul>
-                {missing.map((issue) => (
-                  <li key={issue.field}>
+                {visibleIssues.map((issue, index) => (
+                  <li key={`${issue.field}-${index}`}>
                     <a
                       href={`#${issue.field}`}
                       onClick={(event) => {
                         event.preventDefault();
-                        setStep(issueStep(issue.step));
-                        requestAnimationFrame(() => {
-                          const field = document.getElementById(issue.field);
-                          for (
-                            let parent = field?.parentElement;
-                            parent;
-                            parent = parent.parentElement
-                          )
-                            if (parent instanceof HTMLDetailsElement)
-                              parent.open = true;
-                          if (issue.step === 2)
-                            document
-                              .getElementById("listing-unit-details")
-                              ?.setAttribute("open", "");
-                          field?.focus();
-                          field?.scrollIntoView({ block: "center" });
-                        });
+                        pendingIssue.current = issue;
+                        setStep(issue.step);
+                        setIssuesForStep(issue.step);
+                        setError("");
+                        if (issue.field === "listing-photos")
+                          setPhotoTarget("general");
+                        setFeedbackFocus({ target: "field" });
                       }}
                     >
                       {issue.message}
@@ -944,7 +961,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
             </div>
           ) : null}
           {error ? (
-            <p className="error" role="alert">
+            <p className="error" role="alert" ref={formError} tabIndex={-1}>
               {error}
             </p>
           ) : null}
@@ -965,6 +982,8 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                   latest.current = r.data;
                   setListing(r.data);
                   setLocationConfirmed(!!r.data.locationConfirmedAt);
+                  setLocationReload((reload) => reload + 1);
+                  setLocationSelectionPending(false);
                   dirty.current = false;
                   setSaveState("saved");
                   setError("");
@@ -1012,7 +1031,14 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                 ou sa commune, puis choisissez ce que vous proposez pour chaque
                 place.
               </p>
-              <LocationPicker value={listing} onChange={change} />
+              <div id="listing-location" tabIndex={-1}>
+                <LocationPicker
+                  key={locationReload}
+                  value={listing}
+                  onChange={change}
+                  onSelectionPendingChange={setLocationSelectionPending}
+                />
+              </div>
               <h2>Vos places</h2>
               <div className="account-type-options">
                 {(["covered", "box", "outdoor", "mixed"] as const).map(
@@ -1265,9 +1291,15 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                           { value: "sale", label: "À vendre ensemble" },
                           { value: "rent", label: "À louer ensemble" },
                         ]}
-                        onChange={(value) =>
-                          change({ transactionType: value as "sale" | "rent" })
-                        }
+                        onChange={(value) => {
+                          const patch =
+                            latest.current &&
+                            lotOfferChange(
+                              latest.current,
+                              value as "sale" | "rent",
+                            );
+                          if (patch) change(patch);
+                        }}
                       />
                     </div>
                     <label className="field">
@@ -1529,11 +1561,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                 </>
               </details>
               <details
-                id={
-                  listing.pricingMode === "per_space"
-                    ? "listing-price"
-                    : "listing-financial"
-                }
+                id="listing-financial"
                 className="account-fieldset"
                 tabIndex={-1}
               >
@@ -1698,7 +1726,11 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                       : "Ces photos montrent uniquement la place sélectionnée."}
                   </p>
                 </div>
-                <label className="account-upload">
+                <label
+                  id="listing-photos"
+                  className="account-upload"
+                  tabIndex={-1}
+                >
                   <CloudUpload size={32} />
                   <strong>
                     {uploading
@@ -2065,6 +2097,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                 disabled={step === 0}
                 onClick={() => {
                   setStep((s) => s - 1);
+                  setIssuesForStep(null);
                   setError("");
                 }}
               >
@@ -2087,7 +2120,11 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
           ) : (
             <button
               className="button button-secondary account-preview-back"
-              onClick={() => setStep(1)}
+              onClick={() => {
+                setStep(1);
+                setIssuesForStep(null);
+                setError("");
+              }}
             >
               <ArrowLeft size={18} />
               Modifier les photos et la description

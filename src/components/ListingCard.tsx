@@ -1,4 +1,6 @@
 "use client";
+import Link from "next/link";
+import type { ReactNode } from "react";
 import { listingPrice, availableOffers } from "@/lib/listing-price";
 import { searchOfferSpaces } from "@/lib/search-offers";
 import { pricingScope } from "./ListingOffers";
@@ -20,6 +22,9 @@ export default function ListingCard({
   onCompare,
   eager = false,
   transactionType,
+  href,
+  favoriteDisabled = false,
+  onNavigate,
 }: {
   listing: Listing;
   selected?: boolean;
@@ -30,6 +35,9 @@ export default function ListingCard({
   onCompare?: () => void;
   eager?: boolean;
   transactionType?: TransactionType;
+  href?: string;
+  favoriteDisabled?: boolean;
+  onNavigate?: () => void;
 }) {
   const matched =
     listing.pricingMode === "per_space" &&
@@ -44,10 +52,12 @@ export default function ListingCard({
       className={`listing-card ${selected ? "is-selected" : ""}${listing.pricingMode === "per_space" ? " has-unit-offers" : ""}`}
     >
       <div className="listing-photo">
-        <button
-          onClick={onSelect}
+        <CardTarget
+          href={href}
+          onSelect={onSelect}
           className="photo-select"
-          aria-label={`Voir ${listing.title}`}
+          label={`Consulter ${listing.title}`}
+          onNavigate={onNavigate}
         >
           <Image
             src={listing.photos[0] || "/demo/covered.png"}
@@ -58,13 +68,18 @@ export default function ListingCard({
             }
             width={600}
             height={360}
-            sizes="(max-width:767px) 50vw, 360px"
+            sizes={
+              href
+                ? "(max-width:600px) 100vw, (max-width:1023px) 50vw, (max-width:1440px) 33vw, 420px"
+                : "(max-width:767px) 50vw, 360px"
+            }
             loading={eager ? "eager" : "lazy"}
           />
-        </button>
+        </CardTarget>
         <button
           className={`favorite-button ${favorite ? "is-favorite" : ""}`}
           onClick={onFavorite}
+          disabled={favoriteDisabled}
           aria-label={favorite ? "Retirer des favoris" : "Ajouter aux favoris"}
           aria-pressed={favorite}
         >
@@ -77,7 +92,12 @@ export default function ListingCard({
           </span>
         ) : null}
       </div>
-      <button onClick={onSelect} className="listing-summary">
+      <CardTarget
+        href={href}
+        onSelect={onSelect}
+        onNavigate={onNavigate}
+        className="listing-summary"
+      >
         <span className="listing-title">
           {listing.city} · {listing.district}
         </span>
@@ -88,7 +108,7 @@ export default function ListingCard({
           {typeLabels[listing.type]} ·{" "}
           {areaLabel(searchOfferSpaces(listing, transactionType))}
         </span>
-      </button>
+      </CardTarget>
       <div className="listing-card-footer">
         <span className="subtle-label">
           {listing.pricingMode === "per_space"
@@ -107,5 +127,42 @@ export default function ListingCard({
         ) : null}
       </div>
     </article>
+  );
+}
+
+function CardTarget({
+  href,
+  onSelect,
+  className,
+  label,
+  children,
+  onNavigate,
+}: {
+  href?: string;
+  onSelect: () => void;
+  className: string;
+  label?: string;
+  children: ReactNode;
+  onNavigate?: () => void;
+}) {
+  return href ? (
+    <Link
+      href={href}
+      prefetch={false}
+      className={className}
+      aria-label={label}
+      onNavigate={onNavigate}
+    >
+      {children}
+    </Link>
+  ) : (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={className}
+      aria-label={label}
+    >
+      {children}
+    </button>
   );
 }

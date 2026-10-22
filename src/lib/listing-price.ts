@@ -9,6 +9,21 @@ import {
 
 type PriceListing = Pick<Listing, "priceCents" | "transactionType"> &
   Partial<Pick<Listing, "pricingMode" | "spaces" | "status" | "catalogMatch">>;
+
+/** A sale amount must never silently become a monthly rent, or vice versa. */
+export function lotOfferChange(
+  listing: PriceListing,
+  transactionType: TransactionType,
+): Pick<Listing, "transactionType" | "priceCents"> | null {
+  if (listing.pricingMode === "per_space") return null;
+  return {
+    transactionType,
+    priceCents:
+      transactionType === (listing.transactionType ?? "sale")
+        ? listing.priceCents
+        : 0,
+  };
+}
 export const offerStatusLabels: Record<SpaceOfferStatus, string> = {
   available: "Disponible",
   reserved: "Réservée",

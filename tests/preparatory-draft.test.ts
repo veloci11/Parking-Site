@@ -63,6 +63,25 @@ test("préparation corrompue ou quantité invalide ne crée pas de lot implicite
     90,
   );
 });
+test("une préparation de lot mixte se retrouve après connexion sans perdre les places", () => {
+  const prepared = decodePreparation(
+    JSON.stringify({
+      title: "Place et box dans un même parking",
+      city: "Paris",
+      type: "mixed",
+      quantity: 2,
+    }),
+  );
+  assert.ok(prepared);
+  let index = 0;
+  const payload = preparationPayload(prepared, () => `space-${++index}`);
+  assert.equal(payload.type, "mixed");
+  assert.equal(payload.spaces.length, 2);
+  assert.equal(
+    payload.spaces.every((space) => space.number === ""),
+    true,
+  );
+});
 test("le choix exclusif vente ou location est conservé dans la préparation", () => {
   for (const transactionType of ["sale", "rent"] as const) {
     const prepared = decodePreparation(

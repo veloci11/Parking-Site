@@ -535,6 +535,37 @@
   max-width: 440px;
   text-align: left;
 }
+.account-preparation .account-review-actions {
+  justify-content: center;
+}
+.account-preparation > .account-preparation-next {
+  margin: 20px auto 32px;
+  font-size: 14px;
+}
+.account-preparation-details {
+  text-align: left;
+  border-top: 1px solid var(--border);
+  padding-block: 24px;
+}
+.account-preparation-details > summary {
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+}
+.account-preparation-details > p {
+  margin-top: 16px;
+  line-height: 1.5;
+}
+.account-preparation-details fieldset {
+  border: 0;
+  margin: 24px 0 0;
+  padding: 0;
+  min-width: 0;
+}
+.account-preparation > .account-preparation-saved {
+  margin-bottom: 0;
+  font-size: 14px;
+}
 .account-start-steps > div {
   display: flex;
   gap: 12px;
@@ -1206,6 +1237,7 @@
   background: white;
   text-align: left;
   width: 100%;
+  min-width: 0;
 }
 .account-review-row > div {
   flex: 1;
@@ -1214,6 +1246,7 @@
 .account-review-row strong {
   font-size: 16px;
   display: block;
+  overflow-wrap: anywhere;
 }
 .account-review-row div > span {
   font-size: 12px;
@@ -1233,6 +1266,19 @@
 .account-review-detail {
   padding: 24px;
   margin-top: 32px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.account-review-detail > .account-section-title > div {
+  min-width: 0;
+}
+.account-review-detail > .account-section-title > .button {
+  flex: none;
+}
+.account-review-detail > .table-scroll {
+  min-width: 0;
+  max-width: 100%;
 }
 .account-review-detail > .field {
   margin: 24px 0;
@@ -1631,8 +1677,17 @@
     width: 100%;
     flex-basis: 100%;
   }
+  .account-review-row > span {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.5;
+  }
   .account-review-row svg {
     margin-left: auto;
+    flex: none;
   }
   .account-review-actions .button {
     width: 100%;

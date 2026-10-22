@@ -1,5 +1,20 @@
-/** Same boundary as globals.css: the mobile map panel is hidden at <= 767px. */
+/** Same boundary as the responsive explorer layout. */
 export const MOBILE_MAP_MEDIA_QUERY = "(max-width: 767px)";
+export type ExplorerView = "list" | "map";
+export type ExplorerViewPreference = ExplorerView | "auto";
+export function readExplorerView(
+  params: URLSearchParams,
+): ExplorerViewPreference {
+  const value = params.get("display");
+  if (value === "list" || value === "map") return value;
+  return params.has("listing") ? "map" : "auto";
+}
+export function resolveExplorerView(
+  preference: ExplorerViewPreference,
+  mobile: boolean,
+): ExplorerView {
+  return preference === "auto" ? (mobile ? "list" : "map") : preference;
+}
 export interface MapDemandViewport {
   readonly matches: boolean;
   addEventListener(type: "change", listener: () => void): void;
@@ -8,17 +23,17 @@ export interface MapDemandViewport {
 /** Requests once when the map can be seen. The caller keeps this demand latched. */
 export function observeCityMapDemand(
   viewport: MapDemandViewport,
-  mobileView: "list" | "map",
+  preference: ExplorerViewPreference,
   request: () => void,
+  onViewChange?: (view: ExplorerView) => void,
 ) {
   let requested = false;
   let disposed = false;
   const check = () => {
-    if (
-      !disposed &&
-      !requested &&
-      (!viewport.matches || mobileView === "map")
-    ) {
+    if (disposed) return;
+    const view = resolveExplorerView(preference, viewport.matches);
+    onViewChange?.(view);
+    if (!requested && view === "map") {
       requested = true;
       request();
     }

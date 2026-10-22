@@ -1,0 +1,204 @@
+/* Shared Liste / Carte choice; the map remains mounted after its first use. */
+.explorer .explorer-view-switch {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 4px;
+  margin-left: auto;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-subtle);
+}
+.explorer-view-switch button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+.explorer-view-switch button.active {
+  color: var(--text);
+  background: white;
+  box-shadow: 0 2px 8px #2116370d;
+}
+.explorer-view-switch button.active svg {
+  color: var(--brand);
+}
+.explorer .view-list {
+  display: block;
+  height: auto;
+  min-height: 580px;
+}
+.explorer .view-list .map-panel {
+  display: none;
+}
+.explorer .view-list .results-panel {
+  width: 100%;
+  min-width: 0;
+  max-width: 1440px;
+  margin: 0 auto;
+  border: 0;
+  overflow: visible;
+  padding-bottom: 36px;
+}
+.explorer .view-list .results-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  padding: 28px 32px 20px;
+}
+.explorer .view-list .results-heading h2 {
+  margin: 0;
+}
+.explorer .view-list .results-meta {
+  gap: 24px;
+}
+.explorer .view-list .results-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  padding: 0 32px;
+}
+.explorer .view-list .listing-card {
+  padding: 0 0 20px;
+  min-width: 0;
+}
+.explorer .view-list .listing-card.is-selected:before {
+  display: none;
+}
+.explorer .view-list .listing-photo {
+  border-radius: 12px;
+}
+.explorer .view-list .listing-photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+}
+.explorer .view-list .listing-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 14px;
+  color: inherit;
+}
+.explorer .view-list .listing-title,
+.explorer .view-list .listing-price {
+  font-size: 16px;
+}
+.explorer .view-list .listing-meta {
+  margin-top: 0;
+  font-size: 14px;
+}
+.explorer .view-list .listing-card-footer {
+  flex-wrap: wrap;
+  margin-top: 8px;
+  gap: 4px 12px;
+}
+.explorer .view-list .listing-card-footer .subtle-label {
+  display: inline;
+}
+.explorer .view-list .results-panel > .button.full-width {
+  display: flex;
+  width: max-content;
+  max-width: calc(100% - 40px);
+  margin: 24px auto;
+}
+.explorer .view-list .demo-note {
+  padding: 20px 32px;
+}
+.explorer .map-empty-state {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  transform: translate(-50%, -50%);
+  width: min(360px, calc(100% - 40px));
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  background: #fffffff5;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  z-index: 5;
+}
+.explorer .map-empty-state > svg {
+  color: var(--brand);
+}
+.explorer .map-empty-state p {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 0;
+}
+.explorer .map-empty-state .button {
+  font-size: 14px;
+}
+@media (min-width: 768px) {
+  .explorer-view-list .explorer-compare {
+    display: flex;
+    position: fixed;
+    z-index: 40;
+    right: 24px;
+    bottom: 24px;
+    box-shadow: var(--shadow);
+    background: white;
+  }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .explorer .view-list .results-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 767px) {
+  .explorer .explorer-view-switch {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
+    z-index: 40;
+    background: white;
+    box-shadow: var(--shadow);
+  }
+  .explorer-view-switch button {
+    min-height: 44px;
+  }
+  .explorer-view-switch button.active {
+    background: var(--text);
+    color: white;
+  }
+  .explorer-view-switch button.active svg {
+    color: white;
+  }
+  .explorer .view-list .results-panel {
+    padding-bottom: 100px;
+  }
+  .explorer .view-list .results-heading {
+    padding: 24px 20px 16px;
+  }
+  .explorer .view-list .results-meta {
+    width: 100%;
+    gap: 12px;
+  }
+  .explorer .view-list .results-list {
+    padding: 0 20px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px 16px;
+  }
+}
+@media (max-width: 600px) {
+  .explorer .view-list .results-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

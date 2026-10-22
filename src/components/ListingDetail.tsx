@@ -10,7 +10,12 @@ import {
 import { loadPublicParkingGroup } from "@/lib/parking-client";
 import type { PublicParkingSceneGroup } from "@/lib/parking-registry";
 import { parkingListingGroupLabel } from "@/lib/parking-lots";
-import { contactDraftKey, decodeContactDraft } from "@/lib/contact-draft";
+import {
+  contactDraftKey,
+  decodeContactDraft,
+  contactSelectionContext,
+  contactMessageBody,
+} from "@/lib/contact-draft";
 import Image from "./SafePhoto";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -87,6 +92,7 @@ export default function ListingDetail({
   const requestIds = useRef({
     message: crypto.randomUUID(),
     visit: crypto.randomUUID(),
+    context: "",
   });
   const { user, loading } = useSession();
   const favorites = useFavorites();
@@ -101,6 +107,9 @@ export default function ListingDetail({
   const selectedSpace = focusedListing.spaces.find(
     (space) => space.id === selectedSpaceId,
   );
+  const contactContext = contactSelectionContext(focusedListing, selectedSpace);
+  const contactTextLimit = 4000 - contactContext.length - 2;
+  const contactReturnHref = `/annonces/${listing.id}/${listing.slug}?contact=1${selectedSpace && !relatedSelected ? `&unit=${encodeURIComponent(selectedSpace.id)}&floor=${selectedSpace.level}` : ""}`;
   const focusedGroupLabel = parkingGroup
     ? parkingListingGroupLabel(
         parkingGroup,
@@ -206,6 +215,7 @@ export default function ListingDetail({
         requestIds.current = {
           message: saved.messageRequestId,
           visit: saved.visitRequestId,
+          context: saved.context || "",
         };
         setDraftNotice(
           "Votre texte préparé dans cet onglet a été restauré. Aucun message n’a encore été envoyé par cette reprise.",
@@ -218,6 +228,10 @@ export default function ListingDetail({
     }
   }, [initialListing.id]);
   function saveContactText(text: string, requestVisit: boolean) {
+    if (requestIds.current.context !== contactContext) {
+      requestIds.current.message = crypto.randomUUID();
+      requestIds.current.context = contactContext;
+    }
     try {
       sessionStorage.setItem(
         contactDraftKey(listing.id),
@@ -226,6 +240,7 @@ export default function ListingDetail({
           visit: requestVisit,
           messageRequestId: requestIds.current.message,
           visitRequestId: requestIds.current.visit,
+          context: requestIds.current.context,
         }),
       );
       setDraftNotice(
@@ -314,7 +329,22 @@ export default function ListingDetail({
     sendingLock.current = true;
     setSending(true);
     setError("");
+    if (requestIds.current.context !== contactContext) {
+      requestIds.current.message = crypto.randomUUID();
+      requestIds.current.context = contactContext;
+    }
+    const snapshot = {
+      body: contactMessageBody(contactContext, message),
+      messageRequestId: requestIds.current.message,
+      visitRequestId: requestIds.current.visit,
+      visit,
+    };
+    saveContactText(message, visit);
     try {
+      if (snapshot.body.length > 4000)
+        throw new Error(
+          `Raccourcissez votre message à ${contactTextLimit} caractères pour inclure la place concernée.`,
+        );
       const c = await api<Conversation>("/api/conversations", {
         method: "POST",
         body: JSON.stringify({ listingId: listing.id }),
@@ -322,14 +352,14 @@ export default function ListingDetail({
       await api(`/api/conversations/${c.id}/messages`, {
         method: "POST",
         body: JSON.stringify({
-          body: message,
-          clientRequestId: requestIds.current.message,
+          body: snapshot.body,
+          clientRequestId: snapshot.messageRequestId,
         }),
       });
-      if (visit)
+      if (snapshot.visit)
         await api(`/api/conversations/${c.id}/visit-requests`, {
           method: "POST",
-          body: JSON.stringify({ clientRequestId: requestIds.current.visit }),
+          body: JSON.stringify({ clientRequestId: snapshot.visitRequestId }),
         });
       try {
         sessionStorage.removeItem(contactDraftKey(listing.id));
@@ -390,6 +420,7 @@ export default function ListingDetail({
         </div>
         <button
           className="icon-button"
+          disabled={favorites.loading}
           onClick={() => void favorites.toggle(listing.id)}
           aria-label={
             favorites.ids.includes(listing.id)
@@ -407,6 +438,11 @@ export default function ListingDetail({
           />
         </button>
       </div>
+      {favorites.error ? (
+        <p className="error" role="alert">
+          {favorites.error}
+        </p>
+      ) : null}
       {listing.isDemo ? (
         <p className="notice">
           Bien fictif de démonstration. Les photos sont des illustrations et le
@@ -766,6 +802,11 @@ export default function ListingDetail({
               d’une visite. Une demande n’est confirmée qu’après accord sur un
               horaire.
             </p>
+            {!relatedSelected ? (
+              <p className="notice">
+                {contactContext} Ce contexte sera joint à votre message.
+              </p>
+            ) : null}
             {relatedSelected ? (
               <div className="notice" role="status">
                 La place sélectionnée appartient à « {focusedListing.title} »,
@@ -813,7 +854,7 @@ export default function ListingDetail({
                   id="visitor-message"
                   className="input"
                   rows={4}
-                  maxLength={4000}
+                  maxLength={contactTextLimit}
                   value={message}
                   onChange={(e) => editContactText(e.target.value)}
                 />
@@ -837,7 +878,7 @@ export default function ListingDetail({
                 ) : null}
                 <Link
                   className="button button-primary"
-                  href={`/connexion?next=${encodeURIComponent(`/annonces/${listing.id}/${listing.slug}?contact=1`)}`}
+                  href={`/connexion?next=${encodeURIComponent(contactReturnHref)}`}
                 >
                   Se connecter
                   <ArrowUpRight size={17} />
@@ -864,8 +905,9 @@ export default function ListingDetail({
                 <textarea
                   id="message"
                   minLength={5}
-                  maxLength={4000}
+                  maxLength={contactTextLimit}
                   required
+                  disabled={sending}
                   value={message}
                   onChange={(e) => editContactText(e.target.value)}
                 />
@@ -873,6 +915,7 @@ export default function ListingDetail({
                   <input
                     type="checkbox"
                     checked={visit}
+                    disabled={sending}
                     onChange={(e) => editVisit(e.target.checked)}
                   />
                   <Calendar size={18} />

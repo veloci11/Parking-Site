@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   CheckCircle2,
@@ -19,12 +19,14 @@ import { pricingScope, ListingOffersTable } from "../ListingOffers";
 import { AdminModelingRequests } from "./modeling-request";
 import {
   isRevisionReviewed,
+  moderationOutcome,
   type ReviewedRevision,
 } from "@/lib/moderation-review";
 function Content({ user }: { user: User }) {
   const [items, setItems] = useState<Listing[]>([]),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
+    [loadError, setLoadError] = useState(""),
     [notice, setNotice] = useState(""),
     [selected, setSelected] = useState<string | null>(null),
     [reason, setReason] = useState(""),
@@ -32,18 +34,37 @@ function Content({ user }: { user: User }) {
     [reviewedRevision, setReviewedRevision] = useState<ReviewedRevision | null>(
       null,
     );
+  const loadGeneration = useRef(0);
+  const feedback = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (!error && !notice) return;
+    feedback.current?.focus({ preventScroll: true });
+    feedback.current?.scrollIntoView({ block: "center", behavior: "instant" });
+  }, [error, notice]);
   function load() {
+    const generation = ++loadGeneration.current;
     setLoading(true);
+    setLoadError("");
     return api<{ data: Listing[] }>("/api/admin/revisions")
-      .then((r) => setItems(r.data))
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+      .then((r) => {
+        if (generation === loadGeneration.current) setItems(r.data);
+      })
+      .catch((e) => {
+        if (generation === loadGeneration.current) setLoadError(e.message);
+      })
+      .finally(() => {
+        if (generation === loadGeneration.current) setLoading(false);
+      });
   }
   useEffect(() => {
     void load();
+    return () => {
+      loadGeneration.current++;
+    };
   }, []);
   const item = items.find((l) => l.id === selected);
-  const reviewed = isRevisionReviewed(item, reviewedRevision);
+  const reviewed =
+    !loading && !loadError && isRevisionReviewed(item, reviewedRevision);
   async function decide(decision: "approve" | "changes_requested" | "reject") {
     if (!item) return;
     if (decision !== "approve" && !reason.trim()) {
@@ -56,20 +77,22 @@ function Content({ user }: { user: User }) {
     }
     setBusy(true);
     setError("");
+    setNotice("");
     try {
-      await api(`/api/admin/revisions/${item.id}/decision`, {
-        method: "POST",
-        body: JSON.stringify({
-          decision,
-          reason: reason.trim(),
-          version: item.version,
-        }),
-      });
-      setNotice(
-        decision === "approve"
-          ? "La version relue a été publiée."
-          : "La décision et son motif ont été enregistrés.",
+      const response = await api<{ data: Listing }>(
+        `/api/admin/revisions/${item.id}/decision`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            decision,
+            reason: reason.trim(),
+            version: item.version,
+          }),
+        },
       );
+      const outcome = moderationOutcome(decision, response.data);
+      if (outcome.confirmed) setNotice(outcome.message);
+      else setError(outcome.message);
       setSelected(null);
       setReason("");
       setReviewedRevision(null);
@@ -88,6 +111,7 @@ function Content({ user }: { user: User }) {
       action={
         <button
           className="button button-secondary"
+          disabled={loading || busy}
           onClick={() => {
             void load();
           }}
@@ -129,29 +153,42 @@ function Content({ user }: { user: User }) {
         </p>
       </div>
       {error ? (
-        <p className="error" role="alert">
+        <p className="error" role="alert" ref={feedback} tabIndex={-1}>
           {error}
         </p>
       ) : null}
-      {notice ? (
-        <p className="notice" role="status">
+      {!error && notice ? (
+        <p className="notice" role="status" ref={feedback} tabIndex={-1}>
           {notice}
+        </p>
+      ) : null}
+      {loadError ? (
+        <p className="error" role="alert">
+          La file n’a pas pu être actualisée. {loadError} Utilisez « Actualiser
+          » pour réessayer.
         </p>
       ) : null}
       <div className="account-section-title">
         <h2>Versions en attente</h2>
         <span className="badge">
-          {items.length} dossier{items.length > 1 ? "s" : ""}
+          {loadError ? (
+            "À actualiser"
+          ) : (
+            <>
+              {items.length} dossier{items.length > 1 ? "s" : ""}
+            </>
+          )}
         </span>
       </div>
       {loading ? (
         <p role="status">Chargement de la file…</p>
-      ) : items.length ? (
+      ) : !loadError && items.length ? (
         <div className="account-list">
           {items.map((l) => (
             <button
               key={l.id}
               className={`account-review-row ${selected === l.id ? "active" : ""}`}
+              disabled={busy}
               onClick={() => {
                 setSelected(l.id);
                 setReason("");
@@ -171,13 +208,13 @@ function Content({ user }: { user: User }) {
             </button>
           ))}
         </div>
-      ) : (
+      ) : !loadError ? (
         <div className="empty-state account-empty">
           <CheckCircle2 size={36} />
           <h2>La file est à jour.</h2>
           <p>Les prochaines soumissions seront affichées ici.</p>
         </div>
-      )}
+      ) : null}
       {item ? (
         <section className="account-review-detail card">
           <div className="account-section-title">
@@ -190,6 +227,7 @@ function Content({ user }: { user: User }) {
             <button
               aria-label="Fermer le dossier"
               className="button button-secondary"
+              disabled={busy}
               onClick={() => setSelected(null)}
             >
               <X size={18} />
@@ -343,14 +381,14 @@ function Content({ user }: { user: User }) {
             </button>
             <button
               className="button button-secondary"
-              disabled={busy}
+              disabled={busy || loading || Boolean(loadError)}
               onClick={() => decide("changes_requested")}
             >
               Demander une correction
             </button>
             <button
               className="button button-secondary"
-              disabled={busy}
+              disabled={busy || loading || Boolean(loadError)}
               onClick={() => decide("reject")}
             >
               Refuser

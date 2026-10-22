@@ -11,9 +11,11 @@ import "@/styles/location-picker.css";
 export default function LocationPicker({
   value,
   onChange,
+  onSelectionPendingChange,
 }: {
   value: Listing;
   onChange: (patch: Partial<Listing>) => void;
+  onSelectionPendingChange?: (pending: boolean) => void;
 }) {
   const id = useId();
   const [query, setQuery] = useState(
@@ -31,10 +33,16 @@ export default function LocationPicker({
     value.locationPrecision === "exact_opt_in",
   );
   const [chosen, setChosen] = useState<AddressSuggestion | null>(null);
+  const [selectionPending, setSelectionPending] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    onSelectionPendingChange?.(selectionPending);
+  }, [selectionPending, onSelectionPendingChange]);
   useEffect(() => {
     if (!open || query.trim().length < 3) {
       setResults([]);
+      setLoading(false);
+      setActive(-1);
       return;
     }
     const controller = new AbortController();
@@ -69,6 +77,7 @@ export default function LocationPicker({
   }, [query, open]);
   function select(item: AddressSuggestion) {
     setChosen(item);
+    setSelectionPending(false);
     setQuery(item.label);
     setOpen(false);
     setResults([]);
@@ -77,6 +86,11 @@ export default function LocationPicker({
   }
   function precision(next: boolean) {
     setExact(next);
+    if (selectionPending) {
+      setOpen(true);
+      searchRef.current?.focus();
+      return;
+    }
     if (chosen && (!next || chosen.kind === "address"))
       onChange(locationFromSuggestion(chosen, next, value));
     else if (!next) {
@@ -94,9 +108,23 @@ export default function LocationPicker({
     } else if (value.address) onChange({ locationPrecision: "exact_opt_in" });
     else {
       setQuery("");
+      setSelectionPending(true);
       setOpen(true);
       searchRef.current?.focus();
     }
+  }
+  function restoreSelection() {
+    setQuery(
+      value.address ||
+        [value.city, value.commercialDetails?.postalCode]
+          .filter(Boolean)
+          .join(" "),
+    );
+    setChosen(null);
+    setExact(value.locationPrecision === "exact_opt_in");
+    setSelectionPending(false);
+    setOpen(false);
+    searchRef.current?.focus();
   }
   return (
     <div className="gp-location-picker">
@@ -132,6 +160,10 @@ export default function LocationPicker({
           }
           onChange={(e) => {
             setQuery(e.target.value);
+            setChosen(null);
+            setSelectionPending(true);
+            setResults([]);
+            setActive(-1);
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
@@ -198,6 +230,23 @@ export default function LocationPicker({
         Choisissez un résultat : la ville et le code postal se remplissent
         automatiquement.
       </p>
+      {selectionPending ? (
+        <p className="small muted" role="status">
+          Sélectionnez un résultat pour valider votre nouvelle localisation.
+          {value.city && value.commercialDetails?.postalCode ? (
+            <>
+              {" "}
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={restoreSelection}
+              >
+                Revenir à la localisation sélectionnée
+              </button>
+            </>
+          ) : null}
+        </p>
+      ) : null}
       <div
         className="gp-location-precision"
         role="group"

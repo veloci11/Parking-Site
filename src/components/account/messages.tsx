@@ -20,6 +20,12 @@ import {
 import { AccountGate, AccountShell, api } from "./shared";
 import { mergeMessageHistory } from "./message-history";
 import {
+  messageRequestDraft,
+  composerAfterAcknowledgement,
+  createConversationSendScope,
+  type MessageRequestDraft,
+} from "./message-request-draft";
+import {
   visitRequestDraft,
   type VisitRequestDraft,
 } from "./visit-request-draft";
@@ -63,7 +69,12 @@ function Content({ user, id }: { user: User; id?: string }) {
     type: "conversation" | "message";
     id: string;
   } | null>(null);
-  const requestId = useRef("");
+  const pendingMessage = useRef<MessageRequestDraft | null>(null);
+  const [sendScope] = useState(createConversationSendScope);
+  useLayoutEffect(() => {
+    sendScope.select(id);
+    return () => sendScope.select(undefined);
+  }, [id, sendScope]);
   const pendingVisit = useRef<VisitRequestDraft | null>(null);
   const feed = useRef<HTMLDivElement>(null),
     currentId = useRef(id),
@@ -104,7 +115,9 @@ function Content({ user, id }: { user: User; id?: string }) {
     setMessages([]);
     setVisits([]);
     setLoadingHistory(false);
-    requestId.current = "";
+    pendingMessage.current = null;
+    setText("");
+    setSending(false);
     pendingVisit.current = null;
   }, [id]);
   async function loadOlder() {
@@ -212,22 +225,31 @@ function Content({ user, id }: { user: User; id?: string }) {
     if (!id || !text.trim() || blocked || sending) return;
     setSending(true);
     setError("");
-    requestId.current ||= crypto.randomUUID();
+    const draft = messageRequestDraft(pendingMessage.current, id, text);
+    const completion = sendScope.begin(id);
+    pendingMessage.current = draft;
     try {
       await api(`/api/conversations/${id}/messages`, {
         method: "POST",
         body: JSON.stringify({
-          body: text.trim(),
-          clientRequestId: requestId.current,
+          body: draft.body,
+          clientRequestId: draft.clientRequestId,
         }),
       });
-      setText("");
-      requestId.current = "";
+      if (
+        !completion.apply(() => {
+          setText((current) =>
+            composerAfterAcknowledgement(current, draft.body),
+          );
+          if (pendingMessage.current === draft) pendingMessage.current = null;
+        })
+      )
+        return;
       await load();
     } catch (e) {
-      setError((e as Error).message);
+      completion.apply(() => setError((e as Error).message));
     } finally {
-      setSending(false);
+      completion.apply(() => setSending(false));
     }
   }
   async function requestVisit(e: FormEvent) {

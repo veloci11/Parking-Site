@@ -14,14 +14,35 @@ import {
   Tag,
   X,
 } from "lucide-react";
-import { readSearch, searchParams, searchProblem } from "@/lib/search-client";
+import {
+  readSearch,
+  searchParams,
+  searchProblem,
+  type SearchState,
+} from "@/lib/search-client";
+import {
+  hasExplorerFilters,
+  resetExplorerFilters,
+} from "@/lib/explorer-search";
 import {
   normalizeMapView,
   type MapViewState,
   type MapSearchArea,
 } from "@/lib/map-view";
 import { useFavorites } from "@/lib/favorites";
-import { MOBILE_MAP_MEDIA_QUERY, observeCityMapDemand } from "@/lib/map-demand";
+import {
+  favoritesSearchParams,
+  loadAllFavoriteOffers,
+  showsAllFavoriteOffers,
+} from "@/lib/favorites-search";
+import {
+  MOBILE_MAP_MEDIA_QUERY,
+  observeCityMapDemand,
+  readExplorerView,
+  type ExplorerView,
+  type ExplorerViewPreference,
+} from "@/lib/map-demand";
+import "@/styles/explorer.css";
 import { type Listing } from "@/lib/types";
 import FilterSelect from "./FilterSelect";
 import ListingCard from "./ListingCard";
@@ -57,6 +78,8 @@ export default function Explorer({
   const [transactionType, setTransactionType] = useState<"sale" | "rent">(
     "sale",
   );
+  const [allFavoriteOffers, setAllFavoriteOffers] = useState(favoritesOnly);
+  const offerFilter = allFavoriteOffers ? undefined : transactionType;
   const [maxPrice, setMaxPrice] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [covered, setCovered] = useState("");
@@ -72,7 +95,11 @@ export default function Explorer({
   const [sort, setSort] = useState("recent");
   const [more, setMore] = useState(false);
   const [only3D, setOnly3D] = useState(false);
-  const [mobileView, setMobileView] = useState<"list" | "map">("list");
+  const [viewPreference, setViewPreference] =
+    useState<ExplorerViewPreference>("auto");
+  const [visibleView, setVisibleView] = useState<ExplorerView>("list");
+  const scrollPositions = useRef({ list: 0, map: 0 });
+  const previousView = useRef<ExplorerView | null>(null);
   const [mapRequested, setMapRequested] = useState(false);
   const [compare, setCompare] = useState<string[]>([]);
   const [compareNotice, setCompareNotice] = useState("");
@@ -143,6 +170,10 @@ export default function Explorer({
 
   const load = useCallback(
     async (quiet = false) => {
+      if (favoritesOnly && favorites.loading) {
+        setLoading(true);
+        return;
+      }
       if (!quiet) setLoading(true);
       setError("");
       const generation = ++requestGeneration.current;
@@ -181,6 +212,14 @@ export default function Explorer({
             results.filter((id): id is string => id !== null),
           );
           params.set("ids", ids.join(","));
+          if (allFavoriteOffers) {
+            const data = await loadAllFavoriteOffers(searchState, ids);
+            if (generation !== requestGeneration.current) return;
+            setListings(data);
+            setNextCursor(null);
+            setTotal(data.length);
+            return;
+          }
         } else setMissingFavorites([]);
         const r = await fetch("/api/listings?" + params);
         const result = await r.json();
@@ -197,11 +236,16 @@ export default function Explorer({
         if (generation === requestGeneration.current) setLoading(false);
       }
     },
-    [apiQuery, searchState, favoritesOnly, favoriteKey],
+    [
+      apiQuery,
+      searchState,
+      favoritesOnly,
+      favoriteKey,
+      favorites.loading,
+      allFavoriteOffers,
+    ],
   );
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const search = readSearch(params);
+  const applySearch = useCallback((search: SearchState) => {
     setQuery(search.city);
     setCity(search.city);
     setType(search.type);
@@ -219,6 +263,16 @@ export default function Explorer({
     setCenter(search.center);
     setRadiusKm(search.radiusKm);
     setRadiusDraft(search.radiusKm || "5");
+  }, []);
+  useEffect(() => {
+    const restore = () => {
+      const params = new URLSearchParams(window.location.search);
+      applySearch(readSearch(params));
+      setAllFavoriteOffers(favoritesOnly && showsAllFavoriteOffers(params));
+      setSelectedId(params.get("listing"));
+      setViewPreference(readExplorerView(params));
+    };
+    restore();
     try {
       setMapView(
         normalizeMapView(
@@ -228,18 +282,31 @@ export default function Explorer({
     } catch {
       /* No stored camera. */
     }
-    setSelectedId(params.get("listing"));
-    if (params.get("listing")) setMobileView("map");
     setInitialized(true);
-  }, []);
+    window.addEventListener("popstate", restore);
+    return () => window.removeEventListener("popstate", restore);
+  }, [applySearch, favoritesOnly]);
   useEffect(() => {
-    if (!initialized || mapRequested) return;
+    if (!initialized) return;
     return observeCityMapDemand(
       window.matchMedia(MOBILE_MAP_MEDIA_QUERY),
-      mobileView,
+      viewPreference,
       () => setMapRequested(true),
+      setVisibleView,
     );
-  }, [initialized, mobileView, mapRequested]);
+  }, [initialized, viewPreference]);
+  useEffect(() => {
+    if (!initialized) return;
+    if (previousView.current && previousView.current !== visibleView) {
+      const top = scrollPositions.current[visibleView];
+      const frame = requestAnimationFrame(() =>
+        window.scrollTo({ top, behavior: "instant" }),
+      );
+      previousView.current = visibleView;
+      return () => cancelAnimationFrame(frame);
+    }
+    previousView.current = visibleView;
+  }, [visibleView, initialized]);
   useEffect(() => {
     if (!initialized) return;
     requestGeneration.current++;
@@ -266,18 +333,34 @@ export default function Explorer({
     };
   }, [initialized, load, listings.length]);
   useEffect(() => {
-    if (loading || restoredScroll.current) return;
+    if (!initialized || loading || restoredScroll.current) return;
     restoredScroll.current = true;
     const panel = document.getElementById("resultats");
-    if (panel)
-      try {
+    try {
+      if (visibleView === "list") {
+        const saved = JSON.parse(
+          sessionStorage.getItem("gp:explore:list-scroll") || "null",
+        );
+        if (
+          saved?.href === window.location.pathname + window.location.search &&
+          Number.isFinite(saved.top) &&
+          saved.top >= 0
+        ) {
+          scrollPositions.current.list = saved.top;
+          const frame = requestAnimationFrame(() =>
+            window.scrollTo({ top: saved.top, behavior: "instant" }),
+          );
+          return () => cancelAnimationFrame(frame);
+        }
+      } else if (panel) {
         panel.scrollTop = Number(
           sessionStorage.getItem("gp:explore:scroll") || 0,
         );
-      } catch {
-        /* No stored position. */
       }
-  }, [loading]);
+    } catch {
+      /* No stored position. */
+    }
+  }, [loading, initialized, visibleView]);
   async function loadMore() {
     if (!nextCursor || loadingMore) return;
     setLoadingMore(true);
@@ -302,11 +385,15 @@ export default function Explorer({
       setLoadingMore(false);
     }
   }
-  const filtered = listings;
+  const filtered = !loading && !error ? listings : [];
+  const hasFilters = hasExplorerFilters(searchState);
   const selected = filtered.find((l) => l.id === selectedId) || null;
   useEffect(() => {
-    if (!loading) {
-      const params = searchParams(searchState);
+    if (initialized) {
+      const params = favoritesOnly
+        ? favoritesSearchParams(searchState, allFavoriteOffers)
+        : searchParams(searchState);
+      if (viewPreference !== "auto") params.set("display", viewPreference);
       if (selectedId) params.set("listing", selectedId);
       const href = `${window.location.pathname}${params.size ? "?" + params : ""}`;
       try {
@@ -320,7 +407,14 @@ export default function Explorer({
         `${window.location.pathname}${params.size ? "?" + params : ""}`,
       );
     }
-  }, [searchState, selectedId, loading]);
+  }, [
+    searchState,
+    selectedId,
+    initialized,
+    viewPreference,
+    favoritesOnly,
+    allFavoriteOffers,
+  ]);
   function toggleCompare(id: string) {
     setCompareNotice("");
     setCompare((current) =>
@@ -333,31 +427,65 @@ export default function Explorer({
     );
   }
   function reset() {
-    setQuery("");
-    setCity("");
-    setType("");
-    setMaxPrice("");
-    setMinArea("");
-    setOnly3D(false);
-    setMinPrice("");
-    setCovered("");
-    setClosed("");
-    setOccupancy("");
-    setLevel("");
-    setBbox("");
-    setCenter("");
-    setRadiusKm("");
-    setRadiusDraft("5");
-    setSort("recent");
+    applySearch(resetExplorerFilters(searchState));
     setSelectedId(null);
+  }
+  function changeView(view: ExplorerView) {
+    if (view === visibleView && viewPreference !== "auto") return;
+    scrollPositions.current[visibleView] = window.scrollY;
+    const params = favoritesOnly
+      ? favoritesSearchParams(searchState, allFavoriteOffers)
+      : searchParams(searchState);
+    params.set("display", view);
+    if (selectedId) params.set("listing", selectedId);
+    window.history.pushState(null, "", `${window.location.pathname}?${params}`);
+    setViewPreference(view);
   }
   function choose(id: string) {
     setSelectedId(id);
-
-    setMobileView("map");
+    setViewPreference("map");
   }
+  function rememberListPosition() {
+    try {
+      sessionStorage.setItem(
+        "gp:explore:list-scroll",
+        JSON.stringify({
+          href: window.location.pathname + window.location.search,
+          top: window.scrollY,
+        }),
+      );
+    } catch {
+      /* Returning to the list still works without optional scroll persistence. */
+    }
+  }
+  const emptyMessage = favoritesOnly
+    ? favorites.ids.length
+      ? "Aucun favori disponible ne correspond à ces filtres. Vos favoris restent enregistrés."
+      : "Touchez le cœur d’une annonce pour la retrouver ici."
+    : hasFilters
+      ? "Élargissez votre recherche en retirant des filtres ou en choisissant un autre secteur."
+      : `Aucune annonce à ${transactionType === "rent" ? "louer" : "vendre"} pour le moment. De nouvelles places pourront être proposées ici.`;
+  const emptyAction = hasFilters ? (
+    <button className="button button-secondary" onClick={reset}>
+      Élargir la recherche
+    </button>
+  ) : favoritesOnly ? (
+    <Link href={`/?display=${visibleView}`} className="button button-primary">
+      Explorer les parkings
+    </Link>
+  ) : (
+    <button
+      className="button button-secondary"
+      onClick={() => {
+        setTransactionType(transactionType === "rent" ? "sale" : "rent");
+        setSelectedId(null);
+      }}
+    >
+      Voir les parkings à {transactionType === "rent" ? "vendre" : "louer"}
+    </button>
+  );
   return (
-    <main id="main" className="explorer">
+    <main id="main" className={`explorer explorer-view-${visibleView}`}>
       <section className="search-section">
         <div className="search-heading">
           <h1>
@@ -382,7 +510,11 @@ export default function Explorer({
             <span className="search-separator" />
             <Tag size={22} />
             <span className="search-sale">
-              {transactionType === "rent" ? "À louer" : "À vendre"}
+              {allFavoriteOffers
+                ? "Tous mes favoris"
+                : transactionType === "rent"
+                  ? "À louer"
+                  : "À vendre"}
             </span>
             <button className="search-submit" aria-label="Rechercher">
               <Search size={25} />
@@ -392,15 +524,22 @@ export default function Explorer({
         <div className="filters">
           <FilterSelect
             label="Type d’offre"
-            value={transactionType}
-            applied
+            value={allFavoriteOffers ? "all" : transactionType}
+            applied={!allFavoriteOffers}
             onChange={(value) => {
-              setTransactionType(value as "sale" | "rent");
+              setAllFavoriteOffers(favoritesOnly && value === "all");
+              if (value === "all") setCompare([]);
+              if (value !== "all") setTransactionType(value as "sale" | "rent");
+              if (value === "all" && sort.startsWith("price_"))
+                setSort("recent");
               setMinPrice("");
               setMaxPrice("");
               setSelectedId(null);
             }}
             options={[
+              ...(favoritesOnly
+                ? [{ value: "all", label: "Tous mes favoris" }]
+                : []),
               { value: "sale", label: "À vendre" },
               { value: "rent", label: "À louer" },
             ]}
@@ -420,6 +559,7 @@ export default function Explorer({
           />
           <FilterSelect
             label="Budget maximum"
+            disabled={allFavoriteOffers}
             hint={
               transactionType === "rent"
                 ? "Loyer mensuel par place, ou du lot proposé ensemble"
@@ -481,23 +621,31 @@ export default function Explorer({
               <span className="filter-count">{advancedCount}</span>
             ) : null}
           </button>
-          {city || type || maxPrice || minArea || advancedCount > 0 ? (
+          {hasFilters ? (
             <button className="text-button clear-filters" onClick={reset}>
               <X size={15} />
               Effacer
             </button>
           ) : null}
-          <div className="mobile-view-switch">
+          <div
+            className="explorer-view-switch"
+            role="group"
+            aria-label="Affichage des annonces"
+          >
             <button
-              onClick={() => setMobileView("list")}
-              className={mobileView === "list" ? "active" : ""}
+              type="button"
+              onClick={() => changeView("list")}
+              aria-pressed={visibleView === "list"}
+              className={visibleView === "list" ? "active" : ""}
             >
               <List size={16} />
               Liste
             </button>
             <button
-              onClick={() => setMobileView("map")}
-              className={mobileView === "map" ? "active" : ""}
+              type="button"
+              onClick={() => changeView("map")}
+              aria-pressed={visibleView === "map"}
+              className={visibleView === "map" ? "active" : ""}
             >
               <MapIcon size={16} />
               Carte
@@ -527,6 +675,7 @@ export default function Explorer({
                   min="0"
                   step="1"
                   value={minPrice}
+                  disabled={allFavoriteOffers}
                   onChange={(e) => setMinPrice(e.target.value)}
                   placeholder="Sans minimum"
                 />
@@ -541,6 +690,7 @@ export default function Explorer({
                   min="0"
                   step="1"
                   value={maxPrice}
+                  disabled={allFavoriteOffers}
                   onChange={(e) => setMaxPrice(e.target.value)}
                   placeholder="Sans maximum"
                 />
@@ -613,6 +763,19 @@ export default function Explorer({
                 utilisent la position publique : elles restent approximatives
                 pour une annonce localisée au quartier.
               </p>
+              {visibleView === "list" ? (
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => {
+                    setMore(false);
+                    changeView("map");
+                  }}
+                >
+                  <MapIcon size={16} />
+                  Ouvrir la carte pour choisir une zone
+                </button>
+              ) : null}
               <label className="field">
                 Rayon autour du centre de la carte (km)
                 <input
@@ -676,9 +839,11 @@ export default function Explorer({
             </label>
             <p className="small muted">
               Les surfaces inconnues sont exclues lorsqu’un minimum est choisi.
-              {transactionType === "rent"
-                ? "Le budget s’applique au loyer mensuel d’une place disponible ; pour un lot indivisible, au loyer total du lot."
-                : "Le budget s’applique au prix d’une place disponible ; pour un lot indivisible, au prix total du lot."}
+              {allFavoriteOffers
+                ? " Choisissez « À vendre » ou « À louer » pour filtrer par budget."
+                : transactionType === "rent"
+                  ? "Le budget s’applique au loyer mensuel d’une place disponible ; pour un lot indivisible, au loyer total du lot."
+                  : "Le budget s’applique au prix d’une place disponible ; pour un lot indivisible, au prix total du lot."}
             </p>
             <button
               className="button button-primary full-width"
@@ -690,7 +855,9 @@ export default function Explorer({
           </div>
         ) : null}
       </section>
-      <div className={`explore-workspace mobile-${mobileView}`}>
+      <div
+        className={`explore-workspace mobile-${visibleView} view-${visibleView}`}
+      >
         <section
           id="resultats"
           className="results-panel"
@@ -723,20 +890,24 @@ export default function Explorer({
                 onChange={setSort}
                 options={[
                   { value: "recent", label: "Plus récents" },
-                  {
-                    value: "price_asc",
-                    label:
-                      transactionType === "rent"
-                        ? "Loyer croissant"
-                        : "Prix croissant",
-                  },
-                  {
-                    value: "price_desc",
-                    label:
-                      transactionType === "rent"
-                        ? "Loyer décroissant"
-                        : "Prix décroissant",
-                  },
+                  ...(!allFavoriteOffers
+                    ? [
+                        {
+                          value: "price_asc",
+                          label:
+                            transactionType === "rent"
+                              ? "Loyer croissant"
+                              : "Prix croissant",
+                        },
+                        {
+                          value: "price_desc",
+                          label:
+                            transactionType === "rent"
+                              ? "Loyer décroissant"
+                              : "Prix décroissant",
+                        },
+                      ]
+                    : []),
                   { value: "area_asc", label: "Surface par place croissante" },
                   {
                     value: "spaces_desc",
@@ -778,22 +949,8 @@ export default function Explorer({
                     : "Vos favoris commencent ici."
                   : "Aucune place pour ces critères."}
               </h3>
-              <p>
-                {favoritesOnly
-                  ? favorites.ids.length
-                    ? "Aucun favori disponible ne correspond à ces filtres. Vos favoris restent enregistrés."
-                    : "Touchez le cœur d’une annonce pour la retrouver ici."
-                  : "Essayez un autre quartier ou élargissez votre budget."}
-              </p>
-              {favoritesOnly ? (
-                <Link href="/" className="button button-primary">
-                  Explorer les parkings
-                </Link>
-              ) : (
-                <button className="button button-secondary" onClick={reset}>
-                  Réinitialiser les filtres
-                </button>
-              )}
+              <p>{emptyMessage}</p>
+              {emptyAction}
             </div>
           ) : null}
           <div className="results-list">
@@ -802,13 +959,22 @@ export default function Explorer({
                 key={l.id}
                 eager={index < 2}
                 listing={l}
-                transactionType={transactionType}
+                transactionType={offerFilter}
                 selected={selectedId === l.id}
+                href={
+                  visibleView === "list"
+                    ? `/annonces/${l.id}/${l.slug}${offerFilter ? `?transactionType=${offerFilter}` : ""}`
+                    : undefined
+                }
                 onSelect={() => choose(l.id)}
+                onNavigate={rememberListPosition}
                 favorite={favorites.ids.includes(l.id)}
+                favoriteDisabled={favorites.loading}
                 onFavorite={() => void favorites.toggle(l.id)}
                 compare={compare.includes(l.id)}
-                onCompare={() => toggleCompare(l.id)}
+                onCompare={
+                  allFavoriteOffers ? undefined : () => toggleCompare(l.id)
+                }
               />
             ))}
           </div>
@@ -833,6 +999,7 @@ export default function Explorer({
                   <span>Annonce indisponible {index + 1}</span>
                   <button
                     className="text-button"
+                    disabled={favorites.loading}
                     onClick={() => void favorites.toggle(id)}
                   >
                     Retirer des favoris
@@ -854,12 +1021,14 @@ export default function Explorer({
           {initialized && mapRequested ? (
             <CityMap
               listings={filtered}
-              transactionType={transactionType}
+              visible={visibleView === "map"}
+              transactionType={offerFilter}
               selectedId={selected?.id || null}
               onSelect={choose}
               initialView={mapView}
               onCameraChange={cameraChanged}
               onSearchArea={searchArea}
+              onRecenter={() => setSelectedId(null)}
             />
           ) : (
             <div className="map-loading" role="status">
@@ -870,46 +1039,70 @@ export default function Explorer({
             <ListingInspector
               key={selected.id}
               listing={selected}
-              transactionType={transactionType}
+              transactionType={offerFilter}
               onClose={() => {
                 setSelectedId(null);
               }}
             />
-          ) : (
+          ) : !loading && !error && filtered.length ? (
             <div className="map-hint">
               <MapPin size={18} />
               <span>
                 Choisissez un prix sur la carte pour découvrir le bien.
               </span>
             </div>
-          )}
-          <button
-            className="compare-floating button"
-            onClick={() => {
-              if (compare.length >= 2)
-                window.location.assign(
-                  `/comparer?ids=${compare.join(",")}&transactionType=${transactionType}`,
-                );
-              else
-                setCompareNotice(
-                  "Ajoutez au moins deux biens avec « Comparer » sous les annonces.",
-                );
-            }}
-          >
-            <Layers3 size={19} />
-            Comparer des biens
-            {compare.length ? (
-              <span className="compare-count">{compare.length}</span>
-            ) : null}
-          </button>
+          ) : !loading && !error ? (
+            <div className="map-empty-state" role="status">
+              <Search size={24} />
+              <strong>
+                {favoritesOnly
+                  ? "Aucun favori à afficher ici."
+                  : "Aucune annonce pour cette recherche."}
+              </strong>
+              <p>{emptyMessage}</p>
+              {emptyAction}
+            </div>
+          ) : error ? (
+            <div className="map-empty-state" role="status">
+              <strong>La recherche est interrompue.</strong>
+              <p>{error}</p>
+              <button
+                className="button button-primary"
+                onClick={() => void load()}
+              >
+                Réessayer
+              </button>
+            </div>
+          ) : null}
+          {!allFavoriteOffers && (filtered.length > 0 || compare.length > 0) ? (
+            <button
+              className="compare-floating button"
+              onClick={() => {
+                if (compare.length >= 2)
+                  window.location.assign(
+                    `/comparer?ids=${compare.join(",")}${offerFilter ? `&transactionType=${offerFilter}` : ""}`,
+                  );
+                else
+                  setCompareNotice(
+                    "Ajoutez au moins deux biens avec « Comparer » sous les annonces.",
+                  );
+              }}
+            >
+              <Layers3 size={19} />
+              Comparer des biens
+              {compare.length ? (
+                <span className="compare-count">{compare.length}</span>
+              ) : null}
+            </button>
+          ) : null}
         </section>
       </div>
       {compare.length > 0 ? (
         <a
-          className="mobile-compare button"
+          className="mobile-compare explorer-compare button"
           href={
             compare.length >= 2
-              ? `/comparer?ids=${compare.join(",")}&transactionType=${transactionType}`
+              ? `/comparer?ids=${compare.join(",")}${offerFilter ? `&transactionType=${offerFilter}` : ""}`
               : "#resultats"
           }
         >

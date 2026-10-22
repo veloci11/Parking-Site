@@ -8,6 +8,11 @@ import { handleApi } from "../src/server/api";
 import { db, resetDbForTests } from "../src/server/db";
 import { mailOptions } from "../src/server/mail";
 import {
+  messageRequestDraft,
+  composerAfterAcknowledgement,
+  createConversationSendScope,
+} from "../src/components/account/message-request-draft";
+import {
   visitRequestDraft,
   type VisitRequestDraft,
 } from "../src/components/account/visit-request-draft";
@@ -64,6 +69,116 @@ async function conversation(cookie: string, listingId = listings[0]) {
 function count(table: "messages" | "visits" | "outbox" | "message_reads") {
   return Number(db().prepare(`SELECT COUNT(*) AS n FROM ${table}`).get()?.n);
 }
+
+test("message retry retains its key, while an edited body or conversation creates a new request", () => {
+  let serial = 0;
+  const id = () => `request-${++serial}`;
+  const first = messageRequestDraft(null, "a", " Bonjour ", id);
+  assert.equal(messageRequestDraft(first, "a", "Bonjour", id), first);
+  const edited = messageRequestDraft(first, "a", "Bonjour, place 18 ?", id);
+  assert.notEqual(edited.clientRequestId, first.clientRequestId);
+  assert.notEqual(
+    messageRequestDraft(edited, "b", edited.body, id).clientRequestId,
+    edited.clientRequestId,
+  );
+  assert.equal(composerAfterAcknowledgement(" Bonjour ", first.body), "");
+  assert.equal(
+    composerAfterAcknowledgement("Nouvelle question", first.body),
+    "Nouvelle question",
+  );
+});
+
+test("lost message response then edited content sends both intentions, unchanged retry sends only once", async () => {
+  const buyer = await persona("buyer");
+  const id = await conversation(buyer);
+  const first = messageRequestDraft(
+    null,
+    id,
+    "La place 18 est-elle disponible ?",
+  );
+  const accepted = await api(
+    `conversations/${id}/messages`,
+    "POST",
+    first,
+    buyer,
+  );
+  const retried = await api(
+    `conversations/${id}/messages`,
+    "POST",
+    messageRequestDraft(first, id, first.body),
+    buyer,
+  );
+  assert.equal(accepted.status, 201);
+  assert.equal(retried.body.data.id, accepted.body.data.id);
+  assert.equal(count("messages"), 1);
+  const edited = messageRequestDraft(first, id, "Je peux venir samedi matin.");
+  const changed = await api(
+    `conversations/${id}/messages`,
+    "POST",
+    edited,
+    buyer,
+  );
+  assert.equal(changed.status, 201);
+  assert.equal(changed.body.data.body, edited.body);
+  assert.equal(count("messages"), 2);
+});
+
+test("a delayed send success or failure cannot alter the composer after A → B → A", async () => {
+  for (const failed of [false, true]) {
+    const scope = createConversationSendScope();
+    scope.select("a");
+    const oldSend = scope.begin("a");
+    let settle!: () => void;
+    const response = new Promise<void>((resolve, reject) => {
+      settle = () => (failed ? reject(new Error("Ancien envoi")) : resolve());
+    });
+    const composer = {
+      text: "Texte de la nouvelle visite de A",
+      error: "",
+      sending: true,
+    };
+    const handled = response
+      .then(
+        () =>
+          oldSend.apply(() => {
+            composer.text = "";
+          }),
+        (error) =>
+          oldSend.apply(() => {
+            composer.error = error.message;
+          }),
+      )
+      .finally(() => {
+        oldSend.apply(() => {
+          composer.sending = false;
+        });
+      });
+    scope.select("b");
+    scope.select("a");
+    const newSend = scope.begin("a");
+    settle();
+    await handled;
+    assert.deepEqual(composer, {
+      text: "Texte de la nouvelle visite de A",
+      error: "",
+      sending: true,
+    });
+    assert.equal(
+      newSend.apply(() => {
+        composer.sending = false;
+      }),
+      true,
+    );
+    assert.equal(composer.sending, false);
+    scope.select(undefined);
+    assert.equal(
+      newSend.apply(() => {
+        composer.error = "late";
+      }),
+      false,
+    );
+  }
+});
 
 test("clé de visite conservée après réponse perdue, renouvelée pour un nouveau créneau ou échange", () => {
   let serial = 0;

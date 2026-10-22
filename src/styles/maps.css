@@ -121,7 +121,11 @@
 }
 .gp-map-price {
   display: block;
-  position: relative;
+  /* MapLibre translates from the canvas origin. Relative positioning would
+     add normal-flow offsets and move each successive marker farther south. */
+  position: absolute;
+  top: 0;
+  left: 0;
   border: 1px solid #e5e7ef;
   white-space: nowrap;
   padding: 8px 14px;
@@ -172,6 +176,39 @@
 .gp-map-price.is-cluster {
   font-size: 14px;
   background: #f3ecd9;
+}
+.gp-map-cluster-choices {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 15;
+  width: min(360px, calc(100% - 32px));
+  max-height: calc(100% - 120px);
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #e5e7ef;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 10px 40px #21163726;
+}
+.gp-map-cluster-choices:focus {
+  outline: none;
+}
+.gp-map-cluster-item {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 14px 0;
+  border-top: 1px solid #e5e7ef;
+  text-align: left;
+  color: #12141d;
+  font-size: 14px;
+}
+.gp-map-cluster-item:hover {
+  color: #6d28ff;
 }
 .gp-map-loading,
 .gp-map-unavailable {
@@ -667,22 +704,31 @@
 .gp-map-search-area {
   position: absolute;
   left: 50%;
-  top: 76px;
+  top: 132px;
   transform: translateX(-50%);
   z-index: 12;
   box-shadow: 0 6px 24px #20113724;
   white-space: nowrap;
 }
 
-.gp-map-geolocate {
+.gp-map-position-actions {
   position: absolute;
   left: 24px;
+  right: 24px;
   top: 82px;
   z-index: 4;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  pointer-events: none;
+}
+.gp-map-geolocate {
+  pointer-events: auto;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 14px;
+  padding: 10px 12px;
+  white-space: nowrap;
   background: #fff;
   color: #262132;
   border: 1px solid #e5e1ee;
@@ -723,6 +769,14 @@
     width: max-content;
     max-width: calc(100% - 32px);
     white-space: normal;
+  }
+  .gp-map-position-actions {
+    left: 12px;
+    right: 12px;
+    gap: 6px;
+  }
+  .gp-map-geolocate {
+    padding: 10px;
   }
 }
 

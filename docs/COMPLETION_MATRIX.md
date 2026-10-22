@@ -1,5 +1,11 @@
 # Matrice de complétude des exigences — V1
 
+## Addendum de finition ergonomique — 22 octobre 2026
+
+Le [rapport de finition](qa/UX_FINISH_2026-10-22.md) prévaut pour l’état de l’interface et les nouveaux compteurs de recette. La revue précédente n’était pas une clôture : ses erreurs de validation, de récupération sans résultat et d’entrée anonyme sont maintenant corrigées. Liste/Carte fonctionne sur mobile et ordinateur ; les favoris, le contact par place, les envois de messages et le rattachement administratif ont reçu des contrôles de concurrence et de continuité.
+
+Le coordinateur a exercé les trois rôles dans le navigateur avec une annonce mixte entièrement fictive, du dépôt à la réponse du vendeur. Les preuves, dimensions d’écran et limites sont consignées dans le rapport. Les données absentes restent explicites ; la présence d’un champ ou un succès sur SQLite ne garantit pas son renseignement sur un vrai bien, la livraison d’un email humain ou la révocation CDN réelle. Aucune migration ni mutation Supabase n’est ajoutée par cette passe. Les prérequis d’ouverture publique et les forfaits V2 restent séparés.
+
 État de travail du 21 octobre 2026. **L’addendum courant ci-dessous prévaut sur les tableaux historiques 001–011 conservés ensuite.** Ces tableaux étaient une photographie avant intégration ; leurs mentions « absent », « 21 tables », « 11 migrations » et les anciens compteurs de recette ne décrivent plus le dépôt courant. Ils restent utiles pour retrouver les écarts initiaux, sans constituer une nouvelle recette.
 
 ## Addendum de reprise — 22 octobre 2026, migrations032–034

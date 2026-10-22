@@ -24,7 +24,7 @@ export function decodePreparation(raw: string | null): Preparation | null {
       Array.isArray(value) ||
       typeof value.title !== "string" ||
       typeof value.city !== "string" ||
-      !["covered", "box", "outdoor"].includes(value.type) ||
+      !["covered", "box", "outdoor", "mixed"].includes(value.type) ||
       (value.transactionType !== undefined &&
         !["sale", "rent"].includes(value.transactionType)) ||
       !Number.isInteger(value.quantity) ||

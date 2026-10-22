@@ -1,53 +1,62 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { api, useSession } from "./client";
+import { createFavoritesStore, initialFavoritesState } from "./favorites-store";
 import type { Listing } from "./types";
 const key = "gp:favorites:v1";
-export function useFavorites() {
-  const { user } = useSession();
-  const [ids, setIds] = useState<string[]>([]);
-  const [error, setError] = useState("");
-  useEffect(() => {
-    let active = true;
-    if (user) {
-      api<Array<Listing | string>>("/api/favorites")
-        .then((data) => {
-          if (active)
-            setIds(data.map((x) => (typeof x === "string" ? x : x.id)));
-        })
-        .catch(() => {});
-    } else {
-      try {
-        const parsed = JSON.parse(localStorage.getItem(key) || "[]");
-        setIds(
-          Array.isArray(parsed)
-            ? parsed.filter((x) => typeof x === "string").slice(0, 100)
-            : [],
-        );
-      } catch {
-        setIds([]);
-      }
-    }
-    return () => {
-      active = false;
-    };
-  }, [user]);
-  async function toggle(id: string) {
-    const selected = ids.includes(id);
-    const previous = ids;
-    const next = selected ? ids.filter((x) => x !== id) : [...ids, id];
-    setIds(next);
-    setError("");
-    try {
-      if (user)
-        await api(`/api/favorites/${id}`, {
-          method: selected ? "DELETE" : "PUT",
-        });
-      else localStorage.setItem(key, JSON.stringify(next));
-    } catch (e) {
-      setIds(previous);
-      setError((e as Error).message);
-    }
+function localIds(): string[] {
+  const raw = localStorage.getItem(key);
+  try {
+    const parsed = JSON.parse(raw || "[]");
+    return Array.isArray(parsed)
+      ? [
+          ...new Set(
+            parsed.filter((id): id is string => typeof id === "string"),
+          ),
+        ].slice(0, 100)
+      : [];
+  } catch {
+    return [];
   }
-  return { ids, toggle, error };
+}
+export function useFavorites() {
+  const { user, loading: sessionLoading } = useSession();
+  const userId = user?.id;
+  const [store] = useState(createFavoritesStore);
+  const state = useSyncExternalStore(
+    store.subscribe,
+    store.getSnapshot,
+    () => initialFavoritesState,
+  );
+  useEffect(() => {
+    if (sessionLoading) return;
+    return store.connect(
+      userId
+        ? {
+            load: async () =>
+              (await api<Array<Listing | string>>("/api/favorites")).map(
+                (item) => (typeof item === "string" ? item : item.id),
+              ),
+            save: async (id, selected) => {
+              await api(`/api/favorites/${id}`, {
+                method: selected ? "PUT" : "DELETE",
+              });
+            },
+          }
+        : {
+            load: async () => localIds(),
+            save: async (id, selected) => {
+              const ids = new Set(localIds());
+              if (selected) ids.add(id);
+              else ids.delete(id);
+              localStorage.setItem(key, JSON.stringify([...ids]));
+            },
+          },
+    );
+  }, [userId, sessionLoading, store]);
+  return {
+    ...state,
+    loading: sessionLoading || state.loading,
+    toggle: store.toggle,
+  };
 }

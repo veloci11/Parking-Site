@@ -14,6 +14,7 @@ import {
   type RegistryLevelPlanHistory,
 } from "@/lib/parking-registry";
 import type { Listing, User, AdminUser } from "@/lib/types";
+import { loadRegistrySelection } from "@/lib/registry-selection";
 import "@/styles/registry.css";
 const empty: RegistryAdminData = { sites: [], links: [], conflicts: [] };
 function LevelPlanHistory({
@@ -272,33 +273,77 @@ function Content({
     [checked, setChecked] = useState(false),
     [busy, setBusy] = useState(false),
     [loading, setLoading] = useState(true),
+    [registryReady, setRegistryReady] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
+  const activeListingId = useRef(initialListingId || ""),
+    pendingLoad = useRef<AbortController | null>(null),
+    mutationPending = useRef(false);
   const site = data.sites.find((item) => item.id === siteId),
     level = site?.levels.find((item) => item.id === levelId);
-  async function reload() {
+  const mutationDisabled = busy || loading || !registryReady;
+  async function reload(
+    requestedListingId = activeListingId.current,
+    restoreLinkedSite = true,
+  ) {
+    pendingLoad.current?.abort();
+    const controller = new AbortController();
+    pendingLoad.current = controller;
+    activeListingId.current = requestedListingId;
     setLoading(true);
+    setRegistryReady(false);
+    setChecked(false);
+    setError("");
     const results = await Promise.allSettled([
-      api<RegistryAdminData>("/api/admin/parking-registry"),
-      api<Listing[]>("/api/admin/revisions"),
-      ...(user.role === "admin" ? [api<AdminUser[]>("/api/admin/users")] : []),
+      loadRegistrySelection(api, requestedListingId, controller.signal),
+      api<Listing[]>("/api/admin/revisions", { signal: controller.signal }),
+      api<AdminUser[]>("/api/admin/users", { signal: controller.signal }),
     ]);
-    const [registry, revisions, users] = results;
-    if (registry.status === "fulfilled") {
-      setData(registry.value);
-      setSiteId((current) =>
-        registry.value.sites.some((site) => site.id === current)
+    if (controller.signal.aborted) return;
+    const [context, revisions, users] = results;
+    const failures: string[] = [];
+    if (context.status === "fulfilled" && context.value) {
+      const { registry, listing: loadedListing } = context.value;
+      setData(registry);
+      setListing(loadedListing);
+      setListingId(requestedListingId);
+      setRegistryReady(true);
+      const linkedSiteId = registry.links.find(
+        (link) => link.listingId === requestedListingId,
+      )?.siteId;
+      setSiteId((current) => {
+        if (restoreLinkedSite && linkedSiteId) return linkedSiteId;
+        return registry.sites.some((site) => site.id === current)
           ? current
-          : registry.value.sites[0]?.id || "",
-      );
-    } else setError((registry.reason as Error).message);
+          : registry.sites[0]?.id || "";
+      });
+    } else {
+      setListing(null);
+      setMapping({});
+      if (context.status === "rejected")
+        failures.push((context.reason as Error).message);
+    }
     if (revisions.status === "fulfilled") setPending(revisions.value);
-    if (users?.status === "fulfilled") setAccounts(users.value as AdminUser[]);
+    else {
+      setPending([]);
+      failures.push(
+        "La liste des annonces n’a pas pu être chargée. Actualisez pour réessayer.",
+      );
+    }
+    if (users.status === "fulfilled") setAccounts(users.value);
+    else {
+      setAccounts([]);
+      failures.push(
+        "La liste des comptes n’a pas pu être chargée. Actualisez pour réessayer.",
+      );
+    }
+    setError(failures.join(" "));
     setLoading(false);
   }
   useEffect(() => {
-    void reload();
-  }, []);
+    void reload(initialListingId || "");
+    return () => pendingLoad.current?.abort();
+  }, [initialListingId]);
   useEffect(() => {
     setLevelId((current) =>
       site?.levels.some((item) => item.id === current)
@@ -317,32 +362,13 @@ function Content({
     setChecked(false);
   }, [siteId, data.sites, data.links, listing?.id]);
   async function loadListing(id: string) {
-    if (!id) return;
-    setBusy(true);
-    setError("");
-    setChecked(false);
-    try {
-      const item = await api<Listing>(
-        `/api/scenes?scope=listing&listingId=${encodeURIComponent(id)}`,
-      );
-      setListing(item);
-      setListingId(item.id);
-      const links = data.links.filter((link) => link.listingId === item.id);
-      if (links[0]) setSiteId(links[0].siteId);
-      setMapping(
-        Object.fromEntries(links.map((link) => [link.unitId, link.spaceId])),
-      );
-    } catch (error) {
-      setError((error as Error).message);
-      setListing(null);
-    } finally {
-      setBusy(false);
-    }
+    if (mutationPending.current) return;
+    setReason("");
+    setNotice("");
+    await reload(id);
   }
-  useEffect(() => {
-    if (initialListingId) void loadListing(initialListingId);
-  }, [initialListingId]);
   async function mutate(command: unknown) {
+    if (mutationPending.current || loading || !registryReady) return;
     const parsed = registryCommandSchema.safeParse(command);
     if (!parsed.success) {
       setError(
@@ -362,6 +388,7 @@ function Content({
       );
       return;
     }
+    mutationPending.current = true;
     setBusy(true);
     setError("");
     setNotice("");
@@ -380,14 +407,19 @@ function Content({
       );
       if (result.status === "saved" && parsed.data.action === "link_listing") {
         setChecked(false);
-        await loadListing(parsed.data.listingId);
       }
-      await reload();
+      await reload(
+        parsed.data.action === "link_listing"
+          ? parsed.data.listingId
+          : activeListingId.current,
+        parsed.data.action === "link_listing",
+      );
       if (result.id && parsed.data.action === "create_site")
         setSiteId(result.id);
     } catch (error) {
       setError((error as Error).message);
     } finally {
+      mutationPending.current = false;
       setBusy(false);
     }
   }
@@ -454,6 +486,7 @@ function Content({
         <label className="field">
           Parking existant
           <FilterSelect
+            disabled={busy || loading}
             variant="field"
             label="Parking existant"
             value={siteId}
@@ -546,7 +579,10 @@ function Content({
                 step="any"
               />
             </label>
-            <button className="button button-secondary" disabled={busy}>
+            <button
+              className="button button-secondary"
+              disabled={mutationDisabled}
+            >
               Créer le parking
             </button>
           </form>
@@ -560,6 +596,7 @@ function Content({
           <label className="field">
             Niveau
             <FilterSelect
+              disabled={busy || loading}
               variant="field"
               label="Niveau du parking"
               value={levelId}
@@ -625,14 +662,21 @@ function Content({
                   defaultValue={0}
                 />
               </label>
-              <button className="button button-secondary" disabled={busy}>
+              <button
+                className="button button-secondary"
+                disabled={mutationDisabled}
+              >
                 Ajouter le niveau
               </button>
             </form>
           </details>
           {level ? (
             <>
-              <LevelPlanHistory level={level} busy={busy} mutate={mutate} />
+              <LevelPlanHistory
+                level={level}
+                busy={mutationDisabled}
+                mutate={mutate}
+              />
               <p className="muted">
                 {level.spaces.length} place(s) physique(s) référencée(s). Les
                 dimensions inconnues restent vides.
@@ -691,7 +735,10 @@ function Content({
                       />
                     </label>
                   ))}
-                  <button className="button button-secondary" disabled={busy}>
+                  <button
+                    className="button button-secondary"
+                    disabled={mutationDisabled}
+                  >
                     Ajouter la place
                   </button>
                 </form>
@@ -707,6 +754,7 @@ function Content({
         <label className="field">
           Annonce en attente
           <FilterSelect
+            disabled={busy || loading}
             variant="field"
             label="Annonce en attente"
             value={listingId}
@@ -735,13 +783,14 @@ function Content({
             <input
               className="input"
               value={listingId}
+              disabled={busy || loading}
               onChange={(event) => setListingId(event.target.value)}
               placeholder="Identifiant de l’annonce à rapprocher"
             />
           </label>
           <button
             className="button button-secondary"
-            disabled={busy || !listingId}
+            disabled={busy || loading || !listingId}
           >
             Charger l’annonce
           </button>
@@ -764,6 +813,7 @@ function Content({
                   Unité {unit.number || "non numérotée"} · niveau {unit.level} ·{" "}
                   {unit.lengthM ?? "—"} × {unit.widthM ?? "—"} m
                   <FilterSelect
+                    disabled={busy || loading}
                     variant="field"
                     label={`Place physique de l’unité ${unit.number || "non numérotée"}`}
                     value={mapping[unit.id] || ""}
@@ -805,6 +855,7 @@ function Content({
               <input
                 type="checkbox"
                 checked={checked}
+                disabled={mutationDisabled}
                 onChange={(event) => setChecked(event.target.checked)}
               />{" "}
               J’ai comparé toutes les unités aux pièces et vérifié qu’elles
@@ -814,7 +865,7 @@ function Content({
             <button
               className="button button-primary"
               disabled={
-                busy ||
+                mutationDisabled ||
                 !checked ||
                 !site ||
                 reason.trim().length < 15 ||
@@ -874,6 +925,7 @@ function Content({
                 <>
                   <input type="hidden" name="userId" value={contributorId} />
                   <FilterSelect
+                    disabled={busy || loading}
                     variant="field"
                     label="Compte habilité aux références communes"
                     value={contributorId}
@@ -900,7 +952,9 @@ function Content({
             </label>
             <button
               className="button button-secondary"
-              disabled={busy || (accounts.length > 0 && !contributorId)}
+              disabled={
+                mutationDisabled || (accounts.length > 0 && !contributorId)
+              }
             >
               Accorder l’accès commun
             </button>
@@ -913,7 +967,7 @@ function Content({
                 · références communes{" "}
                 <button
                   className="text-link"
-                  disabled={busy}
+                  disabled={mutationDisabled}
                   onClick={() =>
                     void mutate({
                       action: "set_contributor",

@@ -1,10 +1,10 @@
 {
-  "checkedAt": "2026-10-22T13:49:32.010Z",
+  "checkedAt": "2026-10-22T17:43:04.383Z",
   "status": "passed",
   "scope": "isolated-loopback-http-five-mixed-unit-offers-address-search-manual-modeling-publication-availability-legacy-lot",
   "origin": "http://127.0.0.1:3002",
-  "serverMode": "production",
-  "passed": 176,
+  "serverMode": "coordinator_unspecified",
+  "passed": 168,
   "failedCheck": null,
   "checks": [
     {
@@ -795,42 +795,6 @@
       "status": 200
     },
     {
-      "name": "published_fixture_retained_for_coordinator_review",
-      "passed": true
-    },
-    {
-      "name": "deferred_withdrawal_local_demo_only",
-      "passed": true
-    },
-    {
-      "name": "deferred_vendeur_login",
-      "passed": true,
-      "status": 200
-    },
-    {
-      "name": "deferred_vendeur_identity_matches",
-      "passed": true
-    },
-    {
-      "name": "deferred_acheteur_login",
-      "passed": true,
-      "status": 200
-    },
-    {
-      "name": "deferred_acheteur_identity_matches",
-      "passed": true
-    },
-    {
-      "name": "deferred_seller_owns_retained_draft",
-      "passed": true,
-      "status": 200
-    },
-    {
-      "name": "retained_publication_visible_before_withdrawal",
-      "passed": true,
-      "status": 200
-    },
-    {
       "name": "seller_withdraws_published_offer",
       "passed": true,
       "status": 200
@@ -861,13 +825,12 @@
   "supabaseTouched": false,
   "externalEmailSent": false,
   "syntheticImages": "Three explicit fictional parking images, generated as SVG and uploaded as genuine PNG inputs through the application",
-  "cleanup": "withdrawal tested; disposable database folder removal awaits coordinator shutdown",
+  "cleanup": "withdrawal tested; disposable database folder removed after coordinator shutdown",
   "limitations": [
     "HTTP route journey is separate from the browser UI recipe",
     "Local MFA explicitly unsupported; real AAL2 is not claimed by this run",
     "No real property, personal account or external email"
   ],
-  "withdrawnAt": "2026-10-22T13:57:26.788Z",
   "disposableDatabaseRemoved": true,
   "qaServersStoppedBeforeCleanup": true
 }

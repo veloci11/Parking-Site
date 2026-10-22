@@ -61,7 +61,8 @@ test("pre-login preparation defers offer and price choices to each unit after si
   const copy = text(renderToStaticMarkup(createElement(PreparationForm)));
   assert.match(copy, /Titre provisoire/);
   assert.match(copy, /Nombre de places dans cette annonce/);
-  assert.match(copy, /Après connexion, le prix, le choix vente ou location/);
+  assert.match(copy, /À vendre, à louer, ou les deux/);
+  assert.match(copy, /un prix pour chacune/);
   assert.doesNotMatch(copy, /Type d’offre/);
 });
 function text(html: string) {

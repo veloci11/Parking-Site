@@ -1,0 +1,56 @@
+{
+  "checkedAt": "2026-10-22T18:23:54.795040+00:00",
+  "scope": "local synthetic UI recipe; no public deployment and no remote mutation",
+  "finalBuild": "A8gkDChNyNBp0fVQmdnHP",
+  "tests": {
+    "total": 228,
+    "passed": 225,
+    "failed": 0,
+    "skipped": 3
+  },
+  "http": {
+    "passed": 168,
+    "failed": 0,
+    "build": "e-cpGd499N9KLmWh_ymTc",
+    "beforeFinalUiOnlyFixes": true
+  },
+  "rolesExercised": [
+    "anonymous",
+    "buyer",
+    "seller",
+    "administrator"
+  ],
+  "markerDom": {
+    "desktopVisibleMarkers": 5,
+    "allPositionAbsolute": true,
+    "allOffsetTopAndLeftZero": true,
+    "desktopWidth": 1440,
+    "desktopScrollWidth": 1440,
+    "mobileWidth": 390,
+    "mobileScrollWidth": 375
+  },
+  "finalMapCaptures": [
+    "20-map-geography-corrected.png",
+    "21-map-group-corrected.png",
+    "22-map-mobile-corrected.png"
+  ],
+  "browserConsoleWarningsAndErrors": [],
+  "cleanup": {
+    "disposableRuntimeRemoved": true,
+    "temporaryTabClosed": true,
+    "viewportRestored": true,
+    "closedTaskPorts": [
+      3000,
+      3001,
+      3002
+    ],
+    "unrelated8768Untouched": true
+  },
+  "limits": [
+    "Synthetic properties and local accounts only",
+    "No real email or human MFA completion",
+    "CDN purge deferred by owner",
+    "No public deployment",
+    "Not a complete assistive technology audit"
+  ]
+}

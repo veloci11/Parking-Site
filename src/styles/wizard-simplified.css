@@ -2,6 +2,24 @@
 .account-wizard .account-wizard-steps {
   min-width: 0;
 }
+.account-wizard .account-wizard-errors {
+  display: block;
+  scroll-margin-top: 112px;
+}
+.account-wizard .account-wizard-errors > p {
+  font-weight: 600;
+}
+.account-wizard .account-wizard-errors ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+.account-wizard .account-wizard-errors li + li {
+  margin-top: 8px;
+}
+.account-wizard .account-wizard-errors a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 @media (max-width: 900px) {
   .account-wizard .account-wizard-layout {
     grid-template-columns: minmax(0, 1fr);
