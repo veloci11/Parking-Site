@@ -179,15 +179,22 @@ test("parent rejects malformed, oversized and trailing output from an untrusted 
 
 test("real Docker raster uses the enforced isolation policy and renders/rejects inert fixtures", async (t) => {
   const image = process.env.GP_SOURCE_RASTER_IMAGE;
-  if (!image)
+  const required = process.env.GP_REQUIRE_RASTER_ISOLATION_TEST === "true";
+  if (!image) {
+    assert.ok(
+      !required,
+      "The CI isolation gate requires a pinned raster image.",
+    );
     return t.skip(
       "No pinned GP_SOURCE_RASTER_IMAGE; real container was not executed.",
     );
+  }
   try {
     await execute("docker", ["info", "--format", "{{.ServerVersion}}"], {
       timeout: 5000,
     });
-  } catch {
+  } catch (error) {
+    if (required) throw error;
     return t.skip(
       "Docker daemon unavailable; real container was not executed.",
     );
