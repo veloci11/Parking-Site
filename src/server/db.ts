@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import type { Listing, User } from "@/lib/types";
 import { currentRequestId } from "./request-context";
+import { parisDemoListing, migrateParisDemo } from "./demo-paris";
 let singleton: DatabaseSync | undefined;
 export function db() {
   if (singleton) return singleton;
@@ -73,6 +74,17 @@ export function db() {
       sql.exec(`ALTER TABLE users ADD COLUMN ${column} ${type}`);
   singleton = sql;
   seed(sql);
+  sql
+    .prepare(
+      "INSERT OR IGNORE INTO users(id,name,email,role,verified,created_at) VALUES(?,?,?,'admin',1,?)",
+    )
+    .run(
+      personas.admin,
+      "Administration GPpark",
+      "admin@demo.invalid",
+      new Date().toISOString(),
+    );
+  migrateParisDemo(sql);
   sql.exec(
     "UPDATE listings SET published_at=json_extract(public_json,'$.updatedAt') WHERE public_json IS NOT NULL AND published_at IS NULL",
   );
@@ -98,6 +110,7 @@ export const personas = {
   buyer: "00000000-0000-4000-8000-000000000001",
   seller: "00000000-0000-4000-8000-000000000002",
   moderator: "00000000-0000-4000-8000-000000000003",
+  admin: "00000000-0000-4000-8000-000000000004",
 };
 export function userDTO(row: Record<string, unknown>): User {
   return {
@@ -119,6 +132,7 @@ function seed(sql: DatabaseSync) {
     ["Camille Martin", personas.buyer, "member"],
     ["Alexandre Laurent", personas.seller, "member"],
     ["Équipe modération", personas.moderator, "moderator"],
+    ["Administration GPpark", personas.admin, "admin"],
   ])
     sql
       .prepare(
@@ -127,74 +141,78 @@ function seed(sql: DatabaseSync) {
       .run(
         id,
         name,
-        `${role === "moderator" ? "moderation" : id === personas.buyer ? "acheteur" : "vendeur"}@demo.invalid`,
+        `${role === "admin" ? "admin" : role === "moderator" ? "moderation" : id === personas.buyer ? "acheteur" : "vendeur"}@demo.invalid`,
         role,
         now,
       );
   const data = [
-    ["Part-Dieu", 1850000, "covered", 12, 4.859, 45.76],
-    ["Montchat", 2400000, "box", 14, 4.887, 45.749],
-    ["Sans-Souci", 1600000, "outdoor", 11, 4.868, 45.743],
-    ["Confluence", 3100000, "covered", 12, 4.818, 45.742],
-    ["Croix-Rousse", 2200000, "covered", null, 4.832, 45.779],
-    ["Brotteaux", 2850000, "box", 16, 4.858, 45.77],
+    ["Gare de Lyon · 12e", 1850000, "covered", 12, 2.3739, 48.8446],
+    ["Billancourt", 2400000, "box", 14, 2.2402, 48.8331],
+    ["Bas-Montreuil", 1600000, "outdoor", 11, 2.4358, 48.8606],
+    ["Chantiers", 3100000, "covered", 12, 2.1362, 48.7963],
+    ["Stade de France", 2200000, "covered", null, 2.3578, 48.9274],
+    ["Centre", 2850000, "box", 16, 2.4556, 48.7904],
   ] as const;
   data.forEach(([district, price, type, area, lng, lat], i) => {
     const id = `10000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`;
-    const listing: Listing = {
-      id,
-      slug: `lyon-${district
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")}`,
-      title:
-        i === 3
-          ? "Deux places côte à côte"
-          : type === "box"
-            ? "Un box, l’esprit tranquille"
-            : type === "outdoor"
-              ? "Votre place au grand air"
-              : "Une place au cœur du quartier",
-      description:
-        i === 0
-          ? "À quelques minutes de la gare, une place couverte dans une résidence calme. Accès par rampe et portail. Les dimensions et l’état présentés sont des données fictives de démonstration."
-          : `Découvrez ce ${type === "box" ? "box fermé" : "parking"} dans le quartier ${district}. Ce bien est un exemple fictif pour explorer la plateforme. Les photos sont des illustrations et ne représentent pas un bien à vendre.`,
-      city: "Lyon",
-      district,
-      priceCents: price,
-      type,
-      spaces: Array.from({ length: i === 3 ? 2 : 1 }, (_, j) => ({
-        id: randomUUID(),
-        number: String(i === 0 ? 12 : i === 3 ? 14 + j : 27 + i),
-        level: type === "outdoor" ? 0 : -1,
-        areaM2: area,
-        lengthM: area ? 5 : null,
-        widthM: area ? area / 5 : null,
-        clearanceM: type === "outdoor" ? null : 2.1,
-      })),
-      photos: [`/demo/${type}.png`],
-      quality: {
-        floor: i === 0 ? "Bon état · traces d’usage" : "État déclaré",
-        lighting:
-          type === "outdoor" ? "Lumière naturelle" : "Éclairage collectif",
-        humidity: i === 0 ? "À vérifier sur place" : "Non renseignée",
-        access: type === "outdoor" ? "Accès extérieur" : "Portail sécurisé",
-        maneuver: i === 0 ? "Poteau côté gauche" : "À vérifier sur place",
-        observations:
+    const listing: Listing = parisDemoListing(
+      {
+        id,
+        slug: `paris-region-${district
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")}`,
+        title:
+          i === 3
+            ? "Deux places côte à côte"
+            : type === "box"
+              ? "Un box, l’esprit tranquille"
+              : type === "outdoor"
+                ? "Votre place au grand air"
+                : "Une place au cœur du quartier",
+        description:
           i === 0
-            ? "Poteau latéral à prendre en compte. Illustration fictive ; aucune expertise du bien."
-            : "Données et photos de démonstration. État réel à documenter.",
+            ? "À quelques minutes de la gare, une place couverte dans une résidence calme. Accès par rampe et portail. Les dimensions et l’état présentés sont des données fictives de démonstration."
+            : `Découvrez ce ${type === "box" ? "box fermé" : "parking"} dans le quartier ${district}. Ce bien est un exemple fictif pour explorer la plateforme. Les photos sont des illustrations et ne représentent pas un bien à vendre.`,
+        city: "Paris",
+        district,
+        priceCents: price,
+        type,
+        spaces: Array.from({ length: i === 3 ? 2 : 1 }, (_, j) => ({
+          id: randomUUID(),
+          number: String(i === 0 ? 12 : i === 3 ? 14 + j : 27 + i),
+          level: type === "outdoor" ? 0 : -1,
+          areaM2: area,
+          lengthM: area ? 5 : null,
+          widthM: area ? area / 5 : null,
+          clearanceM: type === "outdoor" ? null : 2.1,
+        })),
+        photos: [`/demo/${type}.png`],
+        quality: {
+          floor: i === 0 ? "Bon état · traces d’usage" : "État déclaré",
+          lighting:
+            type === "outdoor" ? "Lumière naturelle" : "Éclairage collectif",
+          humidity: i === 0 ? "À vérifier sur place" : "Non renseignée",
+          access: type === "outdoor" ? "Accès extérieur" : "Portail sécurisé",
+          maneuver: i === 0 ? "Poteau côté gauche" : "À vérifier sur place",
+          observations:
+            i === 0
+              ? "Poteau latéral à prendre en compte. Illustration fictive ; aucune expertise du bien."
+              : "Données et photos de démonstration. État réel à documenter.",
+        },
+        locationPrecision: i === 0 ? "exact_opt_in" : "area",
+        coordinates: [lng, lat],
+        sceneAvailable: i === 0,
+        isDemo: true,
+        status: "published",
+        version: 1,
+        sellerName: "Alexandre Laurent",
+        createdAt: now,
+        updatedAt: now,
       },
-      locationPrecision: i === 0 ? "exact_opt_in" : "area",
-      coordinates: [lng, lat],
-      sceneAvailable: i === 0,
-      isDemo: true,
-      status: "published",
-      version: 1,
-      sellerName: "Alexandre Laurent",
-      createdAt: now,
-      updatedAt: now,
-    };
+      i,
+      now,
+    );
     sql
       .prepare(
         "INSERT INTO listings(id,seller_id,draft_json,public_json,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?)",

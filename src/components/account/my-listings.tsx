@@ -1,16 +1,12 @@
 "use client";
 import { listingPrice, offerLabel } from "@/lib/listing-price";
+import { pricingScope, ListingOffersTable } from "../ListingOffers";
+import { ModelRequest } from "./modeling-request";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Check, ClipboardList, Pause, Plus, X } from "lucide-react";
 import { AccountGate, AccountShell, api, statusLabels } from "./shared";
-import {
-  areaLabel,
-  money,
-  typeLabels,
-  type Listing,
-  type User,
-} from "@/lib/types";
+import { areaLabel, typeLabels, type Listing, type User } from "@/lib/types";
 function Content({ user }: { user: User }) {
   const [items, setItems] = useState<Listing[]>([]),
     [filter, setFilter] = useState("all"),
@@ -135,9 +131,11 @@ function Content({ user }: { user: User }) {
               <div className="account-manage-copy">
                 <div>
                   <span className={`badge account-status-${l.status}`}>
-                    {l.status === "sold" && l.transactionType === "rent"
-                      ? "Louée"
-                      : statusLabels[l.status] || l.status}
+                    {l.status === "sold" && l.pricingMode === "per_space"
+                      ? "Offres clôturées"
+                      : l.status === "sold" && l.transactionType === "rent"
+                        ? "Louée"
+                        : statusLabels[l.status] || l.status}
                   </span>
                   {l.isDemo ? (
                     <span className="badge">Exemple fictif</span>
@@ -150,9 +148,13 @@ function Content({ user }: { user: User }) {
                 <strong>
                   {listingPrice(l)}
                   {l.spaces.length > 1
-                    ? ` · lot de ${l.spaces.length} places`
+                    ? ` · ${l.spaces.length} places dans l’annonce`
                     : ""}
                 </strong>
+                <p className="small muted">
+                  {offerLabel(l)} · {pricingScope(l)}
+                </p>
+                <ListingOffersTable listing={l} />
                 {l.availabilityConfirmedAt || l.availabilityExpiresAt ? (
                   <p className="muted">
                     {l.availabilityConfirmedAt
@@ -203,10 +205,12 @@ function Content({ user }: { user: User }) {
                   ) : null}
                   {l.status === "published" && l.spaces.length > 1 ? (
                     <Link
-                      href={`/compte/annonces/${l.id}/modifier?partial=1`}
+                      href={`/compte/annonces/${l.id}/modifier${l.pricingMode === "per_space" ? "" : "?partial=1"}`}
                       className="button button-secondary"
                     >
-                      Une partie du lot est vendue
+                      {l.pricingMode === "per_space"
+                        ? "Gérer prix et statuts par place"
+                        : "Une partie du lot est vendue ou louée"}
                     </Link>
                   ) : null}
                   {l.status === "published" ? (
@@ -219,14 +223,16 @@ function Content({ user }: { user: User }) {
                         <Pause size={16} />
                         Pause
                       </button>
-                      <button
-                        disabled={busy === l.id}
-                        className="button button-secondary"
-                        onClick={() => lifecycle(l, "sold")}
-                      >
-                        <Check size={16} />
-                        {l.transactionType === "rent" ? "Louée" : "Vendue"}
-                      </button>
+                      {l.pricingMode !== "per_space" ? (
+                        <button
+                          disabled={busy === l.id}
+                          className="button button-secondary"
+                          onClick={() => lifecycle(l, "sold")}
+                        >
+                          <Check size={16} />
+                          {l.transactionType === "rent" ? "Louée" : "Vendue"}
+                        </button>
+                      ) : null}
                     </>
                   ) : null}
                   {l.status === "paused" ? (
@@ -249,6 +255,7 @@ function Content({ user }: { user: User }) {
                     </button>
                   ) : null}
                 </div>
+                <ModelRequest listingId={l.id} />
               </div>
             </article>
           ))}

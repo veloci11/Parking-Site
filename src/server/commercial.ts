@@ -6,6 +6,8 @@ import {
 import type { Listing } from "@/lib/types";
 import { sceneDB } from "./scenes/local";
 import { ApiError } from "./security";
+import { assertLocalIdfPublication } from "./region";
+import { assertLocalOffers } from "./listing-offers";
 export function locationHash(value: Listing) {
   return createHash("sha256")
     .update(
@@ -25,6 +27,8 @@ export function validateLocalCommercial(
   actorId: string,
   submitting = false,
 ) {
+  assertLocalOffers(value, submitting);
+  if (submitting) assertLocalIdfPublication(value);
   try {
     const docs = new Set(
       sceneDB()

@@ -15,13 +15,13 @@ test("camera persisted state validates finite values and clamps renderer limits"
     { center: [10, 85.051129], zoom: 19, bearing: 30, pitch: 70 },
   );
   const view = {
-    center: [4.85, 45.75] as [number, number],
+    center: [2.37, 48.84] as [number, number],
     zoom: 14,
     bearing: -28,
     pitch: 55,
   };
   const normalized = normalizeMapView(JSON.parse(JSON.stringify(view)))!;
-  assert.ok(Math.abs(normalized.center[0] - 4.85) < 1e-10);
+  assert.ok(Math.abs(normalized.center[0] - 2.37) < 1e-10);
   assert.equal(normalized.bearing, -28);
 });
 test("search bounds preserve normal France view and explicitly widen crossing world", () => {

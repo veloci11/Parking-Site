@@ -1,5 +1,7 @@
 import { publicCommercialDetails } from "@/lib/commercial-details";
 import { publicConditions } from "@/lib/condition-observations";
+import { idfListingProblem } from "@/lib/paris-region";
+import { normalizeListingOffers, catalogOfferMatch } from "@/lib/listing-price";
 import type { Listing, Quality, Space } from "@/lib/types";
 import { db } from "./db";
 import { localEffectiveSceneAvailable } from "./scene-availability";
@@ -28,6 +30,7 @@ export function publicUnitQuality(
   return result;
 }
 export function publicProjection(value: Listing): Listing {
+  value = normalizeListingOffers(value);
   const spaces: Space[] = value.spaces.map((s, i) => ({
     id: `${value.id}:unit:${i + 1}`,
     number: s.number,
@@ -36,6 +39,9 @@ export function publicProjection(value: Listing): Listing {
     lengthM: s.lengthM,
     widthM: s.widthM,
     clearanceM: s.clearanceM,
+    ...(value.pricingMode === "per_space" && s.offer
+      ? { offer: { ...s.offer } }
+      : {}),
   }));
   const q = value.quality;
   const quality: Quality = {
@@ -57,6 +63,7 @@ export function publicProjection(value: Listing): Listing {
     district: value.district,
     priceCents: value.priceCents,
     transactionType: value.transactionType ?? "sale",
+    ...(value.pricingMode ? { pricingMode: value.pricingMode } : {}),
     type: value.type,
     spaces,
     photos: [...value.photos],
@@ -124,8 +131,9 @@ export function listPublicListingSnapshots(): Listing[] {
     .map((r) => JSON.parse(String(r.public_json)) as Listing)
     .filter(
       (value) =>
-        !value.availabilityExpiresAt ||
-        Date.parse(value.availabilityExpiresAt) > Date.now(),
+        (!value.availabilityExpiresAt ||
+          Date.parse(value.availabilityExpiresAt) > Date.now()) &&
+        !idfListingProblem(value),
     )
     .map(publicProjection);
 }
@@ -147,9 +155,21 @@ export function listPublicListings(query: CatalogQuery = {}): Listing[] {
     );
   if (query.city)
     listings = listings.filter((l) => fold(l.city).includes(fold(query.city!)));
+  if (query.type || query.maxPrice !== undefined || query.minArea !== undefined)
+    listings = listings.filter(
+      (l) =>
+        l.pricingMode !== "per_space" ||
+        catalogOfferMatch(l, {
+          type: query.type,
+          maxPrice: query.maxPrice,
+          minArea: query.minArea,
+          transactionType: l.transactionType,
+        }) !== null,
+    );
   if (query.type)
     listings = listings.filter(
       (l) =>
+        l.pricingMode === "per_space" ||
         l.type === query.type ||
         (l.type === "mixed" &&
           l.spaces.some(
@@ -157,10 +177,14 @@ export function listPublicListings(query: CatalogQuery = {}): Listing[] {
           )),
     );
   if (query.maxPrice !== undefined)
-    listings = listings.filter((l) => l.priceCents <= query.maxPrice!);
+    listings = listings.filter(
+      (l) => l.pricingMode === "per_space" || l.priceCents <= query.maxPrice!,
+    );
   if (query.minArea !== undefined)
-    listings = listings.filter((l) =>
-      l.spaces.every((s) => s.areaM2 !== null && s.areaM2 >= query.minArea!),
+    listings = listings.filter(
+      (l) =>
+        l.pricingMode === "per_space" ||
+        l.spaces.every((s) => s.areaM2 !== null && s.areaM2 >= query.minArea!),
     );
   if (query.ids) listings = listings.filter((l) => query.ids!.includes(l.id));
   if (query.sort === "price_asc")

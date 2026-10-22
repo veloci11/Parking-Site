@@ -16,12 +16,12 @@ const listing = {
 } as Listing;
 test("interior URL preserves public parking context, valid floor and selected public unit only", () => {
   const query = writeInteriorSelection(
-    "?query=Lyon&view=parking",
+    "?query=Paris&view=parking",
     listing,
     -2,
     "public-listing:unit:2",
   );
-  assert.equal(query.get("query"), "Lyon");
+  assert.equal(query.get("query"), "Paris");
   assert.deepEqual(readInteriorSelection(query.toString(), listing), {
     level: -2,
     unit: "public-listing:unit:2",

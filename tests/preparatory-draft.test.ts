@@ -8,7 +8,7 @@ test("préparation locale limitée aux informations non sensibles autorisées", 
   const result = decodePreparation(
     JSON.stringify({
       title: "Lot de deux places",
-      city: "Lyon",
+      city: "Paris",
       type: "covered",
       quantity: 2,
       address: "Adresse précise à ne pas conserver",
@@ -19,7 +19,7 @@ test("préparation locale limitée aux informations non sensibles autorisées", 
   );
   assert.deepEqual(result, {
     title: "Lot de deux places",
-    city: "Lyon",
+    city: "Paris",
     type: "covered",
     quantity: 2,
   });
@@ -29,6 +29,12 @@ test("préparation locale limitée aux informations non sensibles autorisées", 
   assert.notEqual(payload.spaces[0].id, payload.spaces[1].id);
   assert.equal(payload.spaces[0].areaM2, null);
   assert.equal(payload.spaces[0].widthM, null);
+  assert.equal(payload.pricingMode, "per_space");
+  assert.deepEqual(payload.spaces[0].offer, {
+    transactionType: "sale",
+    priceCents: 0,
+    status: "available",
+  });
   assert.equal("address" in payload, false);
   assert.equal("photos" in payload, false);
   assert.equal("priceCents" in payload, false);
@@ -62,7 +68,7 @@ test("le choix exclusif vente ou location est conservé dans la préparation", (
     const prepared = decodePreparation(
       JSON.stringify({
         title: "Lot à proposer",
-        city: "Lyon",
+        city: "Paris",
         type: "covered",
         quantity: 2,
         transactionType,
@@ -78,7 +84,7 @@ test("le choix exclusif vente ou location est conservé dans la préparation", (
     decodePreparation(
       JSON.stringify({
         title: "Lot",
-        city: "Lyon",
+        city: "Paris",
         type: "covered",
         quantity: 2,
         transactionType: "both",

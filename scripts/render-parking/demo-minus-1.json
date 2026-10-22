@@ -1,0 +1,112 @@
+{
+  "schemaVersion": "gp-parking-render-source/1",
+  "isDemo": true,
+  "level": -1,
+  "unit": "m",
+  "description": "Entirely fictional architectural demonstration. No real parking geometry or condition is represented.",
+  "floor": {
+    "footprintXZ": [
+      [-11.5, -9.5],
+      [11.5, -9.5],
+      [11.5, 9.5],
+      [-11.5, 9.5]
+    ],
+    "thicknessM": 0.32
+  },
+  "spaces": [
+    {
+      "number": "12",
+      "footprintXZ": [
+        [-3.44, -8.55],
+        [-0.16, -8.55],
+        [-0.16, -2.85],
+        [-3.44, -2.85]
+      ]
+    },
+    {
+      "number": "13",
+      "footprintXZ": [
+        [0.11, -8.55],
+        [3.39, -8.55],
+        [3.39, -2.85],
+        [0.11, -2.85]
+      ]
+    }
+  ],
+  "allSpaces": [
+    {
+      "number": "10",
+      "footprintXZ": [
+        [-10.54, -8.55],
+        [-7.26, -8.55],
+        [-7.26, -2.85],
+        [-10.54, -2.85]
+      ]
+    },
+    {
+      "number": "11",
+      "footprintXZ": [
+        [-6.99, -8.55],
+        [-3.71, -8.55],
+        [-3.71, -2.85],
+        [-6.99, -2.85]
+      ]
+    },
+    {
+      "number": "12",
+      "footprintXZ": [
+        [-3.44, -8.55],
+        [-0.16, -8.55],
+        [-0.16, -2.85],
+        [-3.44, -2.85]
+      ]
+    },
+    {
+      "number": "13",
+      "footprintXZ": [
+        [0.11, -8.55],
+        [3.39, -8.55],
+        [3.39, -2.85],
+        [0.11, -2.85]
+      ]
+    },
+    {
+      "number": "14",
+      "footprintXZ": [
+        [-10.54, 2.85],
+        [-7.26, 2.85],
+        [-7.26, 8.55],
+        [-10.54, 8.55]
+      ]
+    },
+    {
+      "number": "15",
+      "footprintXZ": [
+        [-6.99, 2.85],
+        [-3.71, 2.85],
+        [-3.71, 8.55],
+        [-6.99, 8.55]
+      ]
+    },
+    {
+      "number": "16",
+      "footprintXZ": [
+        [-3.44, 2.85],
+        [-0.16, 2.85],
+        [-0.16, 8.55],
+        [-3.44, 8.55]
+      ]
+    },
+    {
+      "number": "17",
+      "footprintXZ": [
+        [0.11, 2.85],
+        [3.39, 2.85],
+        [3.39, 8.55],
+        [0.11, 8.55]
+      ]
+    }
+  ],
+  "obstacles": [],
+  "decorativeGeometry": "Fictional concrete walls, pillars, access ramp, stair, luminaires and two context cars are added only in explicitly marked demo mode."
+}

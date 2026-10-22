@@ -1,5 +1,6 @@
 "use client";
 import { listingPrice } from "@/lib/listing-price";
+import { pricingScope } from "./ListingOffers";
 import Image from "./SafePhoto";
 import { ParkingKindIcon } from "./ParkingKindIcon";
 import { accessLabel } from "@/lib/access-label";
@@ -13,13 +14,15 @@ import {
   Maximize,
   X,
 } from "lucide-react";
-import { areaLabel, type Listing } from "@/lib/types";
+import { areaLabel, type Listing, type TransactionType } from "@/lib/types";
 export default function ListingInspector({
   listing,
   onClose,
+  transactionType,
 }: {
   listing: Listing;
   onClose: () => void;
+  transactionType?: TransactionType;
 }) {
   const [index, setIndex] = useState(0);
   const photos = listing.photos.length ? listing.photos : ["/demo/covered.png"];
@@ -80,18 +83,16 @@ export default function ListingInspector({
         </p>
         <h2>
           {listing.spaces.length > 1
-            ? `Lot de ${listing.spaces.length} places`
+            ? `${listing.spaces.length} places${listing.pricingMode === "per_space" ? " à l’unité" : " en lot"}`
             : listing.spaces[0]?.number
               ? `Place ${listing.spaces[0].number}`
               : "Place de parking"}
         </h2>
-        <p className="inspector-price">{listingPrice(listing)}</p>
+        <p className="inspector-price">
+          {listingPrice(listing, transactionType)}
+        </p>
         {listing.spaces.length > 1 ? (
-          <span className="muted small">
-            {listing.transactionType === "rent"
-              ? "Loyer mensuel total du lot"
-              : "Prix total du lot"}
-          </span>
+          <span className="muted small">{pricingScope(listing)}</span>
         ) : null}
         <div className="feature-row">
           <span>
@@ -119,7 +120,7 @@ export default function ListingInspector({
         </p>
         <Link
           className="button button-primary full-width"
-          href={`/annonces/${listing.id}/${listing.slug}`}
+          href={`/annonces/${listing.id}/${listing.slug}${transactionType ? `?transactionType=${transactionType}` : ""}`}
         >
           Consulter l’annonce
           <ArrowUpRight size={18} />

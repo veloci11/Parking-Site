@@ -8,8 +8,8 @@ import {
 import type { Listing } from "../src/lib/types";
 test("submission guidance preserves unknown dimensions, optional painted numbers and scope-specific evidence", () => {
   const listing = {
-    city: "Lyon",
-    district: "Part-Dieu",
+    city: "Paris",
+    district: "Gare de Lyon · 12e",
     locationConfirmedAt: "2026-10-21T12:00:00Z",
     type: "covered",
     spaces: [

@@ -111,6 +111,11 @@ export function localPrivacyExport(u: User) {
       "id,listing_id,owner_id,uploader_id,mime,byte_size,sha256,created_at",
     ),
     registryContributions: own("parking_contributors"),
+    modelingRequests: own(
+      "parking_modeling_requests",
+      "owner_id",
+      "listing_id AS listingId,note,status,requested_at AS requestedAt,updated_at AS updatedAt,version",
+    ),
     auditAboutMe: own("audit", "actor_id", "id,action,target_id,created_at"),
   };
 }
@@ -266,6 +271,16 @@ export async function handlePrivacyCommands(
           )
           .run(u.id);
         db().prepare("DELETE FROM favorites WHERE user_id=?").run(u.id);
+        if (
+          db()
+            .prepare(
+              "SELECT name FROM sqlite_master WHERE type='table' AND name='parking_modeling_requests'",
+            )
+            .get()
+        )
+          db()
+            .prepare("DELETE FROM parking_modeling_requests WHERE owner_id=?")
+            .run(u.id);
         db().prepare("DELETE FROM sessions WHERE user_id=?").run(u.id);
         db().prepare("UPDATE mail_tokens SET used=1 WHERE user_id=?").run(u.id);
         audit(u.id, "privacy.deletion_requested", id);

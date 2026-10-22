@@ -10,7 +10,7 @@ import {
 test("URL partageable conserve tous filtres et transforme euros seulement pour API", () => {
   const state = {
     ...emptySearch,
-    city: "Lyon Part-Dieu",
+    city: "Paris Gare de Lyon",
     type: "box",
     minPrice: "18000.25",
     maxPrice: "40000",
@@ -21,7 +21,7 @@ test("URL partageable conserve tous filtres et transforme euros seulement pour A
     closed: "1",
     occupancy: "unknown",
     level: "-2",
-    center: "4.85,45.75",
+    center: "2.37,48.84",
     radiusKm: "2.5",
   };
   const url = searchParams(state);

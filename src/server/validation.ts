@@ -6,15 +6,37 @@ export const password = z
   .string()
   .min(12, "Utilisez au moins 12 caractères.")
   .max(128);
-const spaceSchema = z.object({
-  id: z.string().uuid(),
-  number: text.max(40),
-  level: z.number().int().min(-20).max(20),
-  areaM2: z.number().positive().max(500).nullable(),
-  lengthM: z.number().positive().max(50).nullable(),
-  widthM: z.number().positive().max(50).nullable(),
-  clearanceM: z.number().positive().max(20).nullable(),
-});
+const spaceSchema = z
+  .object({
+    id: z.string().uuid(),
+    number: text.max(40),
+    level: z.number().int().min(-20).max(20),
+    areaM2: z.number().positive().max(500).nullable(),
+    lengthM: z.number().positive().max(50).nullable(),
+    widthM: z.number().positive().max(50).nullable(),
+    clearanceM: z.number().positive().max(20).nullable(),
+    offer: z
+      .object({
+        transactionType: z.enum(["sale", "rent"]),
+        priceCents: z.number().int().min(0).max(10000000000),
+        status: z.enum([
+          "available",
+          "reserved",
+          "sold",
+          "rented",
+          "withdrawn",
+        ]),
+      })
+      .strict()
+      .refine(
+        (v) =>
+          (v.status !== "sold" || v.transactionType === "sale") &&
+          (v.status !== "rented" || v.transactionType === "rent"),
+        "Le statut doit correspondre à la vente ou la location.",
+      )
+      .optional(),
+  })
+  .strict();
 export const qualitySchema = z.object({
   floor: text.max(500),
   lighting: text.max(500),
@@ -43,6 +65,7 @@ export const draftSchema = z
     district: text.max(100).optional(),
     priceCents: z.number().int().min(0).max(10000000000).optional(),
     transactionType: z.enum(["sale", "rent"]).optional(),
+    pricingMode: z.enum(["lot", "per_space"]).optional(),
     type: z.enum(["covered", "box", "outdoor", "mixed"]).optional(),
     spaces: z.array(spaceSchema).min(1).max(500).optional(),
     photos: z.array(z.string().max(200)).max(20).optional(),

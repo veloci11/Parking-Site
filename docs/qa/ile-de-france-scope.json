@@ -1,0 +1,103 @@
+{
+  "checkedAt": "2026-10-21",
+  "module": "028-paris-ile-de-france-scope",
+  "status": "passed-local-and-real-supabase-sql",
+  "migration": {
+    "file": "supabase/migrations/20261022021315_ile_de_france_scope.sql",
+    "permanentlyApplied": true,
+    "existingListingDml": false,
+    "sha256": "731dd04c4d1660d1d400ca25f75ec636dd9792edfa05dcf8622f9c572dddcd66"
+  },
+  "sqlRecipe": {
+    "file": "supabase/tests/ile-de-france-scope.sql",
+    "remoteExecuted": true,
+    "localPostgisAvailable": false,
+    "localGeospatialSqlSuccessClaimed": false,
+    "sha256": "f9c751a6dfee0792b8bb51596029bf177d97d7606b5d1a5814f05e032b9ee4d9",
+    "remotePostgisVersion": "3.3.7",
+    "remoteTransaction": "rolled-back",
+    "remoteErrors": 0,
+    "finalAssertion": {
+      "region_internal_bypasses_closed": 1
+    },
+    "evidenceSource": "Coordinator confirmation after complete recipe execution on real Supabase"
+  },
+  "inventory": {
+    "file": "supabase/tests/ile-de-france-inventory.sql",
+    "method": "Read-only aggregate counts before application; no identity or private coordinate output",
+    "coordinatorExecutionPending": false,
+    "executedBeforeApplication": true,
+    "listingCount": 0,
+    "publishedListingCount": 0,
+    "activeAdminCount": 0
+  },
+  "reference": {
+    "file": "src/lib/data/ile-de-france-2025.json",
+    "departments": [
+      "75",
+      "77",
+      "78",
+      "91",
+      "92",
+      "93",
+      "94",
+      "95"
+    ],
+    "communeCount": 1266,
+    "generalizationMeters": 50,
+    "sourceDataset": "https://www.data.gouv.fr/datasets/contours-administratifs",
+    "license": "ODbL-1.0"
+  },
+  "localVerification": {
+    "typecheck": "passed",
+    "dedicatedTests": {
+      "file": "tests/paris-region.test.ts",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "verifiedLocally": [
+    "All eight departments with coherent official commune/postal/coordinate combinations",
+    "Outside region, spoofed department, invalid postcode, malformed point refused",
+    "Incomplete private drafts retained while submission, approval and resume outside IDF fail",
+    "Region applied before count, sort and LIMIT",
+    "Seven reserved fictitious listings retain IDs, assets and shared -1/-2 floors",
+    "Separate admin persona with fictitious address and no shared password",
+    "Only reserved original explicitly fictitious seed relocated; human-marked snapshot preserved"
+  ],
+  "limitations": [
+    "Real Supabase SQL evidence is coordinator-reported; it does not prove a browser journey or operational deployment",
+    "50m administrative contours are a geographic reference, not cadastral verification",
+    "Municipality geocoding is not a precise property location",
+    "No public launch or real property verification claimed"
+  ],
+  "credentialsIncluded": false,
+  "humanDataDeleted": false,
+  "publicDeploymentClaimed": false,
+  "regressionRecipes": {
+    "adapter": "Real Supabase, coordinator-reported",
+    "count": 15,
+    "failed": 0,
+    "transaction": "rolled-back",
+    "afterMigrations": "001–029, before030",
+    "files": [
+      "canonical-parking-registry",
+      "catalog-v2",
+      "commercial-details-preview",
+      "common-parking-level-plans",
+      "condition-observations",
+      "conversation-blocks",
+      "effective-scene-availability",
+      "entitlements-anti-abuse",
+      "interlocutor-blocks",
+      "notifications",
+      "profiles-admin-history",
+      "rls",
+      "sale-rent-transactions",
+      "suspension-unit-quality",
+      "unit-galleries"
+    ],
+    "assertionCountClaimed": false
+  }
+}

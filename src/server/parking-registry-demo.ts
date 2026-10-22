@@ -41,7 +41,7 @@ function seedDemo(sql: DatabaseSync) {
     const second: Listing = {
       ...first,
       id: secondId,
-      slug: "lyon-part-dieu-deux-niveaux",
+      slug: "paris-gare-de-lyon-deux-niveaux",
       title: "Deux places, aux niveaux −1 et −2",
       description:
         "Annonce fictive du même parking de démonstration que la place 12. Deux emplacements distincts, aux niveaux −1 et −2. Le plan et les dimensions sont des exemples inventés, sans bien réel à vendre.",
@@ -78,7 +78,7 @@ function seedDemo(sql: DatabaseSync) {
     .run(
       siteId,
       "d2610000-0000-4000-8000-000000000001",
-      "Parking Part-Dieu · démonstration",
+      "Parking Gare de Lyon · Paris · démonstration",
       "DEMO-FICTITIOUS-SHARED",
       "{}",
     );

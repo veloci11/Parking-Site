@@ -1,4 +1,5 @@
 import { handlePrivacyCommands } from "./privacy-commands";
+import { PARIS_CENTER, REGION_MESSAGE } from "@/lib/paris-region";
 import { handleAuthCommands } from "./auth-commands";
 import { assertRemoteUploadQuota } from "./upload-quota";
 import { parseHistoryQuery, historyCursor } from "./history-pagination";
@@ -71,6 +72,10 @@ const schemaError = (
       400,
       "Choisissez une vente ou une location mensuelle.",
     ],
+    OFFER_INVALID: [
+      400,
+      "Complétez les offres de chaque place : transaction, prix positif, statut cohérent et au moins une place disponible.",
+    ],
     CONDITION_INVALID: [400, "Les observations sont invalides."],
     CONDITION_EVIDENCE_REQUIRED: [
       400,
@@ -87,6 +92,7 @@ const schemaError = (
     EMAIL_UNVERIFIED: [403, "Confirmez votre adresse email."],
     FORBIDDEN: [403, "Action non autorisée."],
     NOT_FOUND: [404, "Ressource introuvable."],
+    REGION_OUTSIDE_IDF: [400, REGION_MESSAGE],
     VERSION_CONFLICT: [
       409,
       "La version a changé. Rechargez avant de recommencer.",
@@ -325,7 +331,7 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
         slug: "nouvelle-annonce",
         title: "",
         description: "",
-        city: "Lyon",
+        city: "Paris",
         district: "",
         priceCents: 0,
         type: "covered",
@@ -350,7 +356,7 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
           observations: "",
         },
         locationPrecision: "area",
-        coordinates: [4.85, 45.76],
+        coordinates: [...PARIS_CENTER],
         sceneAvailable: false,
         isDemo: false,
         status: "draft",

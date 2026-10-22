@@ -11,6 +11,13 @@ export type ListingStatus =
   | "withdrawn";
 export type ParkingType = "covered" | "box" | "outdoor" | "mixed";
 export type TransactionType = "sale" | "rent";
+export type SpaceOfferStatus =
+  "available" | "reserved" | "sold" | "rented" | "withdrawn";
+export interface SpaceOffer {
+  transactionType: TransactionType;
+  priceCents: number;
+  status: SpaceOfferStatus;
+}
 export interface FinancialSource {
   year: number | null;
   scope: string;
@@ -87,6 +94,7 @@ export interface Space {
   lengthM: number | null;
   widthM: number | null;
   clearanceM: number | null;
+  offer?: SpaceOffer;
 }
 export interface Listing {
   id: string;
@@ -96,8 +104,16 @@ export interface Listing {
   city: string;
   district: string;
   priceCents: number;
-  /** Legacy absence means sale. priceCents is the whole lot sale price or its monthly rent. */
+  /** Legacy absence means sale. In per_space mode these fields summarize available offers. */
   transactionType?: TransactionType;
+  /** Absence preserves the legacy whole-lot offer. */
+  pricingMode?: "lot" | "per_space";
+  /** Ephemeral catalog result. Contains only public unit aliases and is never writable. */
+  catalogMatch?: {
+    transactionType: TransactionType;
+    priceCents: number;
+    spaceIds: string[];
+  };
   type: ParkingType;
   spaces: Space[];
   photos: string[];

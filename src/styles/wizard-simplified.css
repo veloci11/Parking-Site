@@ -1,0 +1,59 @@
+/* Scope the shorter deposit form without changing other account screens. */
+.account-wizard .account-wizard-steps {
+  min-width: 0;
+}
+@media (max-width: 900px) {
+  .account-wizard .account-wizard-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.account-wizard .account-fieldset > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--ink, #343838);
+  line-height: 1.5;
+}
+.account-wizard .account-fieldset[open] > summary {
+  margin-bottom: 1.4rem;
+}
+.account-wizard .account-fieldset:has(> summary) {
+  border: 1px solid var(--line, #e2e2dc);
+  border-radius: 16px;
+  padding: 1.1rem 1.25rem;
+  margin-top: 1rem;
+}
+.account-wizard .account-space-status {
+  margin-top: 0.85rem;
+  color: var(--muted, #747b78);
+  font-size: 0.88rem;
+}
+.account-wizard .account-space-status > summary {
+  cursor: pointer;
+}
+.account-wizard .account-space-status[open] > summary {
+  margin-bottom: 0.8rem;
+}
+.account-wizard .account-space-status .field {
+  max-width: 28rem;
+}
+@media (max-width: 680px) {
+  .account-wizard .account-fieldset:has(> summary) {
+    padding: 1rem;
+  }
+  .account-wizard .account-wizard-actions {
+    flex-wrap: wrap;
+  }
+  .account-wizard .account-wizard-actions .button {
+    max-width: 100%;
+    white-space: normal;
+  }
+}
+
+.account-wizard .account-offer-fields {
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr) minmax(0, 1.2fr);
+}
+@media (max-width: 800px) {
+  .account-wizard .account-offer-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

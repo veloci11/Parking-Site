@@ -1,5 +1,6 @@
 "use client";
 import { listingPrice } from "@/lib/listing-price";
+import { PARIS_CENTER, IDF_BOUNDS, isIdfCoordinate } from "@/lib/paris-region";
 
 import { useEffect, useRef, useState } from "react";
 import type { Map as MapLibreMap, Marker } from "maplibre-gl";
@@ -12,7 +13,7 @@ import {
   RefreshCw,
   LocateFixed,
 } from "lucide-react";
-import { money, type Listing } from "@/lib/types";
+import { type Listing, type TransactionType } from "@/lib/types";
 import {
   normalizeMapView,
   normalizeMapSearchArea,
@@ -36,6 +37,7 @@ export interface CityMapProps {
   listings: Listing[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  transactionType?: TransactionType;
 }
 
 /** Coordinates reaching this component must already be the public projection. */
@@ -48,12 +50,18 @@ export default function CityMap({
   onViewChange,
   onViewportChange,
   onSearchArea,
+  transactionType,
 }: CityMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markers = useRef<Marker[]>([]);
   const onSelectRef = useRef(onSelect);
-  const initialViewRef = useRef(normalizeMapView(initialView));
+  const normalizedInitialView = normalizeMapView(initialView);
+  const initialViewRef = useRef(
+    normalizedInitialView && isIdfCoordinate(normalizedInitialView.center)
+      ? normalizedInitialView
+      : null,
+  );
   const cameraCallbacks = useRef({
     onCameraChange,
     onViewChange,
@@ -128,8 +136,8 @@ export default function CityMap({
     publicCities.length === 1
       ? publicCities[0]
       : publicCities.length > 1
-        ? "France"
-        : "Explorer";
+        ? "Île-de-France"
+        : "Paris · Île-de-France";
   onSelectRef.current = onSelect;
 
   useEffect(() => {
@@ -152,7 +160,11 @@ export default function CityMap({
           style:
             process.env.NEXT_PUBLIC_MAP_STYLE ||
             "https://tiles.openfreemap.org/styles/liberty",
-          center: initialViewRef.current?.center ?? [4.8596, 45.7538],
+          center: initialViewRef.current?.center ?? PARIS_CENTER,
+          maxBounds: [
+            [IDF_BOUNDS[0], IDF_BOUNDS[1]],
+            [IDF_BOUNDS[2], IDF_BOUNDS[3]],
+          ],
           zoom: initialViewRef.current?.zoom ?? 14.4,
           pitch: initialViewRef.current?.pitch ?? (reducedMotion ? 35 : 55),
           bearing: initialViewRef.current?.bearing ?? -28,
@@ -300,7 +312,7 @@ export default function CityMap({
         )
           return;
         const precision = zoom < 11 ? 1 : zoom < 13 ? 2 : 5;
-        const key = `${lng.toFixed(precision)}:${lat.toFixed(precision)}:${listing.transactionType || "sale"}`;
+        const key = `${lng.toFixed(precision)}:${lat.toFixed(precision)}`;
         groups.set(key, [...(groups.get(key) || []), listing]);
       });
       markers.current = [...groups.values()].map((group) => {
@@ -311,13 +323,13 @@ export default function CityMap({
         button.className = `gp-map-price${selected ? " is-selected" : ""}${group.length > 1 ? " is-cluster" : ""}`;
         button.textContent =
           group.length > 1
-            ? `${group.length} annonces · dès ${listingPrice({ ...first, priceCents: Math.min(...group.map((item) => item.priceCents)) })}`
-            : listingPrice(first);
+            ? `${group.length} annonces`
+            : listingPrice(first, transactionType);
         button.setAttribute(
           "aria-label",
           group.length > 1
             ? `Agrandir le groupe de ${group.length} annonces`
-            : `${first.city}, ${first.district}, ${listingPrice(first)}${first.locationPrecision === "area" ? ", position de secteur" : ""}`,
+            : `${first.city}, ${first.district}, ${listingPrice(first, transactionType)}${first.locationPrecision === "area" ? ", position de secteur" : ""}`,
         );
         if (selected) button.setAttribute("aria-pressed", "true");
         button.addEventListener("click", () => {
@@ -359,7 +371,7 @@ export default function CityMap({
     return () => {
       disposed = true;
     };
-  }, [listings, selectedId, status, mapLoaded, zoom]);
+  }, [listings, selectedId, status, mapLoaded, zoom, transactionType]);
 
   useEffect(() => {
     const map = mapRef.current;

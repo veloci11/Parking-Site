@@ -1,3 +1,4 @@
+import { emptyCommercialDetails } from "../src/lib/commercial-details";
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -72,7 +73,10 @@ test("sale and whole-lot monthly rent are exclusive, versioned and filtered befo
         "Description factuelle du lot, des dimensions et de ses accès. ".repeat(
           4,
         ),
+      city: "Paris",
       district: "Test",
+      coordinates: [2.3739, 48.8446],
+      commercialDetails: { ...emptyCommercialDetails(), postalCode: "75012" },
       priceCents: 15000,
       spaces: [1, 2].map((number) => ({
         id: randomUUID(),

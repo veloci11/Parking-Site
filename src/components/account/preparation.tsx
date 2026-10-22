@@ -64,21 +64,6 @@ export default function PreparationForm() {
       ) : null}
       <fieldset disabled={!ready}>
         <div className="form-grid">
-          <div className="field">
-            <span>Type d’offre</span>
-            <FilterSelect
-              label="Type d’offre"
-              variant="field"
-              value={value.transactionType || "sale"}
-              options={[
-                { value: "sale", label: "À vendre" },
-                { value: "rent", label: "À louer" },
-              ]}
-              onChange={(transactionType) =>
-                change({ transactionType: transactionType as "sale" | "rent" })
-              }
-            />
-          </div>
           <label className="field">
             Titre provisoire
             <input
@@ -115,7 +100,7 @@ export default function PreparationForm() {
             />
           </div>
           <label className="field">
-            Nombre de places proposées ensemble
+            Nombre de places dans cette annonce
             <input
               className="input"
               type="number"
@@ -134,6 +119,11 @@ export default function PreparationForm() {
           </label>
         </div>
       </fieldset>
+      <p className="small muted">
+        Après connexion, le prix, le choix vente ou location et la disponibilité
+        seront renseignés pour chaque place. Une seule annonce peut réunir
+        plusieurs offres.
+      </p>
       <p className="muted" role="status">
         {!ready
           ? "Chargement de la préparation…"

@@ -54,7 +54,7 @@ test("location consent is server-attributed, cleared by effective changes and re
     {
       version: 1,
       locationPrecision: "area",
-      publicCoordinates: [4.87, 45.77],
+      publicCoordinates: [2.38, 48.85],
       locationConfirmedAt: "2000-01-01T00:00:00Z",
     },
     s,
@@ -73,7 +73,7 @@ test("location consent is server-attributed, cleared by effective changes and re
   );
   const preview = await api("listings/" + id + "/preview", "GET", undefined, s);
   assert.equal(preview.status, 200);
-  assert.deepEqual(preview.data.coordinates, [4.87, 45.77]);
+  assert.deepEqual(preview.data.coordinates, [2.38, 48.85]);
   assert.equal(preview.data.address, undefined);
   assert.equal(preview.data.location_confirmation_hash, undefined);
   assert.equal(
@@ -111,7 +111,7 @@ test("commercial details preserve private sources and lot references while previ
   const first = original.spaces[0].id,
     second = randomUUID();
   const details = emptyCommercialDetails();
-  details.postalCode = "69003";
+  details.postalCode = "92100";
   details.units = {
     [first]: {
       ...emptyUnitDetails(),
@@ -241,6 +241,9 @@ test("public place number is optional and allows forty characters without persis
     {
       version: 1,
       title: "Deux places sans numéros publics requis",
+      city: "Paris",
+      coordinates: [2.3739, 48.8446],
+      commercialDetails: { ...emptyCommercialDetails(), postalCode: "75012" },
       description: "Description factuelle du lot et de ses conditions. ".repeat(
         4,
       ),

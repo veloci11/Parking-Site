@@ -1,5 +1,6 @@
 "use client";
 import { listingPrice } from "@/lib/listing-price";
+import { ListingOffersTable } from "../ListingOffers";
 import { useEffect, useState } from "react";
 import type { Listing } from "@/lib/types";
 import { money } from "@/lib/types";
@@ -118,6 +119,7 @@ export default function Publications() {
             {selected.city} · {selected.district} · {listingPrice(selected)} ·
             version {selected.version}
           </p>
+          <ListingOffersTable listing={selected} />
           <p className="notice">
             L’annonce, sa scène et ses médias publics seront masqués. Le vendeur
             devra corriger puis soumettre une nouvelle version ; aucune remise

@@ -1,4 +1,7 @@
 import { handlePrivacyCommands } from "./privacy-commands";
+import { assertLocalIdfPublication } from "./region";
+import { PARIS_CENTER } from "@/lib/paris-region";
+import { assertLocalOffers } from "./listing-offers";
 import { localLimits } from "./entitlement-store";
 import {
   localRegistryPrepareApproval,
@@ -240,7 +243,9 @@ export async function handleApi(request: Request): Promise<Response> {
       });
     if (path === "auth/demo" && method === "POST") {
       const input = parse(
-        z.object({ persona: z.enum(["buyer", "seller", "moderator"]) }),
+        z.object({
+          persona: z.enum(["buyer", "seller", "moderator", "admin"]),
+        }),
         await body(request),
       );
       const user = db()
@@ -441,7 +446,7 @@ export async function handleApi(request: Request): Promise<Response> {
           slug: "nouvelle-annonce",
           title: "",
           description: "",
-          city: "Lyon",
+          city: "Paris",
           district: "",
           priceCents: 0,
           transactionType: "sale",
@@ -460,7 +465,7 @@ export async function handleApi(request: Request): Promise<Response> {
           photos: [],
           quality: blankQuality,
           locationPrecision: "area",
-          coordinates: [4.85, 45.76],
+          coordinates: [...PARIS_CENTER],
           sceneAvailable: false,
           isDemo: true,
           status: "draft",
@@ -574,6 +579,7 @@ export async function handleApi(request: Request): Promise<Response> {
             409,
             "Cette annonce ne peut pas être soumise dans cet état.",
           );
+        assertLocalOffers(draft, true);
         if (
           draft.title.length < 15 ||
           draft.description.length < 100 ||
@@ -672,6 +678,9 @@ export async function handleApi(request: Request): Promise<Response> {
         return respond(
           transact(() => {
             if (command.action === "resume") {
+              assertLocalIdfPublication(
+                JSON.parse(String(row.public_json)) as Listing,
+              );
               const conflict = localRegistryPrepareResume(id, user.id);
               if (conflict) return conflict;
             }
@@ -904,6 +913,7 @@ export async function handleApi(request: Request): Promise<Response> {
           )
             throw new ApiError(403, "Quota actif atteint.", "QUOTA_EXCEEDED");
           if (input.decision === "approve") {
+            assertLocalIdfPublication(draft);
             const conflict = localRegistryPrepareApproval(
               String(row.id),
               user.id,

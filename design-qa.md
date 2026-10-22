@@ -1,31 +1,21 @@
-# Recette visuelle et interactive
+# Revue visuelle — état à la coupure
 
-Références conservées : `docs/plan-construction/assets/reference-ville.png` et `reference-parking.png`. Comparaison visuelle effectuée entre la référence parking et la capture d’application dans le même appel d’inspection ; contrôles navigateur sur les pages réellement rendues, pas sur une capture intégrée en fond.
+**Statut : blocked — pause explicitement demandée par le propriétaire avant la dernière recette mobile.**
 
-## Constat
+La référence est la maquette claire fournie dans la conversation : ville3D, parking en perspective fixe, places interactives et panneau d’annonce. Les évolutions approuvées ensuite priment sur les anciens textes et couleurs de la maquette : logoGP doré/violet, or doux, « Consulter l’annonce », contact dans l’annonce, niveaux−1/−2 et absence de rotation360.
 
-Interface blanche, violet #6D28FF, filtre champagne #F3ECD9, sélection dorée #C9A558 et contour violet. Inter locale effectivement chargée. Échelle CSS vérifiée : 12/14/16/20/24/32/48 px. Le logo original sélectionné est conservé octet pour octet ; seul son affichage est dimensionné dans l’en-tête.
+## Vérifié
 
-La grille reprend liste à gauche, carte/parking au centre et aperçu à droite sur grand écran. Le dépôt et le compte ont été ajoutés pour les vrais parcours de marketplace. La navigation remplace le bouton purement illustratif de contact par des actions compte/dépôt. Six exemples permettent d’éprouver lots, données inconnues et filtres.
+- Le propriétaire a approuvé la qualité actuelle du rendu. Les rendus Blender sont conservés, sans génération supplémentaire.
+- En production locale, la sélection12↔13 garde la même image montée et change le prix ; le niveau−2 sélectionne24. Les lots affichent numéros et nombre de places. Carte se trouve après Photos.
+- La demande de modélisation et son suivi administrateur/propriétaire ont été parcourus dans IAB. Captures07–10 dans `docs/qa/listing-journey-captures/`.
+- Le parking mobile390px est lisible (capture11). Le tableau des dimensions utilise son défilement horizontal interne ; le titre s’inscrit dans la colonne de350px après stabilisation du viewport (capture15).
+- Un vrai défaut de largeur a été repéré dans le dépôt mobile (capture14 avant correction). La correction des pistes de grille est codée ; le build de production et Prettier passent.
 
-La ville est une vraie carte vectorielle avec bâtiments extrudés. Les données et étiquettes diffèrent nécessairement de la ville générée de la référence. Le parking de démonstration est une géométrie interactive schématique : il n’atteint pas le photoréalisme du visuel généré. Le viewer métrique connecté a été affiché avec une fixture explicitement fictive, puis cette fixture a été retirée. Aucune géométrie ou qualité d’un vrai bien n’a été inventée pour remplir l’interface.
+## À terminer à la reprise
 
-## Contrôles réalisés
+- Observer de nouveau le formulaire à390px après cette correction et remplacer la capture14 par une preuve finale distincte.
+- Capturer le rendu final de bureau et la référence ensemble dans une comparaison visuelle, puis conclure la revue complète. La capture13 est transitoire au changement de viewport et ne prouve pas la lisibilité du tableau final.
+- Ne pas déduire d’une preuve locale une validation d’un parking réel ou d’une version publiquement déployée.
 
-- 1440×1000 : sélection sur carte, aperçu, passage parking, retour ville, photos et commandes. Dimensions CSS observées dans le DOM, pas seulement taille demandée au navigateur.
-- 1024 et 768 px : absence de débordement horizontal ; le parking utilise le panneau disponible et la fiche complète reste accessible sans recouvrir le modèle.
-- 390×844 : recherche, liste, comparaison de deux biens et accès à la table, bascule carte/plan, CTA compact et dépôt/état réel. Corps du document sans débordement horizontal ; la table comparative dispose de son propre défilement.
-- Retour fiche → exploration : sélection et vue parking retrouvées, paramètres conservés ; position de liste stockée par session.
-- Clavier : focus sur recherche, lien de retour et alternatives sémantiques ; focus visible de recherche corrigé. SVG métrique avec boutons de places et commandes Entrée/Espace/flèches.
-- Carte indisponible : état de repli réellement observé lors du défaut de worker ; accès aux annonces conservé. Worker MapLibre servi depuis la même origine corrigé puis carte 3D revérifiée.
-- Ouverture/fermeture du canvas métrique : absence de nouvelle erreur après remplacement des racines Html séparées par un overlay DOM React.
-
-## Corrections de la revue
-
-Chevauchement fil d’Ariane/tabs, hauteur de bulle, espace réservé à l’inspecteur, comparaison mobile inaccessible, bouton 3D mobile caché, carte MapLibre 6 sans worker, éclairage démo trop plat, variante de filtre, logo sous-dimensionné, retours de contexte et médias publics conservés dans le cache d’optimisation : corrigés dans le code intégré. Les photographies de vraies annonces utilisent les variantes de l’API avec autorisation revérifiée et cache privé/no-store.
-
-## Preuves et limites
-
-Captures dans `docs/qa/` : `desktop-city.png`, `desktop-parking.png`, `mobile-explorer.png`, `mobile-parking.png`, `tablet-parking.png`, `desktop-wizard.png`, `mobile-wizard.png`, `connected-scene.png`.
-
-Cette recette ciblée n’est pas un audit WCAG exhaustif, un essai lecteur d’écran complet, une mesure terrain Web Vitals, une validation de zoom navigateur 200 % ou une validation géométrique d’un parking réel. Les règles de réduction des mouvements, les replis et la sémantique sont présents ; leur présence ne vaut pas preuve de recette sur tous les appareils. Ces points restent des critères de lancement à vérifier sur l’environnement et les biens réels.
+Voir `docs/REPRISE.md`, `docs/qa/listing-journey-ui.json` et `docs/COMPLETION_MATRIX.md` pour les contrôles acquis et les limites.

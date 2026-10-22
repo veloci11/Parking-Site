@@ -1,4 +1,5 @@
 import type { Listing } from "./types";
+import { availableOffers } from "./listing-price";
 export interface ListingIssue {
   step: number;
   field: string;
@@ -20,6 +21,34 @@ export function listingIssues(value: Listing): ListingIssue[] {
     );
   if (!value.spaces.length)
     add(2, "listing-units", "Ajoutez au moins une place.");
+  if (value.pricingMode === "per_space") {
+    if (
+      value.spaces.some(
+        (s) =>
+          !s.offer ||
+          !Number.isSafeInteger(s.offer.priceCents) ||
+          s.offer.priceCents <= 0 ||
+          s.offer.priceCents > 10000000000 ||
+          !["sale", "rent"].includes(s.offer.transactionType) ||
+          !["available", "reserved", "sold", "rented", "withdrawn"].includes(
+            s.offer.status,
+          ) ||
+          (s.offer.status === "sold" && s.offer.transactionType !== "sale") ||
+          (s.offer.status === "rented" && s.offer.transactionType !== "rent"),
+      )
+    )
+      add(
+        2,
+        "listing-units",
+        "Complétez pour chaque place sa vente ou location, son prix positif et son statut cohérent.",
+      );
+    if (!availableOffers(value).length)
+      add(
+        2,
+        "listing-units",
+        "Conservez au moins une place disponible pour publier.",
+      );
+  }
   if (
     value.type === "mixed" &&
     (value.spaces.length < 2 ||
@@ -57,8 +86,11 @@ export function listingIssues(value: Listing): ListingIssue[] {
     );
   if (value.photos.length < 3)
     add(4, "listing-photos", "Ajoutez au moins trois photos générales.");
-  if (!Number.isSafeInteger(value.priceCents) || value.priceCents <= 0)
-    add(5, "listing-price", "Indiquez un prix total de vente positif.");
+  if (
+    value.pricingMode !== "per_space" &&
+    (!Number.isSafeInteger(value.priceCents) || value.priceCents <= 0)
+  )
+    add(5, "listing-price", "Indiquez un prix positif pour le lot entier.");
   if (
     [
       value.commercialDetails?.chargesSource,

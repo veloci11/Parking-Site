@@ -3,6 +3,11 @@ import FilterSelect from "@/components/FilterSelect";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { listingPrice } from "@/lib/listing-price";
+import {
+  pricingScope,
+  SpaceOfferSummary,
+  spacePrice,
+} from "@/components/ListingOffers";
 import dynamic from "next/dynamic";
 import { ArrowLeft, Layers3, MapPin, Box } from "lucide-react";
 import type { PublicParking as ParkingData } from "@/lib/parking-registry";
@@ -111,6 +116,7 @@ export default function PublicParking({ alias }: { alias: string }) {
       listings.find((listing) => listing.id === listingId) ||
       listings[0] ||
       null;
+  const selectedUnit = selected?.spaces.find((space) => space.id === unitId);
   useEffect(() => {
     setShowPlan(false);
   }, [selected?.id, level?.id]);
@@ -213,6 +219,9 @@ export default function PublicParking({ alias }: { alias: string }) {
                   const listing = listings.find(
                     (listing) => listing.id === space.listingId,
                   );
+                  const unit = listing?.spaces.find(
+                    (unit) => unit.id === space.listingUnitId,
+                  );
                   return listing ? (
                     <button
                       key={`${space.id}:${space.listingId}`}
@@ -227,12 +236,11 @@ export default function PublicParking({ alias }: { alias: string }) {
                     >
                       <strong>Place {space.number || "non numérotée"}</strong>
                       <span>
-                        {listingPrice(listing)}
-                        {listing.spaces.length > 1
-                          ? listing.transactionType === "rent"
-                            ? " · loyer mensuel du lot"
-                            : " · prix total du lot"
-                          : ""}
+                        {unit ? (
+                          <SpaceOfferSummary listing={listing} space={unit} />
+                        ) : (
+                          listingPrice(listing)
+                        )}
                       </span>
                     </button>
                   ) : null;
@@ -305,14 +313,8 @@ export default function PublicParking({ alias }: { alias: string }) {
                         {areaLabel(listing.spaces)} · {listing.spaces.length}{" "}
                         place(s)
                       </p>
-                      <strong>
-                        {listingPrice(listing)}
-                        {listing.spaces.length > 1
-                          ? listing.transactionType === "rent"
-                            ? " · loyer mensuel du lot"
-                            : " · prix total du lot"
-                          : ""}
-                      </strong>
+                      <strong>{listingPrice(listing)}</strong>
+                      <p className="small muted">{pricingScope(listing)}</p>
                       <div className="registry-inline">
                         <button
                           className="button button-secondary"
@@ -337,16 +339,22 @@ export default function PublicParking({ alias }: { alias: string }) {
               {selected ? (
                 <>
                   <p className="registry-public-price">
-                    {listingPrice(selected)}
+                    {selectedUnit
+                      ? spacePrice(selected, selectedUnit)
+                      : listingPrice(selected)}
                   </p>
                   <p>
-                    {selected.transactionType === "rent"
-                      ? selected.spaces.length > 1
-                        ? `Loyer mensuel du lot de ${selected.spaces.length} places`
-                        : "Loyer mensuel de la place"
-                      : selected.spaces.length > 1
-                        ? `Prix total du lot de ${selected.spaces.length} places`
-                        : "Prix de la place"}
+                    {selectedUnit ? (
+                      <>
+                        Place {selectedUnit.number} ·{" "}
+                        <SpaceOfferSummary
+                          listing={selected}
+                          space={selectedUnit}
+                        />
+                      </>
+                    ) : (
+                      pricingScope(selected)
+                    )}
                   </p>
                   <p>
                     Les dimensions, photos et observations restent propres à
@@ -354,7 +362,7 @@ export default function PublicParking({ alias }: { alias: string }) {
                   </p>
                   <Link
                     className="button button-primary"
-                    href={`/annonces/${selected.id}/${selected.slug}`}
+                    href={`/annonces/${selected.id}/${selected.slug}${selectedUnit ? `?parking=${encodeURIComponent(selected.id)}&unit=${encodeURIComponent(selectedUnit.id)}&floor=${selectedUnit.level}` : ""}`}
                   >
                     Consulter ce bien
                   </Link>

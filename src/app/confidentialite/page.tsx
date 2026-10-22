@@ -32,6 +32,13 @@ export default function Privacy() {
         </p>
         <h2>Services externes</h2>
         <p>
+          La recherche d’adresse transmet le texte saisi au service de géocodage
+          IGN / Base Adresse Nationale pour proposer des résultats. Vous pouvez
+          rechercher uniquement une ville ou un code postal. En mode secteur,
+          l’application conserve une position approximative sans enregistrer
+          l’adresse précise issue de la recherche.
+        </p>
+        <p>
           La carte charge les ressources d’OpenFreeMap. Lorsque le mode connecté
           est configuré, les comptes, les annonces et les fichiers utilisent le
           projet Supabase de l’exploitant.

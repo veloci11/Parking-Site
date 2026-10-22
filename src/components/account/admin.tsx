@@ -13,7 +13,10 @@ import Publications from "./publications";
 import { QualitySummary } from "./unit-quality";
 import { ConditionEvidenceSummary } from "./condition-evidence";
 import { CommercialSummary } from "../CommercialSummary";
-import { money, type Listing, type User } from "@/lib/types";
+import { type Listing, type User } from "@/lib/types";
+import { listingPrice, offerLabel } from "@/lib/listing-price";
+import { pricingScope, ListingOffersTable } from "../ListingOffers";
+import { AdminModelingRequests } from "./modeling-request";
 function Content({ user }: { user: User }) {
   const [items, setItems] = useState<Listing[]>([]),
     [loading, setLoading] = useState(true),
@@ -90,6 +93,9 @@ function Content({ user }: { user: User }) {
       <div className="account-admin-links">
         {user.role === "admin" ? (
           <>
+            <a href="#demandes-3d" className="button button-secondary">
+              Demandes 3D
+            </a>
             <Link href="/admin/comptes" className="button button-secondary">
               Comptes et accès
             </Link>
@@ -151,7 +157,9 @@ function Content({ user }: { user: User }) {
                   {l.city} · {l.sellerName} · version {l.version}
                 </span>
               </div>
-              <span>{money(l.priceCents)}</span>
+              <span>
+                {offerLabel(l)} · {listingPrice(l)}
+              </span>
               <ClipboardCheck size={20} />
             </button>
           ))}
@@ -181,9 +189,12 @@ function Content({ user }: { user: User }) {
             </button>
           </div>
           <p>
-            {item.city} · {item.district} · {money(item.priceCents)} ·{" "}
-            {item.spaces.length} place{item.spaces.length > 1 ? "s" : ""}
+            {item.city} · {item.district} · {offerLabel(item)} ·{" "}
+            {listingPrice(item)} · {item.spaces.length} place
+            {item.spaces.length > 1 ? "s" : ""}
           </p>
+          <p className="small muted">{pricingScope(item)}</p>
+          <ListingOffersTable listing={item} />
           <p className="account-preview-description">{item.description}</p>
           <p className="notice">
             Le rattachement des places à un parking identifié doit être contrôlé
@@ -288,9 +299,14 @@ function Content({ user }: { user: User }) {
               onChange={(e) => setReviewed(e.target.checked)}
             />
             <span>
-              J’ai relu le prix total, les unités, la localisation publique, les
-              photos et les défauts déclarés. Je n’ai pas repéré de données
-              sensibles à publier.
+              J’ai relu{" "}
+              {item.pricingMode === "per_space"
+                ? "les offres, les prix et les statuts de chaque place"
+                : item.transactionType === "rent"
+                  ? "le loyer mensuel total"
+                  : "le prix total de vente"}
+              , les unités, la localisation publique, les photos et les défauts
+              déclarés. Je n’ai pas repéré de données sensibles à publier.
             </span>
           </label>
           <label className="field">
@@ -330,6 +346,7 @@ function Content({ user }: { user: User }) {
         </section>
       ) : null}
       <Publications />
+      {user.role === "admin" ? <AdminModelingRequests /> : null}
     </AccountShell>
   );
 }

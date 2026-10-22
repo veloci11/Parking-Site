@@ -2,21 +2,20 @@
 
 import {
   Component,
-  Suspense,
   useEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
-import { Canvas } from "@react-three/fiber";
-import { ACESFilmicToneMapping, PCFSoftShadowMap } from "three";
+import dynamic from "next/dynamic";
 import {
   Box,
   ChevronLeft,
   ChevronRight,
   ImageIcon,
   Layers3,
+  MapPin,
   MousePointer2,
 } from "lucide-react";
 import { areaLabel, type Listing, type Space } from "@/lib/types";
@@ -30,13 +29,28 @@ import {
   writeInteriorSelection,
 } from "@/lib/interior-view";
 import ParkingPlan2D from "./ParkingPlan2D";
-import {
-  DemoParkingScene,
-  MeasuredParkingScene,
-  WebGLContextGuard,
-  type DisplaySpace,
-} from "./ParkingScene";
+import type { DisplaySpace } from "./ParkingScene";
+import RenderedParkingLevel from "./RenderedParkingLevel";
+import { parkingListingGroups } from "@/lib/parking-lots";
+import { listingPrice } from "@/lib/listing-price";
 import "@/styles/maps.css";
+
+const MeasuredParkingCanvas = dynamic(() => import("./MeasuredParkingCanvas"), {
+  ssr: false,
+  loading: () => (
+    <div className="gp-map-loading" role="status">
+      Chargement du plan…
+    </div>
+  ),
+});
+const CityMap = dynamic(() => import("./CityMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="gp-map-loading" role="status">
+      Chargement de la carte…
+    </div>
+  ),
+});
 
 export interface ParkingViewerProps {
   listing: Listing;
@@ -49,7 +63,7 @@ export interface ParkingViewerProps {
   onListingSelect?: (listingId: string, listingUnitId: string) => void;
 }
 
-type Mode = "3d" | "plan" | "photo";
+type Mode = "3d" | "plan" | "photo" | "map";
 type Scene = PublicScene | PublicParkingLevelPlan;
 type UnitReference = {
   id: string;
@@ -423,6 +437,7 @@ export default function ParkingViewer(props: ParkingViewerProps) {
   const levelLayer = useRef<HTMLDivElement>(null);
   const firstLookup = useRef(true);
   const contextId = group?.parkingId || listing.id;
+  const lots = useMemo(() => parkingListingGroups(group), [group]);
   const currentLevel = group?.levels.find((floor) => floor.level === level);
   const scene: Scene | null = group
     ? (currentLevel?.scene ?? null)
@@ -431,6 +446,11 @@ export default function ParkingViewer(props: ParkingViewerProps) {
       : null;
   const levelUnits = units.filter((unit) => unit.space.level === level);
   const selectedReference = units.find((unit) => unit.id === selected);
+  const selectedLot = lots.find(
+    (lot) =>
+      lot.listing.id === selectedReference?.listingId &&
+      lot.spaces.some((space) => space.id === selectedReference.listingUnitId),
+  );
   const photoListing =
     group?.listings.find((item) => item.id === selectedReference?.listingId) ||
     listing;
@@ -457,6 +477,7 @@ export default function ParkingViewer(props: ParkingViewerProps) {
       nextLevel,
       unit,
     );
+    params.set("parking", contextId);
     window.history.replaceState(
       window.history.state,
       "",
@@ -475,6 +496,7 @@ export default function ParkingViewer(props: ParkingViewerProps) {
     } catch {}
   };
   const chooseUnit = (id: string) => {
+    if (id === selected) return;
     const reference = units.find((unit) => unit.id === id);
     if (!reference || reference.space.level !== level) return;
     persistSelection(level, id);
@@ -491,6 +513,27 @@ export default function ParkingViewer(props: ParkingViewerProps) {
       ) ?? units.find((unit) => unit.space.level === next);
     persistSelection(next, nextUnit?.id ?? null);
     props.onViewLevelChange?.(next);
+    if (nextUnit) {
+      if (nextUnit.listingId === listing.id)
+        props.onSpaceSelect?.(nextUnit.listingUnitId);
+      props.onListingSelect?.(nextUnit.listingId, nextUnit.listingUnitId);
+    }
+  };
+  const chooseLot = (lotKey: string) => {
+    const lot = lots.find((item) => item.key === lotKey);
+    if (!lot) return;
+    const belongs = (unit: UnitReference) =>
+      unit.listingId === lot.listing.id &&
+      lot.spaces.some((space) => space.id === unit.listingUnitId);
+    const reference =
+      units.find((unit) => belongs(unit) && unit.space.level === level) ??
+      units.find(belongs);
+    if (!reference) return;
+    persistSelection(reference.space.level, reference.id);
+    props.onViewLevelChange?.(reference.space.level);
+    if (reference.listingId === listing.id)
+      props.onSpaceSelect?.(reference.listingUnitId);
+    props.onListingSelect?.(reference.listingId, reference.listingUnitId);
   };
 
   useEffect(() => {
@@ -506,6 +549,10 @@ export default function ParkingViewer(props: ParkingViewerProps) {
   }, [level]);
 
   useEffect(() => {
+    if (demoAllowed) {
+      setSupported(true);
+      return;
+    }
     try {
       const canvas = document.createElement("canvas");
       const gl = canvas.getContext("webgl2");
@@ -517,7 +564,7 @@ export default function ParkingViewer(props: ParkingViewerProps) {
     return () => {
       document.body.style.cursor = "";
     };
-  }, []);
+  }, [demoAllowed]);
 
   useEffect(() => {
     firstLookup.current = true;
@@ -581,6 +628,12 @@ export default function ParkingViewer(props: ParkingViewerProps) {
             null);
       firstLookup.current = !sourceParams.has("floor");
       persistSelection(nextLevel, nextSelected);
+      const selectedUnit = units.find((unit) => unit.id === nextSelected);
+      if (selectedUnit)
+        props.onListingSelect?.(
+          selectedUnit.listingId,
+          selectedUnit.listingUnitId,
+        );
     };
     restore();
     window.addEventListener("popstate", restore);
@@ -650,7 +703,7 @@ export default function ParkingViewer(props: ParkingViewerProps) {
     />
   );
   const title = selectedReference
-    ? `Place ${selectedReference.space.number || "non numérotée"}`
+    ? `${selectedLot ? `${selectedLot.label} · ` : ""}Place ${selectedReference.space.number || "non numérotée"}`
     : `Niveau ${floorLabel(level)}`;
   return (
     <section
@@ -693,83 +746,119 @@ export default function ParkingViewer(props: ParkingViewerProps) {
             <ImageIcon size={17} />
             Photos
           </button>
+          <button
+            type="button"
+            className={effectiveMode === "map" ? "is-active" : ""}
+            aria-pressed={effectiveMode === "map"}
+            onClick={() => setMode("map")}
+          >
+            <MapPin size={17} />
+            Carte
+          </button>
         </div>
-        <LevelSwitch levels={levels} current={level} onChange={chooseLevel} />
+        {effectiveMode !== "map" ? (
+          <LevelSwitch levels={levels} current={level} onChange={chooseLevel} />
+        ) : null}
       </div>
+      {lots.length > 1 ? (
+        <div
+          className="gp-viewer-lots"
+          role="group"
+          aria-label="Lots proposés dans ce parking"
+        >
+          {lots.map((lot) => (
+            <button
+              key={lot.key}
+              type="button"
+              aria-pressed={selectedLot?.key === lot.key}
+              onClick={() => chooseLot(lot.key)}
+              style={{ borderLeftColor: lot.color }}
+            >
+              <strong>
+                <i style={{ background: lot.color }} />
+                {lot.label}
+                <span>
+                  {lot.spaces.length} place{lot.spaces.length > 1 ? "s" : ""}
+                </span>
+              </strong>
+              <small>
+                {lot.spaces.some((space) => space.number.trim())
+                  ? `Place${lot.spaces.length > 1 ? "s" : ""} ${lot.spaces.map((space) => space.number || "sans numéro").join(", ")}`
+                  : "Places non numérotées"}
+              </small>
+              <small>{listingPrice(lot.listing, lot.transactionType)}</small>
+            </button>
+          ))}
+        </div>
+      ) : null}
       <div className="gp-viewer-level-layer" ref={levelLayer}>
         <div className="gp-viewer-stage">
-          {effectiveMode === "photo" ? (
+          {effectiveMode === "map" ? (
+            <div className="gp-viewer-city">
+              <CityMap
+                listings={[photoListing]}
+                selectedId={photoListing.id}
+                onSelect={() => {}}
+                initialView={{
+                  center: photoListing.coordinates,
+                  zoom: 15.5,
+                  bearing: -28,
+                  pitch: 50,
+                }}
+              />
+            </div>
+          ) : effectiveMode === "photo" ? (
             <Photos
               listing={photoListing}
               selectedId={selectedReference?.listingUnitId || null}
             />
           ) : effectiveMode === "plan" ||
-            supported === false ||
+            (!demoAllowed && supported === false) ||
             sceneTooLarge ? (
             plan
-          ) : (loadingScene && !hasModel) || supported === null ? (
+          ) : (loadingScene && !hasModel) ||
+            (!demoAllowed && supported === null) ? (
             <div className="gp-map-loading" role="status">
               <span className="gp-map-spinner" />
               Chargement du plan…
             </div>
-          ) : (
+          ) : demoAllowed ? (
+            <RenderedParkingLevel
+              key={`${contextId}:${level}`}
+              level={level}
+              units={levelUnits.map((unit) => ({
+                ...unit,
+                lot:
+                  lots.length > 1
+                    ? lots.find(
+                        (lot) =>
+                          lot.listing.id === unit.listingId &&
+                          lot.spaces.some(
+                            (space) => space.id === unit.listingUnitId,
+                          ),
+                      )
+                    : undefined,
+              }))}
+              selected={selected}
+              onSelect={chooseUnit}
+              onFallback={() => setMode("plan")}
+            />
+          ) : scene ? (
             <SceneBoundary key={contextId} fallback={plan}>
-              <Suspense
-                fallback={
-                  <div className="gp-map-loading" role="status">
-                    Chargement du plan…
-                  </div>
-                }
-              >
-                <Canvas
-                  className="gp-parking-canvas"
-                  orthographic
-                  shadows
-                  camera={{
-                    position: [19, 25, 31],
-                    zoom: 20,
-                    near: 0.1,
-                    far: 250,
-                  }}
-                  dpr={[1, 1.75]}
-                  frameloop="demand"
-                  gl={{
-                    antialias: true,
-                    alpha: false,
-                    powerPreference: "default",
-                  }}
-                  onCreated={({ gl }) => {
-                    gl.toneMapping = ACESFilmicToneMapping;
-                    gl.toneMappingExposure = 1.08;
-                    gl.shadowMap.type = PCFSoftShadowMap;
-                    gl.domElement.setAttribute(
-                      "aria-label",
-                      "Vue isométrique fixe du parking. Cliquez sur une place pour la consulter. Le mode Places permet aussi de la sélectionner au clavier.",
-                    );
-                  }}
-                >
-                  <WebGLContextGuard
-                    onUnavailable={() => setSupported(false)}
-                  />
-                  {demoAllowed ? (
-                    <DemoParkingScene
-                      spaces={slots}
-                      selectedId={selected}
-                      onSelect={chooseUnit}
-                      level={level}
-                    />
-                  ) : scene ? (
-                    <MeasuredParkingScene
-                      manifest={scene.manifest}
-                      selectedId={selected}
-                      onSelect={chooseUnit}
-                    />
-                  ) : null}
-                </Canvas>
-              </Suspense>
+              <MeasuredParkingCanvas
+                manifest={scene.manifest}
+                selectedId={selected}
+                onSelect={chooseUnit}
+                onUnavailable={() => setSupported(false)}
+              />
             </SceneBoundary>
+          ) : (
+            plan
           )}
-          {effectiveMode === "3d" && supported && hasModel && !sceneTooLarge ? (
+          {effectiveMode === "3d" &&
+          (demoAllowed || supported) &&
+          hasModel &&
+          !sceneTooLarge ? (
             <>
               <div className="gp-viewer-gesture">
                 <MousePointer2 size={14} />
@@ -827,6 +916,22 @@ export default function ParkingViewer(props: ParkingViewerProps) {
               : "Les photos et dimensions renseignées restent consultables."}
         </span>
       </div>
+      {demoAllowed ? (
+        <details className="gp-viewer-provenance">
+          <summary>À propos de cette représentation</summary>
+          <p>
+            Un schéma représentatif pour mieux comprendre le parking et ses
+            places. Cette démonstration est fictive.
+          </p>
+          <a
+            href="/parking-renders/ATTRIBUTION.txt"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Crédits du rendu
+          </a>
+        </details>
+      ) : null}
       {scene && !demoAllowed ? (
         <details className="gp-viewer-provenance">
           <summary>À propos de ce plan</summary>

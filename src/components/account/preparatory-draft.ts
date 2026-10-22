@@ -53,18 +53,24 @@ export function preparationPayload(value: Preparation, makeId: () => string) {
     );
   const spaces: Space[] = Array.from({ length: safe.quantity }, (_, i) => ({
     id: makeId(),
-    number: String(i + 1),
+    number: "",
     level: -1,
     areaM2: null,
     lengthM: null,
     widthM: null,
     clearanceM: null,
+    offer: {
+      transactionType: safe.transactionType || "sale",
+      priceCents: 0,
+      status: "available",
+    },
   }));
   return {
     title: safe.title,
     city: safe.city,
     type: safe.type,
     spaces,
+    pricingMode: "per_space" as const,
     ...(safe.transactionType ? { transactionType: safe.transactionType } : {}),
   };
 }

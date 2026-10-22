@@ -6,8 +6,8 @@ import {
 } from "../src/lib/geolocation";
 test("browser coordinates are validated and raw precision is discarded", () => {
   assert.deepEqual(
-    approximateBrowserPosition(4.8597123, 45.7612345),
-    [4.86, 45.761],
+    approximateBrowserPosition(2.3739123, 48.8446345),
+    [2.374, 48.845],
   );
   for (const point of [
     [181, 45],

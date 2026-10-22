@@ -412,8 +412,8 @@ export default function Explorer({
             label="Budget maximum"
             hint={
               transactionType === "rent"
-                ? "Loyer mensuel total du bien ou du lot"
-                : "Prix total du bien ou du lot"
+                ? "Loyer mensuel par place, ou du lot proposé ensemble"
+                : "Prix par place, ou du lot proposé ensemble"
             }
             value={maxPrice}
             onChange={setMaxPrice}
@@ -509,8 +509,8 @@ export default function Explorer({
             <div className="explorer-advanced-grid">
               <label className="field">
                 {transactionType === "rent"
-                  ? "Loyer minimum · total mensuel (€)"
-                  : "Budget minimum · prix total (€)"}
+                  ? "Loyer minimum mensuel (€)"
+                  : "Budget minimum (€)"}
                 <input
                   className="input"
                   type="number"
@@ -523,8 +523,8 @@ export default function Explorer({
               </label>
               <label className="field">
                 {transactionType === "rent"
-                  ? "Loyer maximum · total mensuel (€)"
-                  : "Budget maximum · prix total (€)"}
+                  ? "Loyer maximum mensuel (€)"
+                  : "Budget maximum (€)"}
                 <input
                   className="input"
                   type="number"
@@ -667,8 +667,8 @@ export default function Explorer({
             <p className="small muted">
               Les surfaces inconnues sont exclues lorsqu’un minimum est choisi.
               {transactionType === "rent"
-                ? "Le budget correspond au loyer mensuel total du bien ou du lot."
-                : "Le budget correspond au prix total du bien ou du lot."}
+                ? "Le budget s’applique au loyer mensuel d’une place disponible ; pour un lot indivisible, au loyer total du lot."
+                : "Le budget s’applique au prix d’une place disponible ; pour un lot indivisible, au prix total du lot."}
             </p>
             <button
               className="button button-primary full-width"
@@ -792,6 +792,7 @@ export default function Explorer({
                 key={l.id}
                 eager={index < 2}
                 listing={l}
+                transactionType={transactionType}
                 selected={selectedId === l.id}
                 onSelect={() => choose(l.id)}
                 favorite={favorites.ids.includes(l.id)}
@@ -843,6 +844,7 @@ export default function Explorer({
           {initialized ? (
             <CityMap
               listings={filtered}
+              transactionType={transactionType}
               selectedId={selected?.id || null}
               onSelect={choose}
               initialView={mapView}
@@ -858,6 +860,7 @@ export default function Explorer({
             <ListingInspector
               key={selected.id}
               listing={selected}
+              transactionType={transactionType}
               onClose={() => {
                 setSelectedId(null);
               }}
@@ -874,7 +877,9 @@ export default function Explorer({
             className="compare-floating button"
             onClick={() => {
               if (compare.length >= 2)
-                window.location.assign(`/comparer?ids=${compare.join(",")}`);
+                window.location.assign(
+                  `/comparer?ids=${compare.join(",")}&transactionType=${transactionType}`,
+                );
               else
                 setCompareNotice(
                   "Ajoutez au moins deux biens avec « Comparer » sous les annonces.",
@@ -894,7 +899,7 @@ export default function Explorer({
           className="mobile-compare button"
           href={
             compare.length >= 2
-              ? `/comparer?ids=${compare.join(",")}`
+              ? `/comparer?ids=${compare.join(",")}&transactionType=${transactionType}`
               : "#resultats"
           }
         >

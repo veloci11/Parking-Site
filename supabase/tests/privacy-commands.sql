@@ -42,11 +42,31 @@ insert into parking_scene_sources(id,owner_id,uploader_id,listing_id,object_key,
 set local role authenticated;
 select set_config('request.jwt.claim.sub','f2100000-0000-4000-8000-000000000002',true);
 select set_config('request.jwt.claims',jsonb_build_object('sub','f2100000-0000-4000-8000-000000000002','role','authenticated','aal','aal1','amr',jsonb_build_array(jsonb_build_object('method','password','timestamp',extract(epoch from now())::bigint)))::text,true);
+-- 023 keeps originals quarantined until the private worker has validated its result.
+do $$begin begin perform gp_export_request();raise exception 'Expected EXPORT_SOURCE_NOT_READY';exception when others then if sqlerrm<>'EXPORT_SOURCE_NOT_READY' then raise;end if;end;end;$$;
+reset role;
+select 1/((select count(*)=0 from gp_private.export_jobs where user_id='f2100000-0000-4000-8000-000000000002')::integer) as unready_source_creates_no_export_job;
+-- Inert Storage metadata only: no uploaded bytes or worker process are fabricated.
+-- Exercise the actual service receipt and completion RPC instead of forcing ready.
+select set_config('request.jwt.claim.sub','',true);
+select set_config('request.jwt.claims','{"role":"service_role"}',true);
+insert into storage.objects(bucket_id,name,metadata) values
+('scene-sources','f2100000-0000-4000-8000-000000000002/f2110000-0000-4000-8000-000000000002/f2130000-0000-4000-8000-000000000001.pdf','{"size":100}'),
+('scene-sources','f2100000-0000-4000-8000-000000000002/f2110000-0000-4000-8000-000000000002/f2130000-0000-4000-8000-000000000001.preview-1.png','{"size":100}');
+set local role service_role;
+select set_config('gp.qa_source_claim',(gp_source_claim('f2130000-0000-4000-8000-000000000001')->>'token'),true);
+select gp_source_complete('f2130000-0000-4000-8000-000000000001',current_setting('gp.qa_source_claim')::uuid,true,array['f2100000-0000-4000-8000-000000000002/f2110000-0000-4000-8000-000000000002/f2130000-0000-4000-8000-000000000001.preview-1.png'],1,'gp-source-raster/1');
+reset role;
+select 1/((select processing_state='ready' and page_count=1 and cardinality(preview_keys)=1 and lease_token is null from parking_scene_sources where id='f2130000-0000-4000-8000-000000000001')::integer) as owned_source_processed_through_worker_contract;
+select 1/((select processing_state='processing' from parking_scene_sources where id='f2130000-0000-4000-8000-000000000002')::integer) as other_uploader_source_stays_quarantined;
+set local role authenticated;
+select set_config('request.jwt.claim.sub','f2100000-0000-4000-8000-000000000002',true);
+select set_config('request.jwt.claims',jsonb_build_object('sub','f2100000-0000-4000-8000-000000000002','role','authenticated','aal','aal1','amr',jsonb_build_array(jsonb_build_object('method','password','timestamp',extract(epoch from now())::bigint)))::text,true);
 select set_config('gp.qa_export_job',(gp_export_request()->>'id'),true);
 select 1/((jsonb_array_length(gp_export_history())=1)::integer) as owner_job_history;
 do $$begin begin perform gp_export_request();raise exception 'Expected EXPORT_PENDING';exception when others then if sqlerrm<>'EXPORT_PENDING' then raise;end if;end;begin perform gp_export_download(current_setting('gp.qa_export_job')::uuid);raise exception 'Expected EXPORT_NOT_READY';exception when others then if sqlerrm<>'EXPORT_NOT_READY' then raise;end if;end;end;$$;
 reset role;
-select 1/((select jsonb_array_length(files)=2 and position('f2130000-0000-4000-8000-000000000002' in snapshot::text)=0 from gp_private.export_jobs where id=current_setting('gp.qa_export_job')::uuid)::integer) as only_own_uploaded_files;
+select 1/((select jsonb_array_length(files)=3 and position('f2130000-0000-4000-8000-000000000002' in snapshot::text)=0 and position('f2130000-0000-4000-8000-000000000002' in files::text)=0 and (select count(*)=1 from jsonb_array_elements(files) f where f->>'kind'='preview' and f->>'mime'='image/png') from gp_private.export_jobs where id=current_setting('gp.qa_export_job')::uuid)::integer) as only_own_uploaded_files_and_ready_preview;
 set local role service_role;
 select set_config('gp.qa_export_claim',gp_export_claim(current_setting('gp.qa_export_job')::uuid,'private-export-v1')::text,true);
 select gp_export_finish(current_setting('gp.qa_export_job')::uuid,(current_setting('gp.qa_export_claim')::jsonb->>'leaseToken')::uuid,true,1000,repeat('a',64),null);

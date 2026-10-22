@@ -5,6 +5,7 @@ import { db } from "./db";
 import { listPublicListings } from "./catalog";
 import { initializeLocalParkingRegistry } from "./parking-registry";
 import type { Listing, TransactionType } from "@/lib/types";
+import { catalogOfferMatch } from "@/lib/listing-price";
 export interface PageFilters {
   query: string;
   type: string | null;
@@ -77,7 +78,12 @@ export function canonicalFilters(f: PageFilters): Required<PageFilters> {
 }
 const queryHash = (filters: PageFilters) =>
   createHash("sha256")
-    .update(JSON.stringify(canonicalFilters(filters)))
+    .update(
+      JSON.stringify({
+        contract: "per-space/1",
+        filters: canonicalFilters(filters),
+      }),
+    )
     .digest("hex");
 const invalid = () => {
   throw new ApiError(400, "Filtres de recherche invalides.");
@@ -246,20 +252,9 @@ export function publicDistanceKm(a: [number, number], b: [number, number]) {
 export function matchesPageFilters(item: Listing, filters: PageFilters) {
   const f = canonicalFilters(filters),
     [lon, lat] = item.coordinates;
-  const types =
-    item.type === "mixed"
-      ? item.spaces.map(
-          (s) => item.commercialDetails?.units[s.id]?.type ?? null,
-        )
-      : [item.type];
   return (
-    (item.transactionType ?? "sale") === f.transactionType &&
-    (f.minPrice === null || item.priceCents >= f.minPrice) &&
-    (f.covered === null ||
-      types.every((t) => t === "covered" || t === "box") === f.covered) &&
-    (f.closed === null || types.every((t) => t === "box") === f.closed) &&
+    catalogOfferMatch(item, f) !== null &&
     (f.occupancy === null || (item.occupancy ?? "unknown") === f.occupancy) &&
-    (f.level === null || item.spaces.some((s) => s.level === f.level)) &&
     (!f.ids || f.ids.includes(item.id)) &&
     (!f.bbox ||
       (lat >= f.bbox[1] &&
@@ -288,22 +283,30 @@ export function localCatalogPage(
   );
   let items = listPublicListings({
     q: filters.query || undefined,
-    type: filters.type || undefined,
-    maxPrice: filters.maxPrice ?? undefined,
-    minArea: filters.minArea ?? undefined,
   }).filter(
     (item) =>
       (!filters.scene || item.sceneAvailable) &&
       Date.parse(publicationTimes.get(item.id)!) <= Date.parse(asOf) &&
       matchesPageFilters(item, filters),
   );
+  const offerMatches = new Map(
+    items.map((item) => [item.id, catalogOfferMatch(item, filters)!]),
+  );
+  items = items.map((item) => ({
+    ...item,
+    catalogMatch: {
+      transactionType: filters.transactionType ?? "sale",
+      priceCents: offerMatches.get(item.id)!.priceCents,
+      spaceIds: offerMatches.get(item.id)!.spaceIds,
+    },
+  }));
   const created = (l: Listing) => publicationTimes.get(l.id)!;
   const key = (l: Listing) => ({
     id: l.id,
     createdAt: created(l),
-    priceCents: l.priceCents,
-    areaM2: minimumUnitArea(l),
-    spaceCount: l.spaces.length,
+    priceCents: offerMatches.get(l.id)!.priceCents,
+    areaM2: offerMatches.get(l.id)!.areaM2,
+    spaceCount: offerMatches.get(l.id)!.spaceCount,
   });
   const compare = (a: PagePosition["after"], b: PagePosition["after"]) => {
     const diff =

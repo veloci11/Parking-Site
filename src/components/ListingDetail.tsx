@@ -1,7 +1,15 @@
 "use client";
-import { listingPrice, offerLabel } from "@/lib/listing-price";
+import { listingPrice, offerLabel, spaceOffer } from "@/lib/listing-price";
+import {
+  pricingScope,
+  SpaceOfferSummary,
+  spacePrice,
+  spaceOfferLabel,
+  spaceOfferStatus,
+} from "./ListingOffers";
 import { loadPublicParkingGroup } from "@/lib/parking-client";
 import type { PublicParkingSceneGroup } from "@/lib/parking-registry";
+import { parkingListingGroupLabel } from "@/lib/parking-lots";
 import { contactDraftKey, decodeContactDraft } from "@/lib/contact-draft";
 import Image from "./SafePhoto";
 import Link from "next/link";
@@ -49,6 +57,25 @@ export default function ListingDetail({
   const [unavailable, setUnavailable] = useState(false);
   const [freshnessError, setFreshnessError] = useState("");
   const [backHref, setBackHref] = useState("/");
+  const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
+  const [focusedListingId, setFocusedListingId] = useState(initialListing.id);
+  const [viewLevel, setViewLevel] = useState<number>();
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const space = initialListing.spaces.find(
+      (item) => item.id === params.get("unit"),
+    );
+    setSelectedSpaceId(space?.id ?? null);
+    setFocusedListingId(initialListing.id);
+    setViewLevel(space?.level);
+  }, [initialListing.id]);
+  function chooseSpace(id: string) {
+    const space = listing.spaces.find((item) => item.id === id);
+    if (!space) return;
+    setSelectedSpaceId(id);
+    setFocusedListingId(listing.id);
+    setViewLevel(space.level);
+  }
   const sendingLock = useRef(false);
   const requestIds = useRef({
     message: crypto.randomUUID(),
@@ -58,6 +85,56 @@ export default function ListingDetail({
   const favorites = useFavorites();
   const [parkingGroup, setParkingGroup] =
     useState<PublicParkingSceneGroup | null>(null);
+  const focusedListing =
+    focusedListingId === listing.id
+      ? listing
+      : (parkingGroup?.listings.find((item) => item.id === focusedListingId) ??
+        listing);
+  const relatedSelected = focusedListing.id !== listing.id;
+  const selectedSpace = focusedListing.spaces.find(
+    (space) => space.id === selectedSpaceId,
+  );
+  const focusedGroupLabel = parkingGroup
+    ? parkingListingGroupLabel(
+        parkingGroup,
+        focusedListing.id,
+        selectedSpace?.id,
+      )
+    : null;
+  const selectedUnavailable =
+    focusedListing.pricingMode === "per_space" &&
+    selectedSpace !== undefined &&
+    spaceOffer(focusedListing, selectedSpace).status !== "available";
+  const selectedViewerSpaceId =
+    parkingGroup?.levels
+      .flatMap((level) => level.spaces)
+      .find(
+        (unit) =>
+          unit.listingId === focusedListing.id &&
+          unit.listingUnitId === selectedSpaceId,
+      )?.id ?? selectedSpaceId;
+  const focusedHref = `/annonces/${focusedListing.id}/${focusedListing.slug}${selectedSpace ? `?parking=${encodeURIComponent(focusedListing.id)}&unit=${encodeURIComponent(selectedSpace.id)}&floor=${selectedSpace.level}` : ""}`;
+  function chooseParkingSpace(id: string, unit: string) {
+    const target =
+      id === listing.id
+        ? listing
+        : parkingGroup?.listings.find((item) => item.id === id);
+    const space = target?.spaces.find((item) => item.id === unit);
+    if (!space) return;
+    setFocusedListingId(id);
+    setSelectedSpaceId(unit);
+    setViewLevel(space.level);
+  }
+  useEffect(() => {
+    if (!parkingGroup) return;
+    const rawUnit = new URLSearchParams(window.location.search).get("unit");
+    const restored = parkingGroup.levels
+      .flatMap((level) => level.spaces)
+      .find((unit) => unit.id === rawUnit || unit.listingUnitId === rawUnit);
+    if (restored)
+      chooseParkingSpace(restored.listingId, restored.listingUnitId);
+    // Restore once per parking; a freshness update must preserve the inspected offer.
+  }, [parkingGroup?.parkingId]);
   const [parkingLoading, setParkingLoading] = useState(true);
   const [parkingError, setParkingError] = useState("");
   const [parkingAttempt, setParkingAttempt] = useState(0);
@@ -220,7 +297,13 @@ export default function ListingDetail({
   }, [initialListing.id]);
   async function send(e: React.FormEvent) {
     e.preventDefault();
-    if (sendingLock.current || unavailable) return;
+    if (
+      sendingLock.current ||
+      unavailable ||
+      selectedUnavailable ||
+      relatedSelected
+    )
+      return;
     sendingLock.current = true;
     setSending(true);
     setError("");
@@ -336,28 +419,39 @@ export default function ListingDetail({
                   <ParkingViewer
                     listing={listing}
                     group={parkingGroup ?? undefined}
-                    onListingSelect={(id, unit) => {
-                      if (id === listing.id) return;
-                      const target = parkingGroup?.listings.find(
-                        (item) => item.id === id,
-                      );
-                      if (!target) return;
-                      const floor = parkingGroup?.levels.find((level) =>
-                        level.spaces.some(
-                          (space) =>
-                            space.listingId === id &&
-                            space.listingUnitId === unit,
-                        ),
-                      )?.level;
-                      const params = new URLSearchParams({ parking: id, unit });
-                      if (floor !== undefined)
-                        params.set("floor", String(floor));
-                      router.push(
-                        `/annonces/${target.id}/${target.slug}?${params}`,
-                      );
+                    selectedSpaceId={selectedViewerSpaceId}
+                    viewLevel={viewLevel}
+                    onSpaceSelect={chooseSpace}
+                    onViewLevelChange={(level) => {
+                      setViewLevel(level);
                     }}
+                    onListingSelect={chooseParkingSpace}
                   />
                 </div>
+                {selectedSpace ? (
+                  <p className="notice" role="status" aria-live="polite">
+                    {focusedGroupLabel ? (
+                      <strong>{focusedGroupLabel} · </strong>
+                    ) : null}
+                    {relatedSelected ? (
+                      <>
+                        <strong>{focusedListing.title}</strong>
+                        <br />
+                      </>
+                    ) : null}
+                    Place {selectedSpace.number} · niveau{" "}
+                    {selectedSpace.level === 0 ? "RDC" : selectedSpace.level} :{" "}
+                    <SpaceOfferSummary
+                      listing={focusedListing}
+                      space={selectedSpace}
+                    />
+                  </p>
+                ) : listing.pricingMode === "per_space" ? (
+                  <p className="muted small">
+                    Sélectionnez une place pour consulter son prix et sa
+                    disponibilité.
+                  </p>
+                ) : null}
               </section>
               <details className="detail-photo-fold">
                 <summary>Photos de l’annonce ({listing.photos.length})</summary>
@@ -591,12 +685,16 @@ export default function ListingDetail({
               </details>
             );
           })}
-          <h2 style={{ marginTop: 32 }}>Dimensions et emplacement</h2>
+          <h2 style={{ marginTop: 32 }}>Places, prix et dimensions</h2>
+          <p className="muted small">{pricingScope(listing)}</p>
           <div className="table-scroll">
             <table className="compare-table">
               <thead>
                 <tr>
                   <th>Place / niveau</th>
+                  <th>Offre</th>
+                  <th>Prix</th>
+                  <th>Statut</th>
                   <th>Surface</th>
                   <th>Longueur × largeur</th>
                   <th>Hauteur libre</th>
@@ -606,8 +704,20 @@ export default function ListingDetail({
                 {listing.spaces.map((s) => (
                   <tr key={s.id}>
                     <td>
-                      {s.number} · {s.level === 0 ? "RDC" : s.level}
+                      <button
+                        type="button"
+                        className="text-button"
+                        aria-pressed={
+                          !relatedSelected && selectedSpaceId === s.id
+                        }
+                        onClick={() => chooseSpace(s.id)}
+                      >
+                        {s.number} · {s.level === 0 ? "RDC" : s.level}
+                      </button>
                     </td>
+                    <td>{spaceOfferLabel(listing, s)}</td>
+                    <td>{spacePrice(listing, s)}</td>
+                    <td>{spaceOfferStatus(listing, s)}</td>
                     <td>
                       {s.areaM2 == null ? "À préciser" : `${s.areaM2} m²`}
                     </td>
@@ -639,11 +749,40 @@ export default function ListingDetail({
           >
             <h2>Rencontrez votre prochaine place.</h2>
             <p className="muted">
-              Posez vos questions à {listing.sellerName} et convenez d’une
-              visite. Une demande n’est confirmée qu’après accord sur un
+              Posez vos questions à {focusedListing.sellerName} et convenez
+              d’une visite. Une demande n’est confirmée qu’après accord sur un
               horaire.
             </p>
-            {loading ? (
+            {relatedSelected ? (
+              <div className="notice" role="status">
+                La place sélectionnée appartient à « {focusedListing.title} »,
+                proposée par {focusedListing.sellerName}.
+                <p>
+                  <Link className="button button-secondary" href={focusedHref}>
+                    Consulter cette annonce et ses offres
+                  </Link>
+                </p>
+              </div>
+            ) : selectedUnavailable && selectedSpace ? (
+              <div className="notice" role="status">
+                La place {selectedSpace.number} est{" "}
+                {spaceOfferStatus(listing, selectedSpace).toLocaleLowerCase(
+                  "fr-FR",
+                )}{" "}
+                et ne peut pas faire l’objet d’une demande de visite.
+                <p>
+                  Choisissez une autre place disponible dans cette annonce pour
+                  contacter l’annonceur.
+                </p>
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  onClick={() => setSelectedSpaceId(null)}
+                >
+                  Voir toutes les offres
+                </button>
+              </div>
+            ) : loading ? (
               <p>Vérification de votre compte…</p>
             ) : !user ? (
               <div className="card">
@@ -791,27 +930,62 @@ export default function ListingDetail({
           ) : null}
         </div>
         <aside className="detail-side card">
+          {relatedSelected ? (
+            <h2 style={{ fontSize: 20 }}>{focusedListing.title}</h2>
+          ) : null}
           <span className="badge">
-            {offerLabel(listing)}
-            {listing.spaces.length > 1
-              ? listing.transactionType === "rent"
-                ? " · loyer mensuel du lot"
-                : " · prix total du lot"
-              : ""}
+            {focusedGroupLabel ? `${focusedGroupLabel} · ` : ""}
+            {selectedSpace
+              ? `Place ${selectedSpace.number} · ${spaceOfferLabel(focusedListing, selectedSpace)}`
+              : offerLabel(focusedListing)}
           </span>
-          <p className="price" style={{ margin: "16px 0" }}>
-            {listingPrice(listing)}
+          <p className="price" style={{ margin: "16px 0" }} aria-live="polite">
+            {selectedSpace
+              ? spacePrice(focusedListing, selectedSpace)
+              : listingPrice(focusedListing)}
           </p>
+          <p className="small muted">
+            {selectedSpace
+              ? spaceOfferStatus(focusedListing, selectedSpace)
+              : pricingScope(focusedListing)}
+          </p>
+          {selectedSpace && focusedListing.pricingMode === "per_space" ? (
+            <button
+              type="button"
+              className="text-button"
+              onClick={() => setSelectedSpaceId(null)}
+            >
+              Voir toutes les offres
+            </button>
+          ) : null}
           <p className="muted">
-            {typeLabels[listing.type]}
+            {typeLabels[focusedListing.type]}
             <br />
-            {areaLabel(listing.spaces)} · {listing.spaces.length} place
-            {listing.spaces.length > 1 ? "s" : ""}
+            {areaLabel(focusedListing.spaces)} · {focusedListing.spaces.length}{" "}
+            place
+            {focusedListing.spaces.length > 1 ? "s" : ""}
           </p>
-          <a className="button button-primary full-width" href="#contact">
-            Demander une visite
-            <ArrowUpRight size={18} />
-          </a>
+          {selectedUnavailable ? (
+            <button
+              type="button"
+              disabled
+              className="button button-primary full-width"
+            >
+              Place indisponible
+            </button>
+          ) : relatedSelected ? (
+            <Link
+              className="button button-primary full-width"
+              href={focusedHref}
+            >
+              Voir cette annonce et contacter <ArrowUpRight size={18} />
+            </Link>
+          ) : (
+            <a className="button button-primary full-width" href="#contact">
+              Demander une visite
+              <ArrowUpRight size={18} />
+            </a>
+          )}
           <div
             style={{
               borderTop: "1px solid var(--border)",
@@ -821,12 +995,14 @@ export default function ListingDetail({
           >
             <ShieldCheck size={24} />
             <p style={{ marginTop: 12, marginBottom: 4, fontWeight: 600 }}>
-              {listing.sellerName}
+              {focusedListing.sellerName}
             </p>
             <p className="small muted">
-              {listing.transactionType === "rent"
-                ? "Le loyer n’est pas encaissé sur la plateforme. Les conditions de location sont à convenir avec le bailleur."
-                : "Le prix d’achat du parking n’est pas encaissé sur la plateforme. La vente est formalisée avec les professionnels compétents."}
+              {focusedListing.pricingMode === "per_space"
+                ? "Les prix et disponibilités sont propres à chaque place. Les paiements ne sont pas encaissés sur la plateforme ; les conditions sont à convenir avec l’annonceur."
+                : focusedListing.transactionType === "rent"
+                  ? "Le loyer n’est pas encaissé sur la plateforme. Les conditions de location sont à convenir avec le bailleur."
+                  : "Le prix d’achat du parking n’est pas encaissé sur la plateforme. La vente est formalisée avec les professionnels compétents."}
             </p>
           </div>
         </aside>

@@ -1,20 +1,28 @@
 "use client";
 import { listingPrice, offerLabel } from "@/lib/listing-price";
+import { pricingScope, SpaceOfferSummary } from "./ListingOffers";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "./SafePhoto";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
-import { api } from "@/lib/client";
-import { areaLabel, money, typeLabels, type Listing } from "@/lib/types";
+import {
+  areaLabel,
+  typeLabels,
+  type Listing,
+  type TransactionType,
+} from "@/lib/types";
 export default function Comparison() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [missing, setMissing] = useState(0);
   const [error, setError] = useState("");
+  const [transactionType, setTransactionType] = useState<TransactionType>();
   useEffect(() => {
-    const ids = (new URLSearchParams(window.location.search).get("ids") || "")
-      .split(",")
-      .slice(0, 3);
+    const params = new URLSearchParams(window.location.search);
+    const transaction = params.get("transactionType");
+    if (transaction === "sale" || transaction === "rent")
+      setTransactionType(transaction);
+    const ids = (params.get("ids") || "").split(",").slice(0, 3);
     let active = true;
     async function refresh() {
       try {
@@ -57,9 +65,35 @@ export default function Comparison() {
   }, []);
   const rows: [string, (l: Listing) => React.ReactNode][] = [
     ["Offre", offerLabel],
-    ["Prix total ou loyer mensuel", (l) => <strong>{listingPrice(l)}</strong>],
+    [
+      "Prix ou loyer mensuel",
+      (l) => (
+        <>
+          <strong>{listingPrice(l, transactionType)}</strong>
+          <p className="small muted">{pricingScope(l)}</p>
+        </>
+      ),
+    ],
+    [
+      "Offres par place",
+      (l) =>
+        l.pricingMode === "per_space"
+          ? l.spaces
+              .filter(
+                (space) =>
+                  !transactionType ||
+                  space.offer?.transactionType === transactionType,
+              )
+              .map((space) => (
+                <p key={space.id}>
+                  Place {space.number} :{" "}
+                  <SpaceOfferSummary listing={l} space={space} />
+                </p>
+              ))
+          : "Places proposées ensemble",
+    ],
     ["Type", (l) => typeLabels[l.type]],
-    ["Places dans le lot", (l) => l.spaces.length],
+    ["Places dans l’annonce", (l) => l.spaces.length],
     ["Surface par place", (l) => areaLabel(l.spaces)],
     [
       "Surface totale connue",

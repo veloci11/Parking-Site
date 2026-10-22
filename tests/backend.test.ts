@@ -1,3 +1,4 @@
+import { emptyCommercialDetails } from "../src/lib/commercial-details";
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -49,8 +50,9 @@ const makeDraft = (version: number) => ({
   title: "Place de test complète",
   description:
     "Une description complète et suffisante pour valider la publication. La place est présentée avec ses accès, ses dimensions et son état connu.",
-  city: "Lyon",
-  district: "Part-Dieu",
+  city: "Paris",
+  commercialDetails: { ...emptyCommercialDetails(), postalCode: "75012" },
+  district: "Gare de Lyon · 12e",
   priceCents: 1850000,
   type: "covered",
   spaces: [
@@ -66,7 +68,7 @@ const makeDraft = (version: number) => ({
   ],
   photos: ["/demo/covered.png", "/demo/box.png", "/demo/outdoor.png"],
   locationPrecision: "area",
-  coordinates: [4.8597, 45.7612],
+  coordinates: [2.3739, 48.8446],
   address: "Rue privée à masquer",
 });
 after(() => {
@@ -80,14 +82,14 @@ test("catalogue public assaini, filtre de lot par chaque surface, prix total", a
   assert.ok(
     a.result.data.every((l: any) => !("sellerId" in l) && !("email" in l)),
   );
-  const area = a.result.data.find((l: any) => l.district === "Montchat");
+  const area = a.result.data.find((l: any) => l.district === "Billancourt");
   assert.equal(area.address, undefined);
   assert.equal(area.sceneAvailable, false);
-  assert.deepEqual(area.coordinates, [4.89, 45.75]);
+  assert.deepEqual(area.coordinates, [2.24, 48.83]);
   const filtered = await api("listings?areaMin=13&priceMax=2500000");
   assert.deepEqual(
     filtered.result.data.map((l: any) => l.district),
-    ["Montchat"],
+    ["Billancourt"],
   );
 });
 test("inscription, mailbox privée, vérification et session hashée", async () => {

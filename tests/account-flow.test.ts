@@ -1,3 +1,4 @@
+import { emptyCommercialDetails } from "../src/lib/commercial-details";
 /**
  * Black-box HTTP acceptance flow. Opt-in against the LOCAL demonstration only:
  * GP_ACCOUNT_TEST_URL=http://127.0.0.1:3000 GP_ACCOUNT_ADMIN_EMAIL=... GP_ACCOUNT_ADMIN_PASSWORD=... npm test
@@ -196,7 +197,8 @@ test(
       title: "Parking de recette HTTP fictif",
       description:
         "Annonce fictive créée uniquement pour vérifier le parcours technique complet. Les images jointes sont des fixtures inertes et ne représentent aucun parking réel.",
-      city: "Lyon",
+      city: "Paris",
+      commercialDetails: { ...emptyCommercialDetails(), postalCode: "75012" },
       district: "Recette locale",
       type: "covered",
       priceCents: 3100000,
@@ -230,7 +232,7 @@ test(
         observations: "Fixture technique, aucune expertise.",
       },
       locationPrecision: "area",
-      coordinates: [4.85321, 45.76321],
+      coordinates: [2.3739, 48.8446],
       address: "Adresse privée test",
       occupancy: "unknown",
       annualChargesCents: null,

@@ -79,8 +79,8 @@ test("bbox and radius use public rounded coordinates; antimeridian and invalid t
   // The rounded public marker is outside a 100m radius around this private source coordinate.
   assert.equal(
     matchesPageFilters(
-      { ...item, coordinates: [4.86, 45.76] },
-      query("center=4.8597,45.7612&radiusKm=0.1").filters,
+      { ...item, coordinates: [2.37, 48.84] },
+      query("center=2.3739,48.8446&radiusKm=0.1").filters,
     ),
     false,
   );

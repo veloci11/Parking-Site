@@ -1,3 +1,4 @@
+import { emptyCommercialDetails } from "../src/lib/commercial-details";
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -74,7 +75,7 @@ test("canonical registry requires administered complete links, isolates conflict
     publicName: "Parking partagé QA",
     internalReference: "INTERNAL-ONLY",
     exactAddress: "REGISTRY-PRIVATE-ADDRESS",
-    coordinates: [4.85, 45.76],
+    coordinates: [2.3739, 48.8446],
   });
   const siteId = site.id;
   const levelId = (
@@ -160,7 +161,8 @@ test("canonical registry requires administered complete links, isolates conflict
         title: "Place physique de recette complète",
         description:
           "Description factuelle de la place et de ses contraintes. ".repeat(4),
-        city: "Lyon",
+        city: "Paris",
+        commercialDetails: { ...emptyCommercialDetails(), postalCode: "75012" },
         district: "Test",
         priceCents: 2000000,
         type: "covered",
@@ -177,7 +179,7 @@ test("canonical registry requires administered complete links, isolates conflict
         ],
         photos: ["/demo/covered.png", "/demo/box.png", "/demo/outdoor.png"],
         locationPrecision: precision,
-        coordinates: [4.85, 45.76],
+        coordinates: [2.3739, 48.8446],
         address: "Adresse choisie par le vendeur",
       },
       cookie,

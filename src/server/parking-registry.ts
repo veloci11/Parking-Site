@@ -35,7 +35,11 @@ export function registryDB() {
   return sql;
 }
 const signature = (spaces: Listing["spaces"]) =>
-  createHash("sha256").update(JSON.stringify(spaces)).digest("hex");
+  createHash("sha256")
+    .update(
+      JSON.stringify(spaces.map(({ offer: _offer, ...physical }) => physical)),
+    )
+    .digest("hex");
 const dimensions = (r: Record<string, unknown>) =>
   JSON.parse(String(r.dimensions));
 function admin(actor: User) {

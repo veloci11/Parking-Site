@@ -295,32 +295,36 @@ export default function AuthForm({ mode }: { mode: Mode }) {
             <span className="badge">Environnement de démonstration</span>
             <p>Explorer avec un compte fictif :</p>
             <div className="account-demo-buttons">
-              {(["buyer", "seller", "moderator"] as const).map((persona, i) => (
-                <button
-                  type="button"
-                  key={persona}
-                  className="button button-secondary"
-                  disabled={busy}
-                  onClick={async () => {
-                    setBusy(true);
-                    try {
-                      await api("/api/auth/demo", {
-                        method: "POST",
-                        body: JSON.stringify({ persona }),
-                      });
-                      window.dispatchEvent(new Event("gp:session"));
-                      window.location.assign(
-                        persona === "moderator" ? "/admin" : returnTo,
-                      );
-                    } catch (e) {
-                      setError((e as Error).message);
-                      setBusy(false);
-                    }
-                  }}
-                >
-                  {["Acheteur", "Vendeur", "Modérateur"][i]}
-                </button>
-              ))}
+              {(["buyer", "seller", "moderator", "admin"] as const).map(
+                (persona, i) => (
+                  <button
+                    type="button"
+                    key={persona}
+                    className="button button-secondary"
+                    disabled={busy}
+                    onClick={async () => {
+                      setBusy(true);
+                      try {
+                        await api("/api/auth/demo", {
+                          method: "POST",
+                          body: JSON.stringify({ persona }),
+                        });
+                        window.dispatchEvent(new Event("gp:session"));
+                        window.location.assign(
+                          persona === "moderator" || persona === "admin"
+                            ? "/admin"
+                            : returnTo,
+                        );
+                      } catch (e) {
+                        setError((e as Error).message);
+                        setBusy(false);
+                      }
+                    }}
+                  >
+                    {["Acheteur", "Vendeur", "Modérateur", "Administrateur"][i]}
+                  </button>
+                ),
+              )}
             </div>
           </div>
         ) : null}

@@ -1,5 +1,6 @@
 "use client";
 import { listingPrice, offerLabel } from "@/lib/listing-price";
+import { pricingScope } from "../ListingOffers";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -113,13 +114,18 @@ function DashboardContent({ user }: { user: User }) {
               </div>
               <div>
                 <span className={`badge account-status-${l.status}`}>
-                  {l.status === "sold" && l.transactionType === "rent"
-                    ? "Louée"
-                    : statusLabels[l.status] || l.status}
+                  {l.status === "sold" && l.pricingMode === "per_space"
+                    ? "Offres clôturées"
+                    : l.status === "sold" && l.transactionType === "rent"
+                      ? "Louée"
+                      : statusLabels[l.status] || l.status}
                 </span>
                 <h3>{l.title || "Annonce sans titre"}</h3>
                 <p className="muted">
                   {l.city || "Ville à préciser"} · {listingPrice(l)}
+                </p>
+                <p className="small muted">
+                  {offerLabel(l)} · {pricingScope(l)}
                 </p>
               </div>
               <ArrowRight size={20} />

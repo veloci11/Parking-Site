@@ -29,7 +29,14 @@ import {
   ConditionEvidenceSummary,
 } from "./condition-evidence";
 import { editableConditions } from "@/lib/condition-observations";
-import { emptyCommercialDetails } from "@/lib/commercial-details";
+import {
+  emptyCommercialDetails,
+  emptyUnitDetails,
+} from "@/lib/commercial-details";
+import LocationPicker from "./location-picker";
+import { ModelRequest } from "./modeling-request";
+import "@/styles/wizard-simplified.css";
+import { listingPrice, offerLabel, spaceOffer } from "@/lib/listing-price";
 import { CommercialEditor } from "./commercial-editor";
 import { CommercialSummary } from "../CommercialSummary";
 import { listingIssues } from "@/lib/listing-issues";
@@ -50,24 +57,78 @@ import {
   type User,
 } from "@/lib/types";
 const steps = [
-  "Votre bien",
-  "Localisation",
-  "Places et accès",
-  "État réel",
-  "Photos",
-  "Prix de vente",
-  "Description",
-  "Prévisualisation",
+  "Localisation et places",
+  "Photos et description",
+  "Vérifier et envoyer",
 ];
-function newSpace(number: string): Space {
+const offerStatusLabels = {
+  available: "Disponible",
+  reserved: "Réservée",
+  sold: "Vendue",
+  rented: "Louée",
+  withdrawn: "Retirée",
+} as const;
+function issueStep(step: number) {
+  return step === 4 || step === 6 ? 1 : step === 7 ? 2 : 0;
+}
+function spaceLabel(space: Space | undefined, index: number) {
+  return space?.number.trim()
+    ? `Place ${space.number.trim()}`
+    : `${index >= 0 ? `Emplacement ${index + 1}` : "Emplacement sélectionné"} · numéro non renseigné`;
+}
+function PaintedNumberField({
+  space,
+  index,
+  onChange,
+}: {
+  space: Space;
+  index: number;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="field">
+      Numéro de la place
+      <input
+        className="input"
+        aria-label={`Numéro de la place — emplacement ${index + 1}`}
+        maxLength={40}
+        placeholder="18"
+        value={space.number}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      <small>Public · facultatif si inconnu</small>
+    </label>
+  );
+}
+function wizardIssues(value: Listing) {
+  const issues = listingIssues(value);
+  const numbers = new Set<string>();
+  for (const space of value.spaces) {
+    const number = space.number.trim().normalize("NFKC").toLowerCase();
+    if (!number) continue;
+    const key = `${space.level}:${number}`;
+    if (numbers.has(key)) {
+      issues.push({
+        step: 2,
+        field: "listing-units",
+        message: `Le numéro « ${space.number.trim()} » est répété au même niveau. Corrigez le numéro ou précisez des niveaux différents.`,
+      });
+      break;
+    }
+    numbers.add(key);
+  }
+  return issues;
+}
+function newSpace(): Space {
   return {
     id: crypto.randomUUID(),
-    number,
+    number: "",
     level: -1,
     areaM2: null,
     lengthM: null,
     widthM: null,
     clearanceM: null,
+    offer: { transactionType: "sale", priceCents: 0, status: "available" },
   };
 }
 function NumField({
@@ -127,6 +188,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
     [attest, setAttest] = useState(false),
     [locationConfirmed, setLocationConfirmed] = useState(false),
     [busy, setBusy] = useState(false);
+  const cachedOffers = useRef(new Map<string, NonNullable<Space["offer"]>>());
   const latest = useRef<Listing | null>(null),
     dirty = useRef(false),
     saving = useRef(false),
@@ -143,7 +205,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
     if (id) {
       if (new URLSearchParams(window.location.search).get("partial") === "1") {
         setPartialSale(true);
-        setStep(2);
+        setStep(0);
       }
       return;
     }
@@ -162,6 +224,10 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
     setLoading(true);
     api<{ data: Listing }>(`/api/listings/${id}?draft=1`)
       .then((r) => {
+        cachedOffers.current.clear();
+        for (const space of r.data.spaces)
+          if (space.offer)
+            cachedOffers.current.set(space.id, { ...space.offer });
         setListing(r.data);
         setLocationConfirmed(!!r.data.locationConfirmedAt);
         latest.current = r.data;
@@ -172,7 +238,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
   useEffect(() => {
     setPreview(null);
     setPreviewError("");
-    if (step !== 7 || !listing?.id || saveState !== "saved") return;
+    if (step !== 2 || !listing?.id || saveState !== "saved") return;
     let active = true;
     api<{ data: Listing }>(`/api/listings/${listing.id}/preview`)
       .then((response) => {
@@ -195,13 +261,23 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
       } catch {
         /* An inaccessible local preparation does not authenticate or alter an existing draft. */
       }
+      const prepared = preparation
+        ? preparationPayload(preparation, () => crypto.randomUUID())
+        : null;
       const r = await api<{ data: Listing }>("/api/listings", {
         method: "POST",
-        body: JSON.stringify(
-          preparation
-            ? preparationPayload(preparation, () => crypto.randomUUID())
-            : {},
-        ),
+        body: JSON.stringify({
+          ...prepared,
+          pricingMode: "per_space",
+          spaces: (prepared?.spaces || [newSpace()]).map((space) => ({
+            ...space,
+            offer: space.offer || {
+              transactionType: prepared?.transactionType || "sale",
+              priceCents: 0,
+              status: "available",
+            },
+          })),
+        }),
       });
       if (preparation) {
         try {
@@ -246,6 +322,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
           district: current.district,
           priceCents: current.priceCents,
           transactionType: current.transactionType || "sale",
+          pricingMode: current.pricingMode,
           type: current.type,
           spaces: current.spaces,
           photos: current.photos,
@@ -401,6 +478,47 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
     setListing(next);
     setSaveState("dirty");
   }
+  function changeOffer(
+    index: number,
+    patch: Partial<NonNullable<Space["offer"]>>,
+  ) {
+    if (!latest.current) return;
+    const value = latest.current;
+    change({
+      spaces: value.spaces.map((space, n) =>
+        n === index
+          ? { ...space, offer: { ...spaceOffer(value, space), ...patch } }
+          : space,
+      ),
+    });
+  }
+  function setPricingMode(mode: "lot" | "per_space") {
+    if (!latest.current || (latest.current.pricingMode || "lot") === mode)
+      return;
+    const value = latest.current;
+    if (mode === "lot") {
+      for (const space of value.spaces)
+        if (space.offer) cachedOffers.current.set(space.id, { ...space.offer });
+      change({
+        pricingMode: "lot",
+        priceCents: 0,
+        spaces: value.spaces.map(({ offer: _offer, ...space }) => space),
+      });
+    } else {
+      change({
+        pricingMode: "per_space",
+        priceCents: 0,
+        spaces: value.spaces.map((space) => ({
+          ...space,
+          offer: cachedOffers.current.get(space.id) || {
+            transactionType: value.transactionType || "sale",
+            priceCents: 0,
+            status: "available",
+          },
+        })),
+      });
+    }
+  }
   function spaceChange(
     i: number,
     key: keyof Space,
@@ -506,35 +624,15 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
   }
 
   function validateStep() {
-    if (!listing) return false;
-    let message = "";
-    if (step === 1 && (!listing.city.trim() || !listing.district.trim()))
-      message = "Indiquez la ville et le quartier du parking.";
-    if (step === 1 && !locationConfirmed)
+    if (!latest.current) return false;
+    const issues = wizardIssues(latest.current).filter(
+      (issue) =>
+        issueStep(issue.step) === step && issue.field !== "location-confirmed",
+    );
+    let message = issues[0]?.message || "";
+    if (step === 0 && !latest.current.commercialDetails?.postalCode.trim())
       message =
-        "Vérifiez le point de localisation puis confirmez qu’il correspond au secteur ou à l’adresse que vous autorisez.";
-    if (step === 2 && !listing.spaces.length)
-      message = "Ajoutez au moins une place à votre annonce.";
-    if (step === 4 && listing.photos.length < 3)
-      message =
-        "Ajoutez au moins 3 photos pour présenter le bien et ses contraintes.";
-    if (
-      step === 5 &&
-      (!Number.isSafeInteger(listing.priceCents) || listing.priceCents <= 0)
-    )
-      message =
-        listing.transactionType === "rent"
-          ? "Indiquez un loyer mensuel total positif."
-          : "Indiquez un prix total de vente positif.";
-    if (
-      step === 6 &&
-      (listing.title.length < 15 ||
-        listing.title.length > 90 ||
-        listing.description.length < 100 ||
-        listing.description.length > 5000)
-    )
-      message =
-        "Le titre doit comporter 15 à 90 caractères et la description 100 à 5 000 caractères.";
+        "Recherchez puis choisissez une adresse ou une commune en Île-de-France.";
     setError(message);
     return !message;
   }
@@ -543,14 +641,20 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
       setShowIssues(true);
       return;
     }
-    await save();
-    setStep((s) => Math.min(7, s + 1));
+    const saved = await save();
+    if (!saved) return;
+    if (step === 0 && !saved.locationConfirmedAt) {
+      change({ locationConfirmedAt: new Date().toISOString() });
+      const confirmed = await save();
+      if (!confirmed?.locationConfirmedAt) return;
+    }
+    setStep((s) => Math.min(2, s + 1));
     window.scrollTo({ top: 0, behavior: "instant" });
   }
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!latest.current || !attest) return;
-    if (listingIssues(latest.current).length) {
+    if (wizardIssues(latest.current).length) {
       setShowIssues(true);
       setError("Complétez les informations indiquées avant de soumettre.");
       return;
@@ -559,7 +663,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
       setError(
         "Confirmez le point de localisation avant de soumettre votre annonce.",
       );
-      setStep(1);
+      setStep(0);
       return;
     }
     setBusy(true);
@@ -659,7 +763,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
     photoTarget === "general"
       ? listing.photos
       : listing.spacePhotos?.[photoTarget] || [];
-  const missing = listingIssues(listing);
+  const missing = wizardIssues(listing);
   const imageUnion = new Set([
     ...listing.photos,
     ...Object.values(listing.spacePhotos || {}).flat(),
@@ -725,7 +829,9 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                   step === index
                     ? "active"
                     : index < step &&
-                        !missing.some((issue) => issue.step === index)
+                        !missing.some(
+                          (issue) => issueStep(issue.step) === index,
+                        )
                       ? "complete"
                       : ""
                 }
@@ -739,20 +845,23 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                 >
                   <span>
                     {index < step &&
-                    !missing.some((issue) => issue.step === index) ? (
+                    !missing.some(
+                      (issue) => issueStep(issue.step) === index,
+                    ) ? (
                       <Check size={14} />
                     ) : (
                       index + 1
                     )}
                   </span>
-                  {index === 5 && listing.transactionType === "rent"
-                    ? "Loyer mensuel"
-                    : label}
-                  {missing.some((issue) => issue.step === index) ? (
+                  {label}
+                  {missing.some((issue) => issueStep(issue.step) === index) ? (
                     <small className="muted">
                       {" "}
-                      · {
-                        missing.filter((issue) => issue.step === index).length
+                      ·{" "}
+                      {
+                        missing.filter(
+                          (issue) => issueStep(issue.step) === index,
+                        ).length
                       }{" "}
                       à compléter
                     </small>
@@ -769,24 +878,18 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
         <section
           className="account-wizard-content"
           id={
-            step === 2
-              ? "listing-units"
-              : step === 3
-                ? "listing-condition"
-                : step === 4
-                  ? "listing-photos"
-                  : undefined
+            step === 0
+              ? "listing-details"
+              : step === 1
+                ? "listing-photos"
+                : "listing-preview"
           }
           tabIndex={-1}
           aria-labelledby="wizard-step-title"
         >
-          <span className="account-eyebrow">ÉTAPE {step + 1} SUR 8</span>
-          <h1 id="wizard-step-title">
-            {step === 5 && listing.transactionType === "rent"
-              ? "Loyer mensuel"
-              : steps[step]}
-          </h1>
-          {(showIssues || step === 7) && missing.length ? (
+          <span className="account-eyebrow">ÉTAPE {step + 1} SUR 3</span>
+          <h1 id="wizard-step-title">{steps[step]}</h1>
+          {(showIssues || step === 2) && missing.length ? (
             <div className="notice" role="status">
               <p>
                 {missing.length} information(s) à compléter avant la soumission
@@ -799,10 +902,23 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                       href={`#${issue.field}`}
                       onClick={(event) => {
                         event.preventDefault();
-                        setStep(issue.step);
-                        requestAnimationFrame(() =>
-                          document.getElementById(issue.field)?.focus(),
-                        );
+                        setStep(issueStep(issue.step));
+                        requestAnimationFrame(() => {
+                          const field = document.getElementById(issue.field);
+                          for (
+                            let parent = field?.parentElement;
+                            parent;
+                            parent = parent.parentElement
+                          )
+                            if (parent instanceof HTMLDetailsElement)
+                              parent.open = true;
+                          if (issue.step === 2)
+                            document
+                              .getElementById("listing-unit-details")
+                              ?.setAttribute("open", "");
+                          field?.focus();
+                          field?.scrollIntoView({ block: "center" });
+                        });
                       }}
                     >
                       {issue.message}
@@ -833,6 +949,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                   );
                   latest.current = r.data;
                   setListing(r.data);
+                  setLocationConfirmed(!!r.data.locationConfirmedAt);
                   dirty.current = false;
                   setSaveState("saved");
                   setError("");
@@ -846,11 +963,11 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
           ) : null}
           {partialSale ? (
             <p className="notice">
-              Vente partielle du lot : retirez uniquement les places déjà
-              vendues, contrôlez chaque place restante et indiquez un nouveau
-              prix total à l’étape Prix de vente. Aucun prorata n’est calculé.
-              La nouvelle version devra être approuvée ; si l’ancienne offre
-              n’est plus valable pendant la correction, mettez-la en pause
+              Mise à jour des places : indiquez les places vendues ou louées
+              dans leur disponibilité et vérifiez les offres restantes. Pour une
+              offre en lot, contrôlez son prix total. Aucun prorata n’est
+              calculé. La nouvelle version devra être approuvée ; si l’ancienne
+              offre n’est plus valable pendant la correction, mettez-la en pause
               depuis Mes annonces.
             </p>
           ) : null}
@@ -876,879 +993,877 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
           {step === 0 ? (
             <>
               <p className="muted">
-                Une place, un box ou plusieurs unités d’un même parking :
-                décrivez ce que vous proposez.
+                Un seul parking, une ou plusieurs places. Recherchez son adresse
+                ou sa commune, puis choisissez ce que vous proposez pour chaque
+                place.
               </p>
-              <div className="field">
-                <span>Type d’offre</span>
-                <FilterSelect
-                  label="Type d’offre"
-                  variant="field"
-                  value={listing.transactionType || "sale"}
-                  options={[
-                    { value: "sale", label: "À vendre" },
-                    { value: "rent", label: "À louer" },
-                  ]}
-                  onChange={(transactionType) =>
-                    change({
-                      transactionType: transactionType as "sale" | "rent",
-                    })
-                  }
-                />
-              </div>
+              <LocationPicker value={listing} onChange={change} />
+              <h2>Vos places</h2>
               <div className="account-type-options">
-                {(["covered", "box", "outdoor", "mixed"] as const).map((t) => (
-                  <button
-                    key={t}
-                    className={listing.type === t ? "active" : ""}
-                    aria-pressed={listing.type === t}
-                    onClick={() => change({ type: t })}
-                  >
-                    <span>{typeLabels[t]}</span>
-                    {listing.type === t ? <CheckCircle2 size={20} /> : null}
-                  </button>
-                ))}
+                {(["covered", "box", "outdoor", "mixed"] as const).map(
+                  (type) => (
+                    <button
+                      type="button"
+                      key={type}
+                      className={listing.type === type ? "active" : ""}
+                      aria-pressed={listing.type === type}
+                      onClick={() => change({ type })}
+                    >
+                      <span>{typeLabels[type]}</span>
+                      {listing.type === type ? (
+                        <CheckCircle2 size={20} />
+                      ) : null}
+                    </button>
+                  ),
+                )}
               </div>
               <label className="field">
-                Combien de places proposez-vous ensemble ?
+                Nombre de places dans cette annonce
                 <input
                   className="input"
                   type="number"
                   min="1"
                   max="500"
                   value={listing.spaces.length}
-                  onChange={(e) => {
-                    const qty = Math.min(
+                  onChange={(event) => {
+                    const quantity = Math.min(
                       500,
-                      Math.max(1, Number(e.target.value) || 1),
+                      Math.max(1, Math.trunc(Number(event.target.value) || 1)),
                     );
                     change({
                       spaces: Array.from(
-                        { length: qty },
-                        (_, i) => listing.spaces[i] || newSpace(String(i + 1)),
+                        { length: quantity },
+                        (_, index) => listing.spaces[index] || newSpace(),
                       ),
                     });
                   }}
                 />
               </label>
-              <div className="notice">
-                <Info size={18} />
-                <p>
-                  {listing.spaces.length > 1
-                    ? `Ce lot de ${listing.spaces.length} places sera proposé avec un seul ${listing.transactionType === "rent" ? "loyer mensuel total" : "prix total"}. Pour les proposer à l’unité, créez des annonces distinctes.`
-                    : "Votre annonce proposera une place unique."}{" "}
-                  Une annonce concerne un seul parking/site.
-                </p>
-              </div>
+              <p className="muted">
+                Vous pouvez proposer certaines places à vendre et d’autres à
+                louer. Elles restent réunies dans la même annonce.
+              </p>
+              {listing.pricingMode === "per_space" ? (
+                <div id="listing-units" tabIndex={-1}>
+                  {listing.spaces.map((space, index) => {
+                    const offer = spaceOffer(listing, space);
+                    return (
+                      <fieldset
+                        className="account-space-fieldset"
+                        key={space.id}
+                      >
+                        <legend>Emplacement {index + 1}</legend>
+                        <div className="form-grid account-offer-fields">
+                          <PaintedNumberField
+                            space={space}
+                            index={index}
+                            onChange={(value) =>
+                              spaceChange(index, "number", value)
+                            }
+                          />
+                          <div className="field">
+                            <span>Offre — emplacement {index + 1}</span>
+                            <FilterSelect
+                              label={`Offre — emplacement ${index + 1}`}
+                              variant="field"
+                              value={offer.transactionType}
+                              options={[
+                                { value: "sale", label: "À vendre" },
+                                { value: "rent", label: "À louer" },
+                              ]}
+                              onChange={(value) =>
+                                changeOffer(index, {
+                                  transactionType: value as "sale" | "rent",
+                                  priceCents:
+                                    value === offer.transactionType
+                                      ? offer.priceCents
+                                      : 0,
+                                  status:
+                                    offer.status === "sold" ||
+                                    offer.status === "rented"
+                                      ? "available"
+                                      : offer.status,
+                                })
+                              }
+                            />
+                          </div>
+                          <label className="field">
+                            {offer.transactionType === "rent"
+                              ? `Loyer mensuel — emplacement ${index + 1}`
+                              : `Prix de vente — emplacement ${index + 1}`}
+                            <span className="account-unit-field">
+                              <input
+                                className="input"
+                                type="number"
+                                min="0"
+                                max="100000000"
+                                step="0.01"
+                                value={
+                                  offer.priceCents ? offer.priceCents / 100 : ""
+                                }
+                                placeholder={
+                                  offer.transactionType === "rent"
+                                    ? "150"
+                                    : "18500"
+                                }
+                                onChange={(event) =>
+                                  changeOffer(index, {
+                                    priceCents: Math.round(
+                                      Number(event.target.value) * 100,
+                                    ),
+                                  })
+                                }
+                              />
+                              <span>
+                                {offer.transactionType === "rent"
+                                  ? "€/mois"
+                                  : "€"}
+                              </span>
+                            </span>
+                          </label>
+                          {listing.type === "mixed" ? (
+                            <div className="field">
+                              <span>Type — emplacement {index + 1}</span>
+                              <FilterSelect
+                                label={`Type — emplacement ${index + 1}`}
+                                variant="field"
+                                value={
+                                  listing.commercialDetails?.units[space.id]
+                                    ?.type || ""
+                                }
+                                options={[
+                                  {
+                                    value: "",
+                                    label: "Choisir",
+                                    disabled: true,
+                                  },
+                                  {
+                                    value: "covered",
+                                    label: "Parking couvert",
+                                  },
+                                  { value: "box", label: "Box fermé" },
+                                  {
+                                    value: "outdoor",
+                                    label: "Parking extérieur",
+                                  },
+                                ]}
+                                onChange={(value) =>
+                                  change({
+                                    commercialDetails: {
+                                      ...(listing.commercialDetails ||
+                                        emptyCommercialDetails()),
+                                      units: {
+                                        ...listing.commercialDetails?.units,
+                                        [space.id]: {
+                                          ...emptyUnitDetails(),
+                                          ...listing.commercialDetails?.units[
+                                            space.id
+                                          ],
+                                          type: value as
+                                            "covered" | "box" | "outdoor",
+                                        },
+                                      },
+                                    },
+                                  })
+                                }
+                              />
+                            </div>
+                          ) : null}
+                        </div>
+                        <details className="account-space-status">
+                          <summary>
+                            {offerStatusLabels[offer.status]} · modifier la
+                            disponibilité
+                          </summary>
+                          <div className="field">
+                            <span>Disponibilité — emplacement {index + 1}</span>
+                            <FilterSelect
+                              label={`Disponibilité — emplacement ${index + 1}`}
+                              variant="field"
+                              value={offer.status}
+                              options={Object.entries(offerStatusLabels)
+                                .filter(
+                                  ([value]) =>
+                                    value !==
+                                    (offer.transactionType === "rent"
+                                      ? "sold"
+                                      : "rented"),
+                                )
+                                .map(([value, label]) => ({ value, label }))}
+                              onChange={(value) =>
+                                changeOffer(index, {
+                                  status: value as NonNullable<
+                                    Space["offer"]
+                                  >["status"],
+                                })
+                              }
+                            />
+                          </div>
+                        </details>
+                      </fieldset>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div id="listing-units" tabIndex={-1}>
+                  <p className="notice">
+                    {offerLabel(listing)} · {listingPrice(listing)} pour
+                    l’ensemble des {listing.spaces.length} place(s).
+                  </p>
+                  {listing.spaces.map((space, index) => (
+                    <fieldset className="account-space-fieldset" key={space.id}>
+                      <legend>Emplacement {index + 1}</legend>
+                      <PaintedNumberField
+                        space={space}
+                        index={index}
+                        onChange={(value) =>
+                          spaceChange(index, "number", value)
+                        }
+                      />
+                    </fieldset>
+                  ))}
+                </div>
+              )}
+              <details className="account-fieldset">
+                <summary>Vendre ou louer les places ensemble</summary>
+                <label className="account-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={listing.pricingMode !== "per_space"}
+                    onChange={(event) =>
+                      setPricingMode(event.target.checked ? "lot" : "per_space")
+                    }
+                  />
+                  <span>
+                    Une seule offre et un prix total pour toutes les places
+                  </span>
+                </label>
+                {listing.pricingMode !== "per_space" ? (
+                  <div className="form-grid">
+                    <div className="field">
+                      <span>Offre pour l’ensemble</span>
+                      <FilterSelect
+                        label="Offre pour l’ensemble"
+                        variant="field"
+                        value={listing.transactionType || "sale"}
+                        options={[
+                          { value: "sale", label: "À vendre ensemble" },
+                          { value: "rent", label: "À louer ensemble" },
+                        ]}
+                        onChange={(value) =>
+                          change({ transactionType: value as "sale" | "rent" })
+                        }
+                      />
+                    </div>
+                    <label className="field">
+                      {listing.transactionType === "rent"
+                        ? "Loyer mensuel total du lot"
+                        : "Prix total du lot"}
+                      <span className="account-unit-field">
+                        <input
+                          id="listing-price"
+                          className="input"
+                          type="number"
+                          min="0"
+                          max="100000000"
+                          step="0.01"
+                          value={
+                            listing.priceCents ? listing.priceCents / 100 : ""
+                          }
+                          onChange={(event) =>
+                            change({
+                              priceCents: Math.round(
+                                Number(event.target.value) * 100,
+                              ),
+                            })
+                          }
+                        />
+                        <span>
+                          {listing.transactionType === "rent" ? "€/mois" : "€"}
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+                ) : (
+                  <p className="muted">
+                    Un prix individuel est demandé pour chaque place disponible.
+                    Aucun prix global n’est divisé automatiquement.
+                  </p>
+                )}
+              </details>
+              <details
+                id="listing-unit-details"
+                className="account-fieldset"
+                tabIndex={-1}
+              >
+                <summary>Dimensions, niveaux et accès · facultatif</summary>
+                <>
+                  <p className="muted">
+                    Renseignez chaque unité. Laissez une dimension vide si vous
+                    ne la connaissez pas : nous afficherons « Non renseigné ».
+                  </p>
+                  {listing.spaces.map((space, index) => (
+                    <fieldset key={space.id} className="account-space-fieldset">
+                      <legend>{spaceLabel(space, index)}</legend>
+                      <div className="form-grid">
+                        <label className="field">
+                          Niveau
+                          <input
+                            className="input"
+                            type="number"
+                            min="-20"
+                            max="20"
+                            value={space.level}
+                            onChange={(e) =>
+                              spaceChange(
+                                index,
+                                "level",
+                                Number(e.target.value),
+                              )
+                            }
+                          />
+                        </label>
+                        <NumField
+                          label="Surface"
+                          value={space.areaM2}
+                          unit="m²"
+                          onChange={(v) => spaceChange(index, "areaM2", v)}
+                        />
+                        <NumField
+                          label="Longueur"
+                          value={space.lengthM}
+                          onChange={(v) => spaceChange(index, "lengthM", v)}
+                        />
+                        <NumField
+                          label="Largeur"
+                          value={space.widthM}
+                          onChange={(v) => spaceChange(index, "widthM", v)}
+                        />
+                        <NumField
+                          max={20}
+                          label="Hauteur libre minimale"
+                          value={space.clearanceM}
+                          onChange={(v) => spaceChange(index, "clearanceM", v)}
+                        />
+                      </div>
+                    </fieldset>
+                  ))}
+                  <p className="notice">
+                    Les dimensions saisies sont déclaratives. Un modèle mesuré
+                    exige des sources et des distances de contrôle
+                    supplémentaires.
+                  </p>
+                  <CommercialEditor
+                    listing={listing}
+                    section="units"
+                    onChange={(commercialDetails) =>
+                      change({ commercialDetails })
+                    }
+                  />
+                </>
+              </details>
+              <details
+                id="listing-condition"
+                className="account-fieldset"
+                tabIndex={-1}
+              >
+                <summary>État et observations · facultatif</summary>
+                <>
+                  <div className="field">
+                    <span>{"Périmètre de la description"}</span>
+                    <FilterSelect
+                      label={"Périmètre de la description"}
+                      variant="field"
+                      value={qualityTarget}
+                      onChange={(selectedValue) =>
+                        setQualityTarget(selectedValue)
+                      }
+                      options={[
+                        { value: "general", label: "État commun du parking" },
+                        ...listing.spaces.map((space, index) => ({
+                          value: space.id,
+                          label: `${spaceLabel(space, index)} · niveau ${space.level}`,
+                        })),
+                      ]}
+                    />
+                  </div>
+                  <p className="notice">
+                    Déclarations du vendeur. Chaque place conserve ses propres
+                    informations ; un champ vide reste non renseigné, sans
+                    reprendre l’état commun. Les photos associées ne constituent
+                    pas une validation automatique.
+                  </p>
+                  <ConditionEvidenceEditor
+                    listing={listing}
+                    spaceId={qualityTarget === "general" ? null : qualityTarget}
+                    onChange={(conditionObservations) =>
+                      change({ conditionObservations })
+                    }
+                  />
+                  <details>
+                    <summary>Description libre complémentaire</summary>
+                    <label className="field">
+                      Date des observations de ce périmètre · facultative
+                      <input
+                        className="input"
+                        type="date"
+                        max={new Date().toISOString().slice(0, 10)}
+                        value={
+                          (qualityTarget === "general"
+                            ? listing.quality.observedAt || listing.observedAt
+                            : listing.unitQuality?.[qualityTarget]?.observedAt
+                          )?.slice(0, 10) || ""
+                        }
+                        onChange={(e) =>
+                          quality(
+                            "observedAt",
+                            e.target.value
+                              ? `${e.target.value}T00:00:00.000Z`
+                              : null,
+                          )
+                        }
+                      />
+                    </label>
+                    <div className="field">
+                      <span>{"Origine déclarée par le vendeur"}</span>
+                      <FilterSelect
+                        label={"Origine déclarée par le vendeur"}
+                        variant="field"
+                        value={
+                          (qualityTarget === "general"
+                            ? listing.quality
+                            : listing.unitQuality?.[qualityTarget]
+                          )?.basis || "unknown"
+                        }
+                        onChange={(selectedValue) =>
+                          quality("basis", selectedValue as Quality["basis"])
+                        }
+                        options={[
+                          { value: "unknown", label: "À préciser" },
+                          {
+                            value: "seller_observation",
+                            label: "Observation du vendeur",
+                          },
+                          {
+                            value: "provided_document",
+                            label: "Document fourni",
+                          },
+                        ]}
+                      />
+                    </div>
+                    <p className="muted">
+                      Montrez le parking tel qu’il est. Décrivez les limites et
+                      les défauts visibles : ils aident à préparer une visite
+                      utile.
+                    </p>
+                    <div className="form-grid">
+                      {(
+                        [
+                          ["floor", "Sol"],
+                          ["lighting", "Éclairage"],
+                          ["humidity", "Humidité"],
+                          ["access", "Accès et fermeture"],
+                          ["maneuver", "Manœuvres"],
+                        ] as [keyof Quality, string][]
+                      ).map(([key, label]) => (
+                        <label className="field" key={key}>
+                          {label}
+                          <input
+                            className="input"
+                            value={
+                              (qualityTarget === "general"
+                                ? listing.quality
+                                : listing.unitQuality?.[qualityTarget])?.[
+                                key
+                              ] || ""
+                            }
+                            maxLength={500}
+                            placeholder="Non renseigné"
+                            onChange={(e) => quality(key, e.target.value)}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                    <label className="field">
+                      Observations, contraintes et défauts
+                      <textarea
+                        className="input"
+                        rows={5}
+                        maxLength={3000}
+                        value={
+                          (qualityTarget === "general"
+                            ? listing.quality
+                            : listing.unitQuality?.[qualityTarget]
+                          )?.observations || ""
+                        }
+                        onChange={(e) =>
+                          quality("observations", e.target.value)
+                        }
+                        placeholder="Ex. poteau à gauche de la place, marquage usé, traces visibles sur un mur…"
+                      />
+                    </label>
+                  </details>
+                  <div className="notice">
+                    <Info size={18} />
+                    <p>
+                      Une absence de trace visible ne garantit pas l’absence
+                      d’infiltration. Ne partagez pas de code d’accès, de badge
+                      lisible ni de donnée personnelle.
+                    </p>
+                  </div>
+                </>
+              </details>
+              <details
+                id={
+                  listing.pricingMode === "per_space"
+                    ? "listing-price"
+                    : "listing-financial"
+                }
+                className="account-fieldset"
+                tabIndex={-1}
+              >
+                <summary>Charges, occupation et sources · facultatif</summary>
+                <>
+                  <div className="field">
+                    <span>{"Occupation actuelle"}</span>
+                    <FilterSelect
+                      label={"Occupation actuelle"}
+                      variant="field"
+                      value={listing.occupancy || "unknown"}
+                      onChange={(selectedValue) =>
+                        change({
+                          occupancy: selectedValue as Listing["occupancy"],
+                        })
+                      }
+                      options={[
+                        { value: "unknown", label: "Non renseignée" },
+                        {
+                          value: "vacant",
+                          label: "Libre · déclaration vendeur",
+                        },
+                        {
+                          value: "occupied",
+                          label: "Occupée · déclaration vendeur",
+                        },
+                      ]}
+                    />
+                  </div>
+                  <div className="form-grid">
+                    <NumField
+                      label="Charges annuelles connues"
+                      value={
+                        listing.annualChargesCents == null
+                          ? null
+                          : listing.annualChargesCents / 100
+                      }
+                      unit="€/an"
+                      onChange={(v) =>
+                        change({
+                          annualChargesCents:
+                            v == null ? null : Math.round(v * 100),
+                        })
+                      }
+                    />
+                    <NumField
+                      label="Taxe foncière annuelle connue"
+                      value={
+                        listing.propertyTaxCents == null
+                          ? null
+                          : listing.propertyTaxCents / 100
+                      }
+                      unit="€/an"
+                      onChange={(v) =>
+                        change({
+                          propertyTaxCents:
+                            v == null ? null : Math.round(v * 100),
+                        })
+                      }
+                    />
+                  </div>
+                  <p className="muted">
+                    Une case vide indique un montant inconnu. Précisez l’année
+                    et le périmètre des montants ci-dessous.
+                  </p>
+                  <CommercialEditor
+                    listing={listing}
+                    section="financial"
+                    onChange={(commercialDetails) =>
+                      change({ commercialDetails })
+                    }
+                  />
+                </>
+              </details>
             </>
           ) : null}
           {step === 1 ? (
             <>
-              <p className="muted">
-                Situez votre parking. Par défaut, seule une localisation de
-                quartier sera publique.
-              </p>
-              <div className="form-grid">
+              <>
                 <label className="field">
-                  Ville
+                  Titre de l’annonce
                   <input
-                    id="parking-city"
+                    id="listing-title"
                     className="input"
-                    value={listing.city}
-                    maxLength={80}
-                    onChange={(e) => change({ city: e.target.value })}
-                    placeholder="Lyon"
-                    required
+                    minLength={15}
+                    maxLength={90}
+                    value={listing.title}
+                    onChange={(e) => change({ title: e.target.value })}
+                    placeholder="Place couverte · Paris 12e Bercy"
                   />
-                </label>
-                <label className="field">
-                  Quartier
-                  <input
-                    id="parking-district"
-                    className="input"
-                    value={listing.district}
-                    maxLength={100}
-                    onChange={(e) => change({ district: e.target.value })}
-                    placeholder="Part-Dieu"
-                    required
-                  />
-                </label>
-              </div>
-              <label className="field">
-                Adresse du parking · privée par défaut
-                <input
-                  className="input"
-                  value={listing.address || ""}
-                  maxLength={200}
-                  onChange={(e) => change({ address: e.target.value })}
-                  autoComplete="street-address"
-                  placeholder="Numéro et nom de rue"
-                />
-              </label>
-              <label className="field">
-                Code postal
-                <input
-                  className="input"
-                  autoComplete="postal-code"
-                  maxLength={16}
-                  value={listing.commercialDetails?.postalCode || ""}
-                  onChange={(e) =>
-                    change({
-                      commercialDetails: {
-                        ...(listing.commercialDetails ||
-                          emptyCommercialDetails()),
-                        postalCode: e.target.value,
-                      },
-                    })
-                  }
-                />
-              </label>
-              <fieldset className="account-fieldset">
-                <legend>Précision affichée aux acheteurs</legend>
-                <label className="account-radio">
-                  <input
-                    type="radio"
-                    checked={listing.locationPrecision === "area"}
-                    onChange={() =>
-                      change({
-                        locationPrecision: "area",
-                        sceneAvailable: false,
-                      })
-                    }
-                  />
-                  <span>
-                    <strong>Le quartier uniquement</strong>
-                    <small>
-                      La scène intérieure et les références du parking ne sont
-                      pas rendues publiques.
-                    </small>
-                  </span>
-                </label>
-                <label className="account-radio">
-                  <input
-                    type="radio"
-                    checked={listing.locationPrecision === "exact_opt_in"}
-                    onChange={() =>
-                      change({ locationPrecision: "exact_opt_in" })
-                    }
-                  />
-                  <span>
-                    <strong>La position exacte</strong>
-                    <small>
-                      J’accepte que la localisation précise soit publiée. Une 3D
-                      pourra être ajoutée après revue des sources.
-                    </small>
-                  </span>
-                </label>
-              </fieldset>
-              <div className="notice">
-                <p>
-                  Indiquez le point à afficher sur la carte. Pour une
-                  localisation de quartier, choisissez un point de secteur sans
-                  révéler l’adresse exacte.
-                </p>
-              </div>
-              <div className="form-grid">
-                <label className="field">
-                  Longitude
-                  <input
-                    className="input"
-                    type="number"
-                    min="-180"
-                    max="180"
-                    step="0.000001"
-                    value={listing.coordinates[0]}
-                    onChange={(e) =>
-                      change({
-                        coordinates: [
-                          Number(e.target.value),
-                          listing.coordinates[1],
-                        ],
-                      })
-                    }
-                  />
+                  <small>
+                    {listing.title.length}/90 caractères · minimum 15
+                  </small>
                 </label>
                 <label className="field">
-                  Latitude
-                  <input
+                  Description
+                  <textarea
+                    id="listing-description"
                     className="input"
-                    type="number"
-                    min="-90"
-                    max="90"
-                    step="0.000001"
-                    value={listing.coordinates[1]}
-                    onChange={(e) =>
-                      change({
-                        coordinates: [
-                          listing.coordinates[0],
-                          Number(e.target.value),
-                        ],
-                      })
-                    }
+                    rows={8}
+                    minLength={100}
+                    maxLength={5000}
+                    value={listing.description}
+                    onChange={(e) => change({ description: e.target.value })}
+                    placeholder="Présentez le bien, sa situation, les accès et ce que l’acheteur doit savoir avant la visite."
                   />
+                  <small>
+                    {listing.description.length}/5 000 caractères · minimum 100
+                  </small>
                 </label>
-              </div>
-              <p className="muted">
-                Ces coordonnées exactes sont proposées à titre de point de
-                départ. Vérifiez-les et corrigez-les pour votre bien ; elles ne
-                constituent pas un relevé mesuré.
-              </p>
-              {listing.locationPrecision === "area" ? (
-                <fieldset className="account-fieldset">
-                  <legend>Point de secteur affiché au public</legend>
-                  <p className="muted">
-                    Choisissez un point qui situe le quartier sans révéler
-                    l’entrée. Les coordonnées exactes ci-dessus restent privées.
+                <div className="notice">
+                  <p>
+                    Votre nom public : <strong>{user.name}</strong>. Les
+                    acheteurs vous contacteront par messagerie. Votre adresse
+                    email n’apparaîtra pas dans l’annonce.
                   </p>
-                  <div className="form-grid">
-                    {["Longitude du secteur", "Latitude du secteur"].map(
-                      (label, index) => (
-                        <label className="field" key={label}>
-                          {label}
-                          <input
-                            className="input"
-                            type="number"
-                            min={index === 0 ? -180 : -90}
-                            max={index === 0 ? 180 : 90}
-                            step="0.000001"
-                            value={
-                              listing.publicCoordinates?.[index] ??
-                              Math.round(listing.coordinates[index] * 100) / 100
-                            }
-                            onChange={(e) => {
-                              const point: [number, number] = [
-                                ...(listing.publicCoordinates ||
-                                  (listing.coordinates.map(
-                                    (v) => Math.round(v * 100) / 100,
-                                  ) as [number, number])),
-                              ];
-                              point[index] = Number(e.target.value);
-                              change({ publicCoordinates: point });
-                            }}
-                          />
-                        </label>
-                      ),
-                    )}
-                  </div>
-                </fieldset>
-              ) : null}
-              <label className="account-checkbox">
-                <input
-                  type="checkbox"
-                  checked={locationConfirmed}
-                  id="location-confirmed"
-                  disabled={saveState !== "saved"}
-                  onChange={(e) => {
-                    setLocationConfirmed(e.target.checked);
-                    change({
-                      locationConfirmedAt: e.target.checked
-                        ? new Date().toISOString()
-                        : null,
-                    });
-                  }}
-                />
-                <span>
-                  Je confirme que ce point correspond au quartier ou à la
-                  position exacte que j’autorise à afficher.
-                  {saveState !== "saved"
-                    ? " Attendez l’enregistrement des coordonnées avant de confirmer."
-                    : ""}
-                </span>
-              </label>
-            </>
-          ) : null}
-          {step === 2 ? (
-            <>
-              <p className="muted">
-                Renseignez chaque unité. Laissez une dimension vide si vous ne
-                la connaissez pas : nous afficherons « Non renseigné ».
-              </p>
-              {listing.spaces.map((space, index) => (
-                <fieldset key={space.id} className="account-space-fieldset">
-                  <legend>Place {index + 1}</legend>
-                  <div className="form-grid">
-                    <label className="field">
-                      Numéro peint · public et facultatif
-                      <input
-                        className="input"
-                        maxLength={40}
-                        value={space.number}
-                        onChange={(e) =>
-                          spaceChange(index, "number", e.target.value)
-                        }
-                      />
-                    </label>
-                    <label className="field">
-                      Niveau
-                      <input
-                        className="input"
-                        type="number"
-                        min="-20"
-                        max="20"
-                        value={space.level}
-                        onChange={(e) =>
-                          spaceChange(index, "level", Number(e.target.value))
-                        }
-                      />
-                    </label>
-                    <NumField
-                      label="Surface"
-                      value={space.areaM2}
-                      unit="m²"
-                      onChange={(v) => spaceChange(index, "areaM2", v)}
-                    />
-                    <NumField
-                      label="Longueur"
-                      value={space.lengthM}
-                      onChange={(v) => spaceChange(index, "lengthM", v)}
-                    />
-                    <NumField
-                      label="Largeur"
-                      value={space.widthM}
-                      onChange={(v) => spaceChange(index, "widthM", v)}
-                    />
-                    <NumField
-                      max={20}
-                      label="Hauteur libre minimale"
-                      value={space.clearanceM}
-                      onChange={(v) => spaceChange(index, "clearanceM", v)}
-                    />
-                  </div>
-                </fieldset>
-              ))}
-              <p className="notice">
-                Les dimensions saisies sont déclaratives. Un modèle mesuré exige
-                des sources et des distances de contrôle supplémentaires.
-              </p>
-              <CommercialEditor
-                listing={listing}
-                section="units"
-                onChange={(commercialDetails) => change({ commercialDetails })}
-              />
-            </>
-          ) : null}
-          {step === 3 ? (
-            <>
-              <div className="field">
-                <span>{"Périmètre de la description"}</span>
-                <FilterSelect
-                  label={"Périmètre de la description"}
-                  variant="field"
-                  value={qualityTarget}
-                  onChange={(selectedValue) => setQualityTarget(selectedValue)}
-                  options={[
-                    { value: "general", label: "État commun du parking" },
-                    ...listing.spaces.map((space, index) => ({
-                      value: space.id,
-                      label: [
-                        " Place ",
-                        space.number || index + 1,
-                        " · niveau ",
-                        space.level,
-                      ]
-                        .join("")
-                        .trim(),
-                    })),
-                  ]}
-                />
-              </div>
-              <p className="notice">
-                Déclarations du vendeur. Chaque place conserve ses propres
-                informations ; un champ vide reste non renseigné, sans reprendre
-                l’état commun. Les photos associées ne constituent pas une
-                validation automatique.
-              </p>
-              <ConditionEvidenceEditor
-                listing={listing}
-                spaceId={qualityTarget === "general" ? null : qualityTarget}
-                onChange={(conditionObservations) =>
-                  change({ conditionObservations })
-                }
-              />
-              <details>
-                <summary>Description libre complémentaire</summary>
-                <label className="field">
-                  Date des observations de ce périmètre · facultative
-                  <input
-                    className="input"
-                    type="date"
-                    max={new Date().toISOString().slice(0, 10)}
-                    value={
-                      (qualityTarget === "general"
-                        ? listing.quality.observedAt || listing.observedAt
-                        : listing.unitQuality?.[qualityTarget]?.observedAt
-                      )?.slice(0, 10) || ""
-                    }
-                    onChange={(e) =>
-                      quality(
-                        "observedAt",
-                        e.target.value
-                          ? `${e.target.value}T00:00:00.000Z`
-                          : null,
-                      )
-                    }
-                  />
-                </label>
+                </div>
+              </>
+              <>
+                <p className="muted">
+                  Ajoutez au moins 3 photos : le parking, son accès et la place.
+                </p>
                 <div className="field">
-                  <span>{"Origine déclarée par le vendeur"}</span>
+                  <span>{"Ajouter des photos à"}</span>
                   <FilterSelect
-                    label={"Origine déclarée par le vendeur"}
+                    label={"Ajouter des photos à"}
                     variant="field"
-                    value={
-                      (qualityTarget === "general"
-                        ? listing.quality
-                        : listing.unitQuality?.[qualityTarget]
-                      )?.basis || "unknown"
-                    }
-                    onChange={(selectedValue) =>
-                      quality("basis", selectedValue as Quality["basis"])
-                    }
+                    value={photoTarget}
+                    disabled={uploading}
+                    onChange={(selectedValue) => {
+                      setPhotoTarget(selectedValue);
+                      setShareExisting(false);
+                    }}
                     options={[
-                      { value: "unknown", label: "À préciser" },
                       {
-                        value: "seller_observation",
-                        label: "Observation du vendeur",
+                        value: "general",
+                        label: "Galerie générale du parking",
                       },
-                      { value: "provided_document", label: "Document fourni" },
+                      ...listing.spaces.map((space, index) => ({
+                        value: space.id,
+                        label: `${spaceLabel(space, index)} · niveau ${space.level}`,
+                      })),
                     ]}
                   />
                 </div>
-                <p className="muted">
-                  Montrez le parking tel qu’il est. Décrivez les limites et les
-                  défauts visibles : ils aident à préparer une visite utile.
-                </p>
-                <div className="form-grid">
-                  {(
-                    [
-                      ["floor", "Sol"],
-                      ["lighting", "Éclairage"],
-                      ["humidity", "Humidité"],
-                      ["access", "Accès et fermeture"],
-                      ["maneuver", "Manœuvres"],
-                    ] as [keyof Quality, string][]
-                  ).map(([key, label]) => (
-                    <label className="field" key={key}>
-                      {label}
-                      <input
-                        className="input"
-                        value={
-                          (qualityTarget === "general"
-                            ? listing.quality
-                            : listing.unitQuality?.[qualityTarget])?.[key] || ""
-                        }
-                        maxLength={500}
-                        placeholder="Non renseigné"
-                        onChange={(e) => quality(key, e.target.value)}
-                      />
-                    </label>
-                  ))}
+                <div className="account-photo-target-note">
+                  <span className="badge">
+                    {photoTarget === "general"
+                      ? "VUE DU PARKING"
+                      : `PHOTOS · ${spaceLabel(
+                          listing.spaces.find(
+                            (space) => space.id === photoTarget,
+                          )!,
+                          listing.spaces.findIndex(
+                            (space) => space.id === photoTarget,
+                          ),
+                        )}`}
+                  </span>
+                  <p>
+                    {photoTarget === "general"
+                      ? "Ces photos présentent le parking dans son ensemble."
+                      : "Ces photos montrent uniquement la place sélectionnée."}
+                  </p>
                 </div>
-                <label className="field">
-                  Observations, contraintes et défauts
-                  <textarea
-                    className="input"
-                    rows={5}
-                    maxLength={3000}
-                    value={
-                      (qualityTarget === "general"
-                        ? listing.quality
-                        : listing.unitQuality?.[qualityTarget]
-                      )?.observations || ""
+                <label className="account-upload">
+                  <CloudUpload size={32} />
+                  <strong>
+                    {uploading
+                      ? "Traitement des images…"
+                      : "Ajouter des photos"}
+                  </strong>
+                  <span>JPEG, PNG ou WebP · 10 Mo maximum par image</span>
+                  <input
+                    aria-label={
+                      photoTarget === "general"
+                        ? "Ajouter des photos générales"
+                        : "Ajouter des photos pour la place sélectionnée"
                     }
-                    onChange={(e) => quality("observations", e.target.value)}
-                    placeholder="Ex. poteau à gauche de la place, marquage usé, traces visibles sur un mur…"
+                    type="file"
+                    multiple
+                    accept="image/jpeg,image/png,image/webp"
+                    disabled={
+                      uploading ||
+                      selectedPhotos.length >=
+                        (photoTarget === "general" ? 20 : 6) ||
+                      imageUnion.size >= 120
+                    }
+                    onChange={(e) => {
+                      void upload(e.target.files);
+                      e.target.value = "";
+                    }}
                   />
                 </label>
-              </details>
-              <div className="notice">
-                <Info size={18} />
-                <p>
-                  Une absence de trace visible ne garantit pas l’absence
-                  d’infiltration. Ne partagez pas de code d’accès, de badge
-                  lisible ni de donnée personnelle.
-                </p>
-              </div>
-            </>
-          ) : null}
-          {step === 4 ? (
-            <>
-              <p className="muted">
-                Ajoutez au moins 3 photos générales : contexte, accès et
-                manœuvre. Reliez ensuite les vues propres à chaque place, sans
-                présenter une vue commune comme sa preuve individuelle.
-              </p>
-              <div className="field">
-                <span>{"Ajouter des photos à"}</span>
-                <FilterSelect
-                  label={"Ajouter des photos à"}
-                  variant="field"
-                  value={photoTarget}
-                  disabled={uploading}
-                  onChange={(selectedValue) => {
-                    setPhotoTarget(selectedValue);
-                    setShareExisting(false);
-                  }}
-                  options={[
-                    { value: "general", label: "Galerie générale du parking" },
-                    ...listing.spaces.map((space, index) => ({
-                      value: space.id,
-                      label: [
-                        " Place ",
-                        space.number || index + 1,
-                        " · niveau ",
-                        space.level,
-                      ]
-                        .join("")
-                        .trim(),
-                    })),
-                  ]}
-                />
-              </div>
-              <div className="account-photo-target-note">
-                <span className="badge">
-                  {photoTarget === "general"
-                    ? "VUE DU PARKING"
-                    : `PHOTOS DE LA PLACE ${listing.spaces.find((s) => s.id === photoTarget)?.number || ""}`}
-                </span>
-                <p>
-                  {photoTarget === "general"
-                    ? "Les photos générales montrent le contexte commun. Elles ne documentent pas automatiquement chaque unité."
-                    : "Ces vues sont rattachées à cette unité uniquement. Leur correspondance et les contraintes visibles seront relues en modération."}
-                </p>
-              </div>
-              <label className="account-upload">
-                <CloudUpload size={32} />
-                <strong>
-                  {uploading ? "Traitement des images…" : "Ajouter des photos"}
-                </strong>
-                <span>JPEG, PNG ou WebP · 10 Mo maximum par image</span>
-                <input
-                  aria-label={
-                    photoTarget === "general"
-                      ? "Ajouter des photos générales"
-                      : "Ajouter des photos pour la place sélectionnée"
-                  }
-                  type="file"
-                  multiple
-                  accept="image/jpeg,image/png,image/webp"
-                  disabled={
-                    uploading ||
-                    selectedPhotos.length >=
-                      (photoTarget === "general" ? 20 : 6) ||
-                    imageUnion.size >= 120
-                  }
-                  onChange={(e) => {
-                    void upload(e.target.files);
-                    e.target.value = "";
-                  }}
-                />
-              </label>
-              <div className="account-photo-grid">
-                {selectedPhotos.map((photo, index) => (
-                  <div key={`${photo}-${index}`}>
-                    <img
-                      src={photo}
-                      alt={
-                        photoTarget === "general"
-                          ? `Vue du parking ${index + 1}`
-                          : `Photo déclarée de la place sélectionnée ${index + 1}`
-                      }
-                      loading="lazy"
-                    />
-                    <span>
-                      {photoTarget === "general"
-                        ? index === 0
-                          ? "Vue du parking · principale"
-                          : "Vue du parking"
-                        : `Photo de la place · ${index + 1}`}
-                    </span>
-                    <button
-                      aria-label={`Retirer la photo ${index + 1} de cette galerie`}
-                      disabled={uploading}
-                      onClick={() => removePhoto(index)}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <p className="muted">
-                {selectedPhotos.length}/{photoTarget === "general" ? 20 : 6}{" "}
-                photos dans cette galerie · {imageUnion.size}/120 images
-                distinctes pour l’annonce. Les images restent privées jusqu’à
-                approbation.
-              </p>
-              {photoTarget !== "general" && shareable.size ? (
-                <section className="account-share-photos">
-                  <button
-                    className="button button-secondary"
-                    disabled={uploading || selectedPhotos.length >= 6}
-                    aria-expanded={shareExisting}
-                    onClick={() => setShareExisting((v) => !v)}
-                  >
-                    Associer une photo partagée existante
-                  </button>
-                  {shareExisting ? (
-                    <>
-                      <p className="muted">
-                        Choisissez uniquement une vue où la place sélectionnée
-                        est identifiable. Le même fichier peut décrire plusieurs
-                        unités sans être compté plusieurs fois dans les 120
-                        images distinctes.
-                      </p>
-                      <div className="account-photo-grid">
-                        {[...shareable].map(([photo, numbers]) => (
-                          <button
-                            key={photo}
-                            type="button"
-                            className="account-shared-photo-option"
-                            disabled={uploading || selectedPhotos.length >= 6}
-                            onClick={() => {
-                              if (selectedPhotos.length >= 6) {
-                                setError(
-                                  "Cette galerie comporte déjà 6 photos.",
-                                );
-                                return;
-                              }
-                              change({
-                                spacePhotos: {
-                                  ...listing.spacePhotos,
-                                  [photoTarget]: [...selectedPhotos, photo],
-                                },
-                              });
-                              setShareExisting(false);
-                            }}
-                          >
-                            <img
-                              src={photo}
-                              alt={`Vue déjà rattachée aux places ${numbers.join(", ")}`}
-                              loading="lazy"
-                            />
-                            <span>
-                              Places {numbers.join(", ")} · associer à cette
-                              place
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  ) : null}
-                </section>
-              ) : null}
-              <section className="account-photo-coverage">
-                <h2>Couverture par place</h2>
-                <p className="muted">
-                  Un rattachement déclaré ne constitue pas une vérification de
-                  l’état ou une preuve de couverture complète.
-                </p>
-                {listing.spaces.map((space, index) => {
-                  const count = listing.spacePhotos?.[space.id]?.length || 0;
-                  return (
-                    <div key={space.id}>
-                      <div>
-                        <strong>Place {space.number || index + 1}</strong>
-                        <span>
-                          {count
-                            ? `Couverture partielle déclarée · ${count} photo${count > 1 ? "s" : ""} · à vérifier`
-                            : "Aucune photo propre · vues communes uniquement si disponibles"}
-                        </span>
-                      </div>
+                <div className="account-photo-grid">
+                  {selectedPhotos.map((photo, index) => (
+                    <div key={`${photo}-${index}`}>
+                      <img
+                        src={photo}
+                        alt={
+                          photoTarget === "general"
+                            ? `Vue du parking ${index + 1}`
+                            : `Vue ${index + 1} · ${spaceLabel(
+                                listing.spaces.find(
+                                  (space) => space.id === photoTarget,
+                                )!,
+                                listing.spaces.findIndex(
+                                  (space) => space.id === photoTarget,
+                                ),
+                              )}`
+                        }
+                        loading="lazy"
+                      />
+                      <span>
+                        {photoTarget === "general"
+                          ? index === 0
+                            ? "Vue du parking · principale"
+                            : "Vue du parking"
+                          : `Vue ${index + 1} · ${spaceLabel(
+                              listing.spaces.find(
+                                (space) => space.id === photoTarget,
+                              )!,
+                              listing.spaces.findIndex(
+                                (space) => space.id === photoTarget,
+                              ),
+                            )}`}
+                      </span>
                       <button
-                        className="button button-secondary"
+                        aria-label={`Retirer la photo ${index + 1} de cette galerie`}
                         disabled={uploading}
-                        onClick={() => setPhotoTarget(space.id)}
+                        onClick={() => removePhoto(index)}
                       >
-                        Voir cette galerie
+                        <Trash2 size={16} />
                       </button>
                     </div>
-                  );
-                })}
-              </section>
-              <div className="notice">
-                <ImagePlus size={20} />
-                <p>
-                  Floutez les plaques et les personnes avant le dépôt. Les
-                  défauts et obstacles doivent rester visibles. Pour un grand
-                  lot partiellement photographié, la couverture incomplète reste
-                  explicitement indiquée.
+                  ))}
+                </div>
+                <p className="muted">
+                  {selectedPhotos.length}/{photoTarget === "general" ? 20 : 6}{" "}
+                  photos dans cette galerie. Elles restent privées jusqu’à
+                  approbation.
                 </p>
-              </div>
-              <p>
-                La préparation d’une vue 3D fidèle passe par vos plans et
-                sources privés dans l’espace{" "}
-                <Link href="/compte/scenes">Mes plans et vues 3D</Link>. Aucun
-                modèle n’est inventé à partir de ces seules photos.
-              </p>
-              <CommercialEditor
-                listing={listing}
-                section="photos"
-                onChange={(commercialDetails) => change({ commercialDetails })}
-              />
-            </>
-          ) : null}
-          {step === 5 ? (
-            <>
-              <p className="muted">
-                Le montant présenté sera{" "}
-                {listing.transactionType === "rent"
-                  ? "le loyer mensuel total"
-                  : "le prix total de vente"}{" "}
-                de l’annonce, pour{" "}
-                {listing.spaces.length > 1
-                  ? `l’ensemble des ${listing.spaces.length} places`
-                  : "la place"}
-                .
-              </p>
-              <label className="field">
-                {listing.transactionType === "rent"
-                  ? "Loyer mensuel total"
-                  : "Prix total de vente"}
-                <span className="account-unit-field">
-                  <input
-                    className="input account-price-input"
-                    id="listing-price"
-                    type="number"
-                    min="1"
-                    max="100000000"
-                    step="1"
-                    value={listing.priceCents ? listing.priceCents / 100 : ""}
-                    onChange={(e) =>
-                      change({
-                        priceCents: Math.round(Number(e.target.value) * 100),
-                      })
-                    }
-                    placeholder={
-                      listing.transactionType === "rent" ? "120" : "18 500"
+                {photoTarget !== "general" && shareable.size ? (
+                  <section className="account-share-photos">
+                    <button
+                      className="button button-secondary"
+                      disabled={uploading || selectedPhotos.length >= 6}
+                      aria-expanded={shareExisting}
+                      onClick={() => setShareExisting((v) => !v)}
+                    >
+                      Associer une photo partagée existante
+                    </button>
+                    {shareExisting ? (
+                      <>
+                        <p className="muted">
+                          Choisissez une photo où cette place est identifiable.
+                        </p>
+                        <div className="account-photo-grid">
+                          {[...shareable].map(([photo, numbers]) => (
+                            <button
+                              key={photo}
+                              type="button"
+                              className="account-shared-photo-option"
+                              disabled={uploading || selectedPhotos.length >= 6}
+                              onClick={() => {
+                                if (selectedPhotos.length >= 6) {
+                                  setError(
+                                    "Cette galerie comporte déjà 6 photos.",
+                                  );
+                                  return;
+                                }
+                                change({
+                                  spacePhotos: {
+                                    ...listing.spacePhotos,
+                                    [photoTarget]: [...selectedPhotos, photo],
+                                  },
+                                });
+                                setShareExisting(false);
+                              }}
+                            >
+                              <img
+                                src={photo}
+                                alt={`Vue déjà rattachée aux places ${numbers.join(", ")}`}
+                                loading="lazy"
+                              />
+                              <span>
+                                Places {numbers.join(", ")} · associer à cette
+                                place
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    ) : null}
+                  </section>
+                ) : null}
+                <details className="account-fieldset">
+                  <summary>Photos par place · facultatif</summary>
+                  <section className="account-photo-coverage">
+                    {listing.spaces.map((space, index) => {
+                      const count =
+                        listing.spacePhotos?.[space.id]?.length || 0;
+                      return (
+                        <div key={space.id}>
+                          <div>
+                            <strong>{spaceLabel(space, index)}</strong>
+                            <span>
+                              {count
+                                ? `${count} photo${count > 1 ? "s" : ""} associée${count > 1 ? "s" : ""}`
+                                : "Aucune photo associée à cette place"}
+                            </span>
+                          </div>
+                          <button
+                            className="button button-secondary"
+                            disabled={uploading}
+                            onClick={() => setPhotoTarget(space.id)}
+                          >
+                            Voir cette galerie
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </section>
+                </details>
+                <div className="notice">
+                  <ImagePlus size={20} />
+                  <p>
+                    Floutez les plaques et les visages. Laissez les défauts et
+                    les obstacles visibles.
+                  </p>
+                </div>
+                <details className="account-fieldset account-photo-metadata">
+                  <summary>Légendes et dates · facultatif</summary>
+                  <CommercialEditor
+                    listing={listing}
+                    section="photos"
+                    onChange={(commercialDetails) =>
+                      change({ commercialDetails })
                     }
                   />
-                  <span>
-                    {listing.transactionType === "rent" ? "€/mois" : "€"}
-                  </span>
-                </span>
-              </label>
-              <div className="field">
-                <span>{"Occupation actuelle"}</span>
-                <FilterSelect
-                  label={"Occupation actuelle"}
-                  variant="field"
-                  value={listing.occupancy || "unknown"}
-                  onChange={(selectedValue) =>
-                    change({
-                      occupancy: selectedValue as Listing["occupancy"],
-                    })
-                  }
-                  options={[
-                    { value: "unknown", label: "Non renseignée" },
-                    { value: "vacant", label: "Libre · déclaration vendeur" },
-                    {
-                      value: "occupied",
-                      label: "Occupée · déclaration vendeur",
-                    },
-                  ]}
-                />
-              </div>
-              <div className="form-grid">
-                <NumField
-                  label="Charges annuelles connues"
-                  value={
-                    listing.annualChargesCents == null
-                      ? null
-                      : listing.annualChargesCents / 100
-                  }
-                  unit="€/an"
-                  onChange={(v) =>
-                    change({
-                      annualChargesCents:
-                        v == null ? null : Math.round(v * 100),
-                    })
-                  }
-                />
-                <NumField
-                  label="Taxe foncière annuelle connue"
-                  value={
-                    listing.propertyTaxCents == null
-                      ? null
-                      : listing.propertyTaxCents / 100
-                  }
-                  unit="€/an"
-                  onChange={(v) =>
-                    change({
-                      propertyTaxCents: v == null ? null : Math.round(v * 100),
-                    })
-                  }
-                />
-              </div>
-              <p className="muted">
-                Une case vide indique un montant inconnu. Précisez l’année et le
-                périmètre des montants ci-dessous.
-              </p>
-              <CommercialEditor
-                listing={listing}
-                section="financial"
-                onChange={(commercialDetails) => change({ commercialDetails })}
-              />
-              {listing.spaces.length > 1 ? (
-                <p className="muted">
-                  Moyenne indicative :{" "}
-                  {money(
-                    Math.round(listing.priceCents / listing.spaces.length),
-                  )}{" "}
-                  {listing.transactionType === "rent"
-                    ? "par place et par mois. Le lot n’est pas loué séparément."
-                    : "par place. Le lot n’est pas vendu séparément."}
-                </p>
-              ) : null}
-              <div className="notice">
-                <Info size={18} />
-                <p>
-                  La plateforme met acheteur et vendeur en relation. Elle
-                  n’encaisse pas le prix immobilier. Aucun forfait ni paiement à
-                  l’annonce n’est actif en V1.
-                </p>
-              </div>
+                </details>
+                <ModelRequest listingId={listing.id} />
+              </>
             </>
           ) : null}
-          {step === 6 ? (
-            <>
-              <label className="field">
-                Titre de l’annonce
-                <input
-                  id="listing-title"
-                  className="input"
-                  minLength={15}
-                  maxLength={90}
-                  value={listing.title}
-                  onChange={(e) => change({ title: e.target.value })}
-                  placeholder="Place couverte · Lyon Part-Dieu"
-                />
-                <small>{listing.title.length}/90 caractères · minimum 15</small>
-              </label>
-              <label className="field">
-                Description
-                <textarea
-                  id="listing-description"
-                  className="input"
-                  rows={8}
-                  minLength={100}
-                  maxLength={5000}
-                  value={listing.description}
-                  onChange={(e) => change({ description: e.target.value })}
-                  placeholder="Présentez le bien, sa situation, les accès et ce que l’acheteur doit savoir avant la visite."
-                />
-                <small>
-                  {listing.description.length}/5 000 caractères · minimum 100
-                </small>
-              </label>
-              <div className="notice">
-                <p>
-                  Votre nom public : <strong>{user.name}</strong>. Les acheteurs
-                  vous contacteront par messagerie. Votre adresse email
-                  n’apparaîtra pas dans l’annonce.
-                </p>
-              </div>
-            </>
-          ) : null}
-          {step === 7 ? (
+          {step === 2 ? (
             <form onSubmit={submit}>
               <p className="muted">
                 Relisez les informations qui seront proposées aux acheteurs
@@ -1768,28 +1883,40 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                     <p>
                       {preview.city} · {preview.district}
                     </p>
-                    <h3>
-                      {money(preview.priceCents)}
-                      {preview.transactionType === "rent" ? " / mois" : ""}
-                    </h3>
-                    <p>
-                      {preview.transactionType === "rent"
-                        ? "À louer · loyer mensuel total"
-                        : "À vendre · prix total de vente"}
-                    </p>
+                    <h3>{listingPrice(preview)}</h3>
+                    <p>{offerLabel(preview)}</p>
                     <p>
                       {typeLabels[preview.type]} · {areaLabel(preview.spaces)}
                       {preview.spaces.length > 1
-                        ? ` · lot de ${preview.spaces.length} places`
+                        ? ` · ${preview.spaces.length} places dans cette annonce`
                         : ""}
                     </p>
                     <div className="account-preview-unit-galleries">
-                      <h3>Photos propres aux places</h3>
+                      <h3>Offres et photos de chaque place</h3>
                       {preview.spaces.map((space, index) => {
                         const photos = preview.spacePhotos?.[space.id] || [];
                         return (
                           <section key={space.id}>
-                            <strong>Place {space.number || index + 1}</strong>
+                            <strong>{spaceLabel(space, index)}</strong>
+                            {preview.pricingMode === "per_space" ? (
+                              <p>
+                                {spaceOffer(preview, space).transactionType ===
+                                "rent"
+                                  ? "À louer"
+                                  : "À vendre"}{" "}
+                                · {money(spaceOffer(preview, space).priceCents)}
+                                {spaceOffer(preview, space).transactionType ===
+                                "rent"
+                                  ? " / mois"
+                                  : ""}{" "}
+                                ·{" "}
+                                {
+                                  offerStatusLabels[
+                                    spaceOffer(preview, space).status
+                                  ]
+                                }
+                              </p>
+                            ) : null}
                             <p className="muted">
                               {photos.length
                                 ? `${photos.length} photo(s) rattachée(s) par le vendeur · couverture à vérifier`
@@ -1801,12 +1928,10 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                                   <div key={`${photo}-${n}`}>
                                     <img
                                       src={photo}
-                                      alt={`Photo déclarée de la place ${space.number || index + 1}`}
+                                      alt={`Photo déclarée · ${spaceLabel(space, index)}`}
                                       loading="lazy"
                                     />
-                                    <span>
-                                      Place {space.number || index + 1}
-                                    </span>
+                                    <span>{spaceLabel(space, index)}</span>
                                   </div>
                                 ))}
                               </div>
@@ -1857,12 +1982,10 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                         : "position exacte autorisée"}
                       . La 3D n’est disponible qu’après une revue spécifique.
                       <br />
-                      Point public : {preview.coordinates[1]},{" "}
-                      {preview.coordinates[0]}
+                      {preview.city} · {preview.district}.{" "}
                       {preview.address
-                        ? ` · adresse publique : ${preview.address}`
-                        : " · adresse complète masquée"}
-                      .
+                        ? "Adresse exacte autorisée."
+                        : "Adresse complète masquée."}
                     </p>
                   </div>
                 </article>
@@ -1920,7 +2043,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
               </p>
             </form>
           ) : null}
-          {step < 7 ? (
+          {step < 2 ? (
             <div className="account-wizard-actions">
               <button
                 className="button button-secondary"
@@ -1938,17 +2061,21 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                 onClick={next}
                 disabled={uploading || saveState === "saving"}
               >
-                {step === 6 ? "Prévisualiser" : "Continuer"}
-                {step === 6 ? <Eye size={18} /> : <ArrowRight size={18} />}
+                {step === 1
+                  ? "Prévisualiser"
+                  : listing.locationPrecision === "area"
+                    ? "Confirmer ce secteur et continuer"
+                    : "Confirmer cette position et continuer"}
+                {step === 1 ? <Eye size={18} /> : <ArrowRight size={18} />}
               </button>
             </div>
           ) : (
             <button
               className="button button-secondary account-preview-back"
-              onClick={() => setStep(6)}
+              onClick={() => setStep(1)}
             >
               <ArrowLeft size={18} />
-              Modifier la description
+              Modifier les photos et la description
             </button>
           )}
         </section>

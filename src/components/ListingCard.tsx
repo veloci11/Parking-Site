@@ -1,8 +1,14 @@
 "use client";
-import { listingPrice, offerLabel } from "@/lib/listing-price";
+import { listingPrice, availableOffers } from "@/lib/listing-price";
+import { pricingScope } from "./ListingOffers";
 import Image from "./SafePhoto";
 import { Heart, Layers3, ScanEye } from "lucide-react";
-import { areaLabel, money, typeLabels, type Listing } from "@/lib/types";
+import {
+  areaLabel,
+  typeLabels,
+  type Listing,
+  type TransactionType,
+} from "@/lib/types";
 export default function ListingCard({
   listing,
   selected,
@@ -12,6 +18,7 @@ export default function ListingCard({
   compare,
   onCompare,
   eager = false,
+  transactionType,
 }: {
   listing: Listing;
   selected?: boolean;
@@ -21,9 +28,20 @@ export default function ListingCard({
   compare?: boolean;
   onCompare?: () => void;
   eager?: boolean;
+  transactionType?: TransactionType;
 }) {
+  const matched =
+    listing.pricingMode === "per_space" &&
+    listing.catalogMatch?.transactionType === transactionType
+      ? listing.catalogMatch
+      : undefined;
+  const offerCount =
+    matched?.spaceIds.length ??
+    availableOffers(listing, transactionType).length;
   return (
-    <article className={`listing-card ${selected ? "is-selected" : ""}`}>
+    <article
+      className={`listing-card ${selected ? "is-selected" : ""}${listing.pricingMode === "per_space" ? " has-unit-offers" : ""}`}
+    >
       <div className="listing-photo">
         <button
           onClick={onSelect}
@@ -62,16 +80,18 @@ export default function ListingCard({
         <span className="listing-title">
           {listing.city} · {listing.district}
         </span>
-        <strong className="listing-price">{listingPrice(listing)}</strong>
+        <strong className="listing-price">
+          {listingPrice(listing, transactionType)}
+        </strong>
         <span className="listing-meta">
           {typeLabels[listing.type]} · {areaLabel(listing.spaces)}
         </span>
       </button>
       <div className="listing-card-footer">
         <span className="subtle-label">
-          {listing.spaces.length > 1
-            ? `${listing.spaces.length} places · ${listing.transactionType === "rent" ? "loyer mensuel du lot" : "prix du lot"}`
-            : "1 place"}
+          {listing.pricingMode === "per_space"
+            ? `${offerCount} place${offerCount > 1 ? "s" : ""} ${matched ? "correspondante" : "disponible"}${offerCount > 1 ? "s" : ""} · prix par place`
+            : `${listing.spaces.length} place${listing.spaces.length > 1 ? "s" : ""} · ${pricingScope(listing)}`}
         </span>
         {onCompare ? (
           <button

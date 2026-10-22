@@ -35,7 +35,7 @@ function listing(overrides: Partial<Listing> = {}): Listing {
     slug: "bien-de-test",
     title: "Un lot de deux places",
     description: "Bien de test ; aucune annonce réelle.",
-    city: "Ville de recette",
+    city: "Paris",
     district: "Secteur privé",
     priceCents: 3100000,
     type: "covered",
@@ -50,7 +50,7 @@ function listing(overrides: Partial<Listing> = {}): Listing {
       observations: "",
     },
     locationPrecision: "area",
-    coordinates: [4.859723, 45.761234],
+    coordinates: [2.373923, 48.844634],
     address: "Adresse exacte privée",
     sceneAvailable: true,
     isDemo: true,
@@ -121,7 +121,7 @@ test("la projection de secteur retire adresse, scène et identifiants physiques 
     b = publicProjection(second);
   assert.equal(a.address, undefined);
   assert.equal(a.sceneAvailable, false);
-  assert.deepEqual(a.coordinates, [4.86, 45.76]);
+  assert.deepEqual(a.coordinates, [2.37, 48.84]);
   assert.notEqual(a.spaces[0].id, physicalId);
   assert.notEqual(a.spaces[0].id, b.spaces[0].id);
   assert.equal(a.spaces[0].lengthM, null);
@@ -135,7 +135,7 @@ test("une projection publique ignore les futurs champs privés, y compris imbriq
     sellerId: "private-seller",
     email: "private@example.invalid",
     privatePlanKey: "private/plans/site.pdf",
-    exactCoordinates: [4.859723, 45.761234],
+    exactCoordinates: [2.373923, 48.844634],
     rejectionReason: "Décision privée",
     quality: { ...source.quality, privateInspectorNote: "À ne pas publier" },
     spaces: source.spaces.map((space) => ({
