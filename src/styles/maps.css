@@ -236,6 +236,9 @@
   line-height: 1.5;
   margin: 0 0 8px;
 }
+.map-panel:has(.gp-map-unavailable) .map-hint {
+  display: none;
+}
 .gp-map-spinner {
   display: block;
   width: 32px;

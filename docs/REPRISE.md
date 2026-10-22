@@ -1,5 +1,11 @@
 # Point de reprise — 22 octobre 2026
 
+## Dernier complément — retour après pagination et réseau
+
+Lire `qa/CLOSURE_ACCESS_2026-10-22.md` avant les résultats historiques ci-dessous. Un écart F09 a été corrigé : retour à une annonce au-delà de la première page, avec restauration des résultats frais, du tri, de la sélection et du défilement en Liste et Carte. Échap et fermeture des filtres restituent le focus ; erreurs réseau en français et compteur cohérent ; aide de la carte masquée quand le fournisseur est indisponible.
+
+Build `C5S5S_JI7BzEPLunNgjBe` réussi ; **233 tests, 230 réussis, 0 échec, 3 conditionnels ignorés**, format réussi. Contre-recette navigateur sur 38 résultats parisiens, annonce 30, filtres et pannes/reprise réussie. Aucune nouvelle mutation Supabase. Aucun serveur de cette tâche sur 3000/3001/3002 ; runtime jetable et onglet supprimés. Vérifier la CI du dernier SHA, sans reprendre les anciens checks. Zoom navigateur 200 % et lecteur d’écran réel restent non validés ; les prérequis humains et la purge CDN différée restent ouverts.
+
 ## Passe actuelle — parcours acheteur, vendeur et administrateur
 
 La passe terminée est documentée dans `qa/UX_FINISH_2026-10-22.md`. Elle corrige les constats de la revue ergonomique précédente : entrée anonyme courte, validation par étape visible, sélection d’adresse explicite, choix Liste/Carte sur ordinateur et mobile, favoris et messages robustes, contexte de la place dans le contact, retour administratif fondé sur le statut réel et rattachement conservé après actualisation. Les captures fraîches sont dans `qa/ux-finish/`. Les décomptes et statuts de cette passe doivent être lus dans ce rapport, et non dans les résultats historiques ci-dessous.

@@ -25,6 +25,14 @@ import {
   resetExplorerFilters,
 } from "@/lib/explorer-search";
 import {
+  encodeExplorerContinuation,
+  explorerContinuationKey,
+  explorerPageSize,
+  explorerRequestError,
+  loadExplorerWindow,
+  restoredResultCount,
+} from "@/lib/explorer-continuation";
+import {
   normalizeMapView,
   type MapViewState,
   type MapSearchArea,
@@ -63,6 +71,10 @@ export default function Explorer({
 }) {
   const restoredScroll = useRef(false);
   const requestGeneration = useRef(0);
+  const windowRequestPending = useRef(false);
+  const windowRequest = useRef<AbortController | null>(null);
+  const resultWindow = useRef<{ context: string; count: number } | null>(null);
+  const moreFiltersButton = useRef<HTMLButtonElement>(null);
   const [missingFavorites, setMissingFavorites] = useState<string[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -152,6 +164,11 @@ export default function Explorer({
     only3D,
   ].filter((v) => v !== "" && v !== false).length;
   const apiQuery = searchParams(searchState, true).toString();
+  const resultContext = `${favoritesOnly ? "favorites" : "explore"}:${allFavoriteOffers ? "all" : "single"}:${apiQuery}`;
+  function closeMoreFilters() {
+    setMore(false);
+    moreFiltersButton.current?.focus({ preventScroll: true });
+  }
   function cameraChanged(value: MapViewState, meta?: { transient?: boolean }) {
     setMapView(value);
     if (meta?.transient) return;
@@ -177,11 +194,18 @@ export default function Explorer({
       if (!quiet) setLoading(true);
       setError("");
       const generation = ++requestGeneration.current;
+      windowRequest.current?.abort();
+      const controller = new AbortController();
+      windowRequest.current = controller;
+      const request = (url: string) =>
+        fetch(url, { signal: controller.signal, cache: "no-store" });
+      windowRequestPending.current = true;
+      setLoadingMore(false);
       try {
         const problem = searchProblem(searchState);
         if (problem) throw new Error(problem);
         const params = new URLSearchParams(apiQuery);
-        params.set("limit", "24");
+        params.set("limit", String(explorerPageSize));
         if (favoritesOnly) {
           const ids = favoriteKey.split(",").filter(Boolean);
           if (!ids.length) {
@@ -190,14 +214,13 @@ export default function Explorer({
               setMissingFavorites([]);
               setTotal(0);
               setNextCursor(null);
+              resultWindow.current = { context: resultContext, count: 0 };
             }
             return;
           }
           const results = await Promise.all(
             ids.map(async (id) => {
-              const response = await fetch(`/api/listings/${id}`, {
-                cache: "no-store",
-              });
+              const response = await request(`/api/listings/${id}`);
               if (response.status === 404) return id;
               const result = await response.json();
               if (!response.ok)
@@ -213,27 +236,53 @@ export default function Explorer({
           );
           params.set("ids", ids.join(","));
           if (allFavoriteOffers) {
-            const data = await loadAllFavoriteOffers(searchState, ids);
+            const data = await loadAllFavoriteOffers(searchState, ids, request);
             if (generation !== requestGeneration.current) return;
             setListings(data);
             setNextCursor(null);
             setTotal(data.length);
+            resultWindow.current = {
+              context: resultContext,
+              count: data.length,
+            };
             return;
           }
         } else setMissingFavorites([]);
-        const r = await fetch("/api/listings?" + params);
-        const result = await r.json();
-        if (!r.ok)
-          throw new Error(result.error || "La recherche est interrompue.");
-        if (generation !== requestGeneration.current) return;
+        let count = explorerPageSize;
+        if (resultWindow.current?.context === resultContext)
+          count = resultWindow.current.count;
+        else {
+          try {
+            count = restoredResultCount(
+              sessionStorage.getItem(explorerContinuationKey),
+              resultContext,
+            );
+          } catch {
+            /* Search remains available when optional session storage is blocked. */
+          }
+        }
+        const result = await loadExplorerWindow(
+          params,
+          count,
+          request,
+          () => generation === requestGeneration.current,
+        );
+        if (!result || generation !== requestGeneration.current) return;
         setListings(result.data);
-        setNextCursor(result.nextCursor || null);
-        setTotal(result.total ?? result.data.length);
+        setNextCursor(result.nextCursor);
+        setTotal(result.total);
+        resultWindow.current = {
+          context: resultContext,
+          count: result.data.length,
+        };
       } catch (e) {
         if (generation === requestGeneration.current)
-          setError((e as Error).message);
+          setError(explorerRequestError(e));
       } finally {
-        if (generation === requestGeneration.current) setLoading(false);
+        if (generation === requestGeneration.current) {
+          windowRequestPending.current = false;
+          setLoading(false);
+        }
       }
     },
     [
@@ -243,6 +292,7 @@ export default function Explorer({
       favoriteKey,
       favorites.loading,
       allFavoriteOffers,
+      resultContext,
     ],
   );
   const applySearch = useCallback((search: SearchState) => {
@@ -284,7 +334,11 @@ export default function Explorer({
     }
     setInitialized(true);
     window.addEventListener("popstate", restore);
-    return () => window.removeEventListener("popstate", restore);
+    return () => {
+      requestGeneration.current++;
+      windowRequest.current?.abort();
+      window.removeEventListener("popstate", restore);
+    };
   }, [applySearch, favoritesOnly]);
   useEffect(() => {
     if (!initialized) return;
@@ -310,7 +364,9 @@ export default function Explorer({
   useEffect(() => {
     if (!initialized) return;
     requestGeneration.current++;
+    windowRequest.current?.abort();
     setLoading(true);
+    setLoadingMore(false);
     setNextCursor(null);
     const timer = window.setTimeout(() => void load(), 200);
     return () => window.clearTimeout(timer);
@@ -333,7 +389,25 @@ export default function Explorer({
     };
   }, [initialized, load, listings.length]);
   useEffect(() => {
-    if (!initialized || loading || restoredScroll.current) return;
+    if (
+      !initialized ||
+      loading ||
+      error ||
+      resultWindow.current?.context !== resultContext
+    )
+      return;
+    resultWindow.current.count = listings.length;
+    try {
+      sessionStorage.setItem(
+        explorerContinuationKey,
+        encodeExplorerContinuation(resultContext, listings.length),
+      );
+    } catch {
+      /* Depth restoration is optional; no listing payload is stored. */
+    }
+  }, [initialized, loading, error, resultContext, listings.length]);
+  useEffect(() => {
+    if (!initialized || loading || error || restoredScroll.current) return;
     restoredScroll.current = true;
     const panel = document.getElementById("resultats");
     try {
@@ -360,12 +434,12 @@ export default function Explorer({
     } catch {
       /* No stored position. */
     }
-  }, [loading, initialized, visibleView]);
+  }, [loading, error, initialized, visibleView]);
   async function loadMore() {
-    if (!nextCursor || loadingMore) return;
+    if (!nextCursor || loadingMore || windowRequestPending.current) return;
     setLoadingMore(true);
+    const generation = requestGeneration.current;
     try {
-      const generation = requestGeneration.current;
       const p = new URLSearchParams(apiQuery);
       p.set("cursor", nextCursor);
       p.set("limit", "24");
@@ -380,9 +454,10 @@ export default function Explorer({
       ]);
       setNextCursor(v.nextCursor || null);
     } catch (e) {
-      setError((e as Error).message);
+      if (generation === requestGeneration.current)
+        setError(explorerRequestError(e));
     } finally {
-      setLoadingMore(false);
+      if (generation === requestGeneration.current) setLoadingMore(false);
     }
   }
   const filtered = !loading && !error ? listings : [];
@@ -611,9 +686,17 @@ export default function Explorer({
             ]}
           />
           <button
+            ref={moreFiltersButton}
             className={`filter-chip ${more || advancedCount > 0 ? "filter-applied" : ""}`}
-            onClick={() => setMore(!more)}
+            onClick={() => (more ? closeMoreFilters() : setMore(true))}
+            onKeyDown={(event) => {
+              if (event.key === "Escape" && more) {
+                event.preventDefault();
+                closeMoreFilters();
+              }
+            }}
             aria-expanded={more}
+            aria-controls="explorer-more-filters"
           >
             <SlidersHorizontal size={18} />
             Plus de filtres
@@ -653,12 +736,21 @@ export default function Explorer({
           </div>
         </div>
         {more ? (
-          <div className="filter-popover">
+          <div
+            className="filter-popover"
+            id="explorer-more-filters"
+            onKeyDown={(event) => {
+              if (event.key === "Escape" && !event.defaultPrevented) {
+                event.preventDefault();
+                closeMoreFilters();
+              }
+            }}
+          >
             <div className="section-row">
               <strong>Affiner la découverte</strong>
               <button
                 className="icon-button"
-                onClick={() => setMore(false)}
+                onClick={closeMoreFilters}
                 aria-label="Fermer les filtres"
               >
                 <X size={20} />
@@ -847,9 +939,13 @@ export default function Explorer({
             </p>
             <button
               className="button button-primary full-width"
-              onClick={() => setMore(false)}
+              onClick={closeMoreFilters}
             >
-              Voir les {total} résultats
+              {error
+                ? "Revenir aux résultats"
+                : loading
+                  ? "Voir la recherche en cours"
+                  : `Voir les ${total} résultats`}
               <ArrowRight size={17} />
             </button>
           </div>
@@ -881,7 +977,9 @@ export default function Explorer({
               <span aria-live="polite">
                 {loading
                   ? "Recherche…"
-                  : `${total} bien${total > 1 ? "s" : ""}${listings.some((l) => l.isDemo) ? " d’exemple" : ""}`}
+                  : error
+                    ? "Résultats à actualiser"
+                    : `${total} bien${total > 1 ? "s" : ""}${listings.some((l) => l.isDemo) ? " d’exemple" : ""}`}
               </span>
               <FilterSelect
                 label="Trier les résultats"

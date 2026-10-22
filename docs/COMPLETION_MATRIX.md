@@ -1,5 +1,9 @@
 # Matrice de complétude des exigences — V1
 
+## Dernier complément de recette — F09 et accessibilité ciblée
+
+Le [complément de recette](qa/CLOSURE_ACCESS_2026-10-22.md) corrige et contre-vérifie le retour après plusieurs pages : 38 résultats en navigateur et 264 dans le test ciblé, curseurs frais, prix actualisés et annonces retirées exclues. Les filtres rendent le focus et se ferment avec Échap ; le réseau indisponible dispose de messages français et d’une reprise vérifiée. Build et 230 tests réussis sur 233 (3 conditionnels ignorés). Tablettes, clavier et mouvements réduits ont été exercés ; ni zoom navigateur réel 200 %, ni lecteur d’écran humain ne sont déclarés validés. Les limites connectées et prérequis d’ouverture ci-dessous restent applicables.
+
 ## Addendum de finition ergonomique — 22 octobre 2026
 
 Le [rapport de finition](qa/UX_FINISH_2026-10-22.md) prévaut pour l’état de l’interface et les nouveaux compteurs de recette. La revue précédente n’était pas une clôture : ses erreurs de validation, de récupération sans résultat et d’entrée anonyme sont maintenant corrigées. Liste/Carte fonctionne sur mobile et ordinateur ; les favoris, le contact par place, les envois de messages et le rattachement administratif ont reçu des contrôles de concurrence et de continuité.
