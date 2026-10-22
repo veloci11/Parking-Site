@@ -1,0 +1,46 @@
+name: Supabase migration and access checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: database-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  sql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SUPABASE_CLI_VERSION: "2.121.0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+      - name: Prepare a disposable local project without remote credentials
+        run: |
+          mkdir -p "$RUNNER_TEMP/gp-parking-sql"
+          npx --yes "supabase@$SUPABASE_CLI_VERSION" init --workdir "$RUNNER_TEMP/gp-parking-sql" --yes
+          cp -R supabase/migrations "$RUNNER_TEMP/gp-parking-sql/supabase/migrations"
+          python3 - <<'PY'
+          from pathlib import Path
+          import os, re
+          p = Path(os.environ["RUNNER_TEMP"]) / "gp-parking-sql/supabase/config.toml"
+          value, count = re.subn(r'(?m)^project_id\s*=\s*.*$', 'project_id = "gp-parking-sql"', p.read_text())
+          assert count == 1
+          p.write_text(value)
+          PY
+      - name: Apply all migrations against actual local Supabase and PostGIS
+        run: |
+          npx --yes "supabase@$SUPABASE_CLI_VERSION" start --workdir "$RUNNER_TEMP/gp-parking-sql" --exclude studio,imgproxy,realtime,edge-runtime,logflare,vector,supavisor,mailpit
+      - name: Execute every SQL recipe with error checking
+        run: |
+          for recipe in supabase/tests/*.sql; do
+            echo "::group::SQL recipe: $recipe"
+            docker exec -i supabase_db_gp-parking-sql psql -X -U postgres -d postgres --set ON_ERROR_STOP=1 < "$recipe"
+            echo "::endgroup::"
+          done
+      - name: Stop only this disposable project
+        if: always()
+        run: npx --yes "supabase@$SUPABASE_CLI_VERSION" stop --workdir "$RUNNER_TEMP/gp-parking-sql" --no-backup
