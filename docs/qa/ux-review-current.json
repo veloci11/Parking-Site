@@ -1,0 +1,29 @@
+{
+  "date": "2026-10-22T16:16:45.850163+00:00",
+  "codeCommit": "b039978a2e8dc243064059e9be1abf6273c56099",
+  "build": "pcMqwObi9XdoC2NB2C0vG",
+  "sourceMatchesPreviousDelivery": true,
+  "auditScope": "Current local synthetic UI review, not full functional or accessibility certification",
+  "steps": 7,
+  "screenshots": 10,
+  "allAcceptedScreenshotsInspected": true,
+  "openFindings": [
+    "step_one_error_visibility_and_global_validation",
+    "empty_search_map_hint_and_noop_reset",
+    "anonymous_deposit_explanation_density",
+    "map_recenter_discoverability"
+  ],
+  "validationObservation": {
+    "focusAfterRefusal": "Confirmer ce secteur et continuer",
+    "futureStepPhotoErrorTop": -914.1015625,
+    "viewportHeight": 1058
+  },
+  "cleanup": {
+    "serverStopped": true,
+    "runtimeRemoved": true,
+    "tabClosed": true,
+    "viewportReset": true
+  },
+  "productCodeChanged": false,
+  "supabaseMutations": false
+}

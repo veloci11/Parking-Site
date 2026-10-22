@@ -2,6 +2,10 @@
 
 **Dernière reprise après confirmation Pro.** Les 15 missions sont terminées et leurs contre-vérifications sont consignées dans `QA_TEAM_15.md`. Code courant `ff17e1f`, branche `codex/build-parking-platform`, [PR1 en brouillon](https://github.com/veloci11/Parking-Site/pull/1). Aucun déploiement public ni compte humain créé. Le bilan courant ci-dessous prévaut sur l’archive du21octobre.
 
+## Revue ergonomique suivante
+
+La question du propriétaire « tout est fini, cohérent et intuitif ? » a donné lieu à une revue IAB fraîche : `qa/UX_REVIEW_2026-10-22.md`. **Ne pas présenter le CDN comme le seul reste.** Erreurs de l’étape1 hors écran et résumé incluant les étapes futures ; état sans résultat avec conseil de carte incohérent et réinitialisation sans effet visible ; entrée anonyme trop dense. Le dépôt mixte et le niveau−2 ont été observés correctement. Aucun code produit corrigé dans cette revue ; source inchangée, runtime jetable retiré. Ces constats priment sur toute formulation antérieure « dernier point CDN ».
+
 ## Résultat actuel
 
 - Build final `pcMqwObi9XdoC2NB2C0vG` réussi ; typage et format réussis. **194 tests :191 réussis,0échec,3ignorés**. Deux recettes HTTP sont conditionnelles ; le parcours complet176 est exercé séparément. Le raster Docker réel est vérifié dans la CI dédiée, pas sur le daemon local indisponible.
