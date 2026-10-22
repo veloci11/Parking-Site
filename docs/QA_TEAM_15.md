@@ -17,7 +17,7 @@ Le propriétaire a demandé quinze agents le22octobre2026. La session permet qua
 | 11  | public_viewer — sélection, lots, étages, repli et navigation                 | Rendus/mapping/navigation relus ;9tests ciblés verts | Revue des interactions et correspondances   |
 | 12  | admin_review — modération, registre et décisions                             | Relecture admin liée à id+version ;6tests ciblés verts | Revue des commandes et états admin          |
 | 13  | a11y_review — clavier, formulaires et petit écran                            | Focus/menu/ARIA corrigés ; contrôle navigateur ciblé réussi | Écarts d’accessibilité concrets             |
-| 14  | performance_seo — chargement, indexation et exploitation                     | Audit terminé ; outil privé de purge cache livré,12tests verts | Vérifications techniques bornées            |
+| 14  | performance_seo — chargement, indexation et exploitation                     | Carte différée prouvée ; boutons corrigés ; outil CDN livré,12tests verts | Vérifications techniques bornées            |
 | 15  | final_acceptance — revue indépendante des exigences et preuves               | Revue indépendante terminée ; limite CDN et prérequis humains explicites | Verdict d’acceptation et limites explicites |
 
 Le coordinateur conserve l’intégration, les builds, les serveurs locaux, la navigation IAB, les migrations distantes et la décision de fin. Le dépôt mobile complet sur build de production local a été observé à390×844, jusqu’à l’envoi en modération ; ses captures sont dans `docs/qa/resume-captures/`.

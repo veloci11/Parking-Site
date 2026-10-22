@@ -1,14 +1,13 @@
 {
   "date": "2026-10-22",
-  "codeCommit": "819f32a1648fd990583348e7a181b291c6a04d27",
-  "codeTreeSha256": "af652ba619e8500d078845784e07e1a8c896315c5011381f65f2df01f10741be",
-  "buildId": "HOV-my8LrO43UDFk0VAKI",
+  "codeTreeSha256": "02f850a61815f505c942af30d2dd54253be351f746df14dfd0cc096cc00db78e",
+  "buildId": "pcMqwObi9XdoC2NB2C0vG",
   "build": "passed",
   "typecheck": "passed",
   "format": "passed",
   "unitTests": {
-    "tests": 189,
-    "passed": 186,
+    "tests": 194,
+    "passed": 191,
     "failed": 0,
     "skipped": 3,
     "skipReasons": [
@@ -45,7 +44,7 @@
   },
   "operatorTools": {
     "photoPrivacy": "6 synthetic tests; local opaque mask and private review trace, no wizard receipt enforcement",
-    "cdnPurge": "12 adapter tests; no actual private operator call, requires secret key and supported provider plan",
+    "cdnPurge": "12 adapter tests; Pro confirmed by owner, local private key absent, new bounded live recipe prepared but no call executed",
     "retention": "SQL contract and adapter tests; actual external SDK worker completion not claimed"
   },
   "cleanup": {
@@ -69,11 +68,20 @@
       55429
     ],
     "localTaskListenersRemaining": 0,
-    "temporaryBrowserTabClosed": true
+    "temporaryBrowserTabClosed": true,
+    "additionalMapRuntimeRemoved": true
   },
   "visualReport": "../../design-qa.md",
   "uiReport": "resume-ui-final.json",
   "publicDeployment": false,
   "overallAcceptance": "pending-provider-cache-arbitration-and-deferred-human-release-requirements",
-  "quotaInstruction": "Stop at7percent remaining; last read11percent, not a product completion claim"
+  "quotaInstruction": "Stop at7percent remaining; last read10percent, not a product completion claim",
+  "previousCodeCommit": "819f32a1648fd990583348e7a181b291c6a04d27",
+  "codeCommit": "ff17e1f531a4f85638ab06d1a5ef32db7bd0ed57",
+  "mapDemandBrowserReport": "map-demand-browser.json",
+  "ciVerifiedCommit": "4b3729e264b97a2d72f00847b311f45bbd4f2a5f",
+  "ciVerifiedChecks": {
+    "total": 6,
+    "passed": 6
+  }
 }
