@@ -1,13 +1,14 @@
 -- Rollback-only QA: exact fd1300* fixtures, no Storage object and no external email.
--- Run as migration operator after013, in one transaction. No ordinary user privileges altered.
+-- Run as migration operator after033, in one transaction. No ordinary user privileges altered.
 begin;
 select set_config('request.jwt.claim.sub','fd130000-0000-4000-8000-000000000001',true);
 select set_config('request.jwt.claims','{"sub":"fd130000-0000-4000-8000-000000000001","role":"authenticated","aal":"aal2"}',true);
 insert into auth.users(id,raw_user_meta_data,email_confirmed_at) values('fd130000-0000-4000-8000-000000000001','{"name":"Availability rollback QA"}',now());
 update app_roles set role='moderator' where user_id='fd130000-0000-4000-8000-000000000001';
-insert into listings(id,seller_id,lifecycle_state,draft)values('fd130001-0000-4000-8000-000000000001','fd130000-0000-4000-8000-000000000001','pending','{}');
-insert into published_listings(id,payload)values('fd130001-0000-4000-8000-000000000001','{}');
-update listings set lifecycle_state='published',last_published='{}' where id='fd130001-0000-4000-8000-000000000001';
+-- The availability lifecycle uses a synthetic location that satisfies the current regional guard.
+insert into listings(id,seller_id,lifecycle_state,draft)values('fd130001-0000-4000-8000-000000000001','fd130000-0000-4000-8000-000000000001','pending','{"id":"fd130001-0000-4000-8000-000000000001","city":"Paris","coordinates":[2.3739,48.8446],"commercialDetails":{"postalCode":"75012"},"locationPrecision":"area"}');
+insert into published_listings(id,payload)select id,gp_public_payload(draft) from listings where id='fd130001-0000-4000-8000-000000000001';
+update listings set lifecycle_state='published',last_published=draft where id='fd130001-0000-4000-8000-000000000001';
 do $$declare l listings;v jsonb;begin
  select * into l from listings where id='fd130001-0000-4000-8000-000000000001';
  if l.availability_expires_at<>now()+interval '90 days' or not gp_listing_available(l.id) then raise exception 'initial90day';end if;
@@ -33,7 +34,7 @@ do $$declare l listings;v jsonb;begin
  if exists(select 1 from published_listings where id=l.id) or not exists(select 1 from listings where id=l.id and lifecycle_state='expired' and last_published is null) then raise exception 'expiry_failed';end if;
  begin update listings set lifecycle_state='published' where id=l.id;raise exception 'cleanup_race_accepted';exception when others then if sqlerrm<>'AVAILABILITY_CLEANUP_PENDING' then raise;end if;end;
  perform gp_finish_availability_cleanup(l.id,(select row_version from listings where id=l.id));
- update listings set lifecycle_state='pending' where id=l.id;insert into published_listings(id,payload)values(l.id,'{}');update listings set lifecycle_state='published',last_published='{}' where id=l.id;
+ update listings set lifecycle_state='pending' where id=l.id;insert into published_listings(id,payload)select id,gp_public_payload(draft) from listings where id=l.id;update listings set lifecycle_state='published',last_published=draft where id=l.id;
  if not gp_listing_available(l.id) then raise exception 'reviewed_republication_failed';end if;
  update account_statuses set status='suspended' where user_id=l.seller_id;
  begin perform gp_confirm_availability(l.id,3);raise exception 'suspended_accepted';exception when others then if sqlerrm<>'FORBIDDEN' then raise;end if;end;
