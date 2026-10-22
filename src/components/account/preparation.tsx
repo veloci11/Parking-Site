@@ -68,8 +68,8 @@ export default function PreparationForm() {
         </Link>
       </div>
       <p className="small account-preparation-next">
-        Votre parking → Photos et description → Vérification. Après connexion,
-        votre brouillon est sauvegardé à chaque étape.
+        Trois étapes : votre parking, photos et description, puis vérification.
+        Après connexion, votre brouillon est sauvegardé à chaque étape.
       </p>
       {error ? (
         <p className="error" role="alert">

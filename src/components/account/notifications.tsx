@@ -2,7 +2,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowRight,
   Bell,
   CalendarDays,
   Check,
@@ -78,9 +77,7 @@ export function NotificationFeed({ compact = false }: { compact?: boolean }) {
       <div className="account-section-title">
         <h2>{compact ? "À suivre" : "Vos notifications"}</h2>
         {compact ? (
-          <Link href="/compte/notifications">
-            Tout voir <ArrowRight size={16} />
-          </Link>
+          <Link href="/compte/notifications">Tout voir</Link>
         ) : (
           <div className="account-notification-actions">
             <span className="badge">
@@ -136,9 +133,7 @@ export function NotificationFeed({ compact = false }: { compact?: boolean }) {
                     }).format(new Date(n.createdAt))}
                   </time>
                   <div className="account-notification-links">
-                    <Link href={safeHref(n.url)}>
-                      Ouvrir <ArrowRight size={14} />
-                    </Link>
+                    <Link href={safeHref(n.url)}>Ouvrir</Link>
                     {!n.readAt ? (
                       <button
                         disabled={!!busy}

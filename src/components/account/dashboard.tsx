@@ -4,7 +4,6 @@ import { pricingScope } from "../ListingOffers";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowRight,
   Bell,
   CheckCircle2,
   ClipboardList,
@@ -55,9 +54,7 @@ function DashboardContent({ user }: { user: User }) {
             Suivez vos annonces et échangez directement avec les personnes
             intéressées.
           </p>
-          <Link href="/explorer">
-            Explorer les parkings <ArrowRight size={16} />
-          </Link>
+          <Link href="/explorer">Explorer les parkings</Link>
         </div>
         <div className="account-welcome-symbol">
           <Sparkles size={48} />
@@ -91,9 +88,7 @@ function DashboardContent({ user }: { user: User }) {
       </div>
       <div className="account-section-title">
         <h2>Mes dernières annonces</h2>
-        <Link href="/compte/annonces">
-          Tout voir <ArrowRight size={16} />
-        </Link>
+        <Link href="/compte/annonces">Tout voir</Link>
       </div>
       {loading ? (
         <p role="status">Chargement de vos annonces…</p>
@@ -128,7 +123,6 @@ function DashboardContent({ user }: { user: User }) {
                   {offerLabel(l)} · {pricingScope(l)}
                 </p>
               </div>
-              <ArrowRight size={20} />
             </Link>
           ))}
         </div>

@@ -2,7 +2,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft,
   CheckCircle2,
   KeyRound,
   LoaderCircle,
@@ -151,7 +150,6 @@ function Content({ user }: { user: User }) {
   return (
     <AccountShell user={user} title="La sécurité de votre compte.">
       <Link className="account-return-link" href="/compte/parametres">
-        <ArrowLeft size={16} />
         Revenir aux paramètres
       </Link>
       <p className="muted account-lead">

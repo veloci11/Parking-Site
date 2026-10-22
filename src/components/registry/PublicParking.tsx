@@ -9,7 +9,7 @@ import {
   spacePrice,
 } from "@/components/ListingOffers";
 import dynamic from "next/dynamic";
-import { ArrowLeft, Layers3, MapPin, Box } from "lucide-react";
+import { Layers3, MapPin, Box } from "lucide-react";
 import type { PublicParking as ParkingData } from "@/lib/parking-registry";
 import { areaLabel, type Listing } from "@/lib/types";
 import SafePhoto from "@/components/SafePhoto";
@@ -166,7 +166,7 @@ export default function PublicParking({ alias }: { alias: string }) {
   return (
     <main id="main" className="registry-public">
       <Link href="/" className="text-link">
-        <ArrowLeft size={16} /> Retour à l’exploration
+        Retour
       </Link>
       {loading ? (
         <section className="registry-public-loading" role="status">

@@ -3,7 +3,6 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowRight,
   Check,
   Layers3,
   List,
@@ -946,7 +945,6 @@ export default function Explorer({
                 : loading
                   ? "Voir la recherche en cours"
                   : `Voir les ${total} résultats`}
-              <ArrowRight size={17} />
             </button>
           </div>
         ) : null}

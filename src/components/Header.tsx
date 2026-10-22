@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowUpRight, Menu, Plus, UserRound, X } from "lucide-react";
+import { Menu, Plus, UserRound, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "@/lib/client";
 export default function Header() {
@@ -66,7 +66,6 @@ export default function Header() {
           >
             <Plus size={18} />
             <span>Déposer une annonce</span>
-            <ArrowUpRight size={16} />
           </Link>
           <Link
             className="account-link"

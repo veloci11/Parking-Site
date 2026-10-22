@@ -8,7 +8,6 @@ import { accessLabel } from "@/lib/access-label";
 import Link from "next/link";
 import { useState } from "react";
 import {
-  ArrowUpRight,
   ChevronLeft,
   ChevronRight,
   LockKeyhole,
@@ -124,7 +123,6 @@ export default function ListingInspector({
           href={`/annonces/${listing.id}/${listing.slug}${transactionType ? `?transactionType=${transactionType}` : ""}`}
         >
           Consulter l’annonce
-          <ArrowUpRight size={18} />
         </Link>
         {listing.isDemo ? (
           <p className="demo-caption">Bien et visuel de démonstration</p>

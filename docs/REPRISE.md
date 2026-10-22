@@ -1,5 +1,9 @@
 # Point de reprise — 22 octobre 2026
 
+## Dernière demande — boutons simplifiés
+
+Voir `qa/ARROW_CLEANUP_2026-10-22.md` : flèches décoratives retirées, Retour à l’exploration remplacé par Retour, retour mobile de messagerie lisible. Deux relectures indépendantes ; build `thIGxvEcDWfeuxmyWSI0u` et format réussis ; fiche desktop et connexion mobile vérifiées. Aucun test métier supplémentaire requis pour ces icônes/libellés. Serveur et onglets temporaires fermés, runtime nettoyé. Le zoom 200 % et le lecteur d’écran restent non validés ; ne pas poursuivre une refonte non demandée pour cette finition bornée à cinq minutes.
+
 ## Dernier complément — retour après pagination et réseau
 
 Lire `qa/CLOSURE_ACCESS_2026-10-22.md` avant les résultats historiques ci-dessous. Un écart F09 a été corrigé : retour à une annonce au-delà de la première page, avec restauration des résultats frais, du tri, de la sélection et du défilement en Liste et Carte. Échap et fermeture des filtres restituent le focus ; erreurs réseau en français et compteur cohérent ; aide de la carte masquée quand le fournisseur est indisponible.

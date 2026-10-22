@@ -2,7 +2,7 @@
 import FilterSelect from "../FilterSelect";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { api } from "./shared";
 import { safeAuthReturn, type AuthPolicy } from "@/lib/auth-return";
 type Mode = "login" | "register" | "verify" | "forgot" | "reset";
@@ -501,7 +501,6 @@ export default function AuthForm({ mode }: { mode: Mode }) {
               }
             >
               {busy ? "Un instant…" : c.button}
-              <ArrowRight size={18} />
             </button>
           </form>
         )}

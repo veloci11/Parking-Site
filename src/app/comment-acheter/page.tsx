@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, MapPinned, MessageCircle, KeyRound } from "lucide-react";
+import { MapPinned, MessageCircle, KeyRound } from "lucide-react";
 import Footer from "@/components/Footer";
 export const metadata = { title: "Comment acheter un parking" };
 export default function HowToBuy() {
@@ -51,7 +51,6 @@ export default function HowToBuy() {
           </p>
           <Link className="button button-primary" href="/">
             Trouver ma prochaine place
-            <ArrowUpRight size={18} />
           </Link>
         </section>
       </main>

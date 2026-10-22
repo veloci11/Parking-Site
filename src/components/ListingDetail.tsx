@@ -22,8 +22,6 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
-  ArrowUpRight,
   Calendar,
   CheckCircle2,
   Heart,
@@ -396,7 +394,7 @@ export default function ListingDetail({
           existantes restent accessibles dans votre compte.
         </p>
         <Link className="button" href={backHref}>
-          Retour à l’exploration
+          Retour
         </Link>
       </main>
     );
@@ -408,8 +406,7 @@ export default function ListingDetail({
         </p>
       ) : null}
       <Link href={backHref} className="text-button">
-        <ArrowLeft size={18} />
-        Retour à l’exploration
+        Retour
       </Link>
       <div className="section-row" style={{ marginTop: 24 }}>
         <div>
@@ -881,7 +878,6 @@ export default function ListingDetail({
                   href={`/connexion?next=${encodeURIComponent(contactReturnHref)}`}
                 >
                   Se connecter
-                  <ArrowUpRight size={17} />
                 </Link>
               </div>
             ) : !user.emailVerified ? (
@@ -928,7 +924,6 @@ export default function ListingDetail({
                 ) : null}
                 <button className="button button-primary" disabled={sending}>
                   {sending ? "Envoi en cours…" : "Envoyer au vendeur"}
-                  <ArrowUpRight size={18} />
                 </button>
               </form>
             )}
@@ -1032,12 +1027,11 @@ export default function ListingDetail({
               className="button button-primary full-width"
               href={focusedHref}
             >
-              Voir cette annonce et contacter <ArrowUpRight size={18} />
+              Voir cette annonce et contacter
             </Link>
           ) : (
             <a className="button button-primary full-width" href="#contact">
               Demander une visite
-              <ArrowUpRight size={18} />
             </a>
           )}
           <div

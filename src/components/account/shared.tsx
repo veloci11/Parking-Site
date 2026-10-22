@@ -4,7 +4,6 @@ import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ArrowRight,
   Bell,
   Box,
   Flag,
@@ -138,7 +137,7 @@ export function AccountGate({
           className="button button-primary"
           href={`/connexion?next=${encodeURIComponent(path)}`}
         >
-          Se connecter <ArrowRight size={18} />
+          Se connecter
         </Link>
         <Link href={`/inscription?next=${encodeURIComponent(path)}`}>
           Créer un compte
@@ -193,7 +192,6 @@ export function AccountGate({
         </p>
         <Link className="button button-primary" href="/compte/securite">
           Sécuriser ma session
-          <ArrowRight size={18} />
         </Link>
       </div>
     );

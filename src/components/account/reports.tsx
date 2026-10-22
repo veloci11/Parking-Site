@@ -1,14 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  ArrowRight,
-  CheckCircle2,
-  Flag,
-  RefreshCw,
-  ShieldCheck,
-} from "lucide-react";
+import { CheckCircle2, Flag, RefreshCw, ShieldCheck } from "lucide-react";
 import { AccountGate, AccountShell, api } from "./shared";
 import ContextReports from "./context-reports";
 import type { User } from "@/lib/types";
@@ -99,7 +92,6 @@ function Content({ user }: { user: User }) {
       }
     >
       <Link className="account-return-link" href="/admin">
-        <ArrowLeft size={16} />
         Revenir aux annonces à relire
       </Link>
       <p className="muted account-lead">
@@ -186,7 +178,7 @@ function Content({ user }: { user: User }) {
             className="button button-secondary"
             href={`/annonces/${item.listingId}/parking`}
           >
-            Consulter l’annonce publique <ArrowRight size={16} />
+            Consulter l’annonce publique
           </Link>
           <p className="muted account-notification-note">
             Si l’annonce a déjà été retirée, la fiche publique peut être

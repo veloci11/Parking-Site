@@ -4,7 +4,7 @@ import { pricingScope, SpaceOfferSummary } from "./ListingOffers";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "./SafePhoto";
-import { ArrowLeft, ArrowUpRight } from "lucide-react";
+
 import {
   areaLabel,
   typeLabels,
@@ -128,8 +128,7 @@ export default function Comparison() {
           </p>
         </div>
         <Link href="/" className="button button-secondary">
-          <ArrowLeft size={18} />
-          Retour à l’exploration
+          Retour
         </Link>
       </div>
       {missing > 0 ? (
@@ -195,7 +194,6 @@ export default function Comparison() {
                       className="button button-primary"
                     >
                       Voir le bien
-                      <ArrowUpRight size={16} />
                     </Link>
                   </td>
                 ))}

@@ -8,15 +8,7 @@ import {
   type FormEvent,
 } from "react";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  CalendarDays,
-  Check,
-  ChevronRight,
-  Mail,
-  Send,
-  X,
-} from "lucide-react";
+import { CalendarDays, Check, Mail, Send, X } from "lucide-react";
 import { AccountGate, AccountShell, api } from "./shared";
 import { mergeMessageHistory } from "./message-history";
 import {
@@ -339,7 +331,6 @@ function Content({ user, id }: { user: User; id?: string }) {
                     {c.blocked ? " · échanges bloqués" : ""}
                   </small>
                 </div>
-                <ChevronRight size={16} />
               </Link>
             ))}
           </aside>
@@ -349,9 +340,9 @@ function Content({ user, id }: { user: User; id?: string }) {
                 <Link
                   className="account-thread-back"
                   href="/compte/messages"
-                  aria-label="Revenir aux conversations"
+                  aria-label="Retour aux conversations"
                 >
-                  <ArrowLeft size={20} />
+                  Retour
                 </Link>
                 <div>
                   <strong>
@@ -665,7 +656,6 @@ function Content({ user, id }: { user: User; id?: string }) {
           </p>
           <Link className="button button-primary" href="/explorer">
             Explorer les parkings
-            <ArrowLeft size={18} />
           </Link>
         </div>
       )}

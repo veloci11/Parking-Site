@@ -4,7 +4,7 @@ import { pricingScope, ListingOffersTable } from "../ListingOffers";
 import { ModelRequest } from "./modeling-request";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Check, ClipboardList, Pause, Plus, X } from "lucide-react";
+import { Check, ClipboardList, Pause, Plus, X } from "lucide-react";
 import { AccountGate, AccountShell, api, statusLabels } from "./shared";
 import { areaLabel, typeLabels, type Listing, type User } from "@/lib/types";
 function Content({ user }: { user: User }) {
@@ -184,7 +184,6 @@ function Content({ user }: { user: User }) {
                     {l.status === "published"
                       ? "Préparer une modification"
                       : "Reprendre l’annonce"}
-                    <ArrowRight size={16} />
                   </Link>
                   {l.status === "published" ? (
                     <button

@@ -9,8 +9,6 @@ import {
 } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft,
-  ArrowRight,
   Check,
   CheckCircle2,
   CloudUpload,
@@ -744,7 +742,6 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
         </p>
         <Link href="/compte/annonces" className="button button-primary">
           Suivre mon annonce
-          <ArrowRight size={18} />
         </Link>
       </main>
     );
@@ -790,7 +787,6 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
             : hasPreparation
               ? "Reprendre ma préparation dans un brouillon privé"
               : "Commencer mon annonce"}
-          <ArrowRight size={18} />
         </button>
       </main>
     );
@@ -821,10 +817,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
   return (
     <main id="main" className="page-shell account-wizard">
       <div className="account-wizard-top">
-        <Link href="/compte/annonces">
-          <ArrowLeft size={18} />
-          Mes annonces
-        </Link>
+        <Link href="/compte/annonces">Mes annonces</Link>
         <div className="account-save-state" role="status">
           {saveState === "saving" ? (
             <LoaderCircle size={16} className="account-spin" />
@@ -2083,7 +2076,6 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                 }
               >
                 {busy ? "Envoi en cours…" : "Soumettre à la modération"}
-                <ArrowRight size={18} />
               </button>
               <p className="muted">
                 Votre annonce ne sera pas publiée automatiquement.
@@ -2101,7 +2093,6 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                   setError("");
                 }}
               >
-                <ArrowLeft size={18} />
                 Retour
               </button>
               <button
@@ -2114,7 +2105,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                   : listing.locationPrecision === "area"
                     ? "Confirmer ce secteur et continuer"
                     : "Confirmer cette position et continuer"}
-                {step === 1 ? <Eye size={18} /> : <ArrowRight size={18} />}
+                {step === 1 ? <Eye size={18} /> : null}
               </button>
             </div>
           ) : (
@@ -2126,7 +2117,6 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                 setError("");
               }}
             >
-              <ArrowLeft size={18} />
               Modifier les photos et la description
             </button>
           )}
