@@ -21,6 +21,7 @@ import {
   type MapSearchArea,
 } from "@/lib/map-view";
 import { useFavorites } from "@/lib/favorites";
+import { MOBILE_MAP_MEDIA_QUERY, observeCityMapDemand } from "@/lib/map-demand";
 import { type Listing } from "@/lib/types";
 import FilterSelect from "./FilterSelect";
 import ListingCard from "./ListingCard";
@@ -72,6 +73,7 @@ export default function Explorer({
   const [more, setMore] = useState(false);
   const [only3D, setOnly3D] = useState(false);
   const [mobileView, setMobileView] = useState<"list" | "map">("list");
+  const [mapRequested, setMapRequested] = useState(false);
   const [compare, setCompare] = useState<string[]>([]);
   const [compareNotice, setCompareNotice] = useState("");
   const favorites = useFavorites();
@@ -230,6 +232,14 @@ export default function Explorer({
     if (params.get("listing")) setMobileView("map");
     setInitialized(true);
   }, []);
+  useEffect(() => {
+    if (!initialized || mapRequested) return;
+    return observeCityMapDemand(
+      window.matchMedia(MOBILE_MAP_MEDIA_QUERY),
+      mobileView,
+      () => setMapRequested(true),
+    );
+  }, [initialized, mobileView, mapRequested]);
   useEffect(() => {
     if (!initialized) return;
     requestGeneration.current++;
@@ -841,7 +851,7 @@ export default function Explorer({
           className={`map-panel ${selected ? "has-inspector" : ""}`}
           aria-label="Carte des parkings"
         >
-          {initialized ? (
+          {initialized && mapRequested ? (
             <CityMap
               listings={filtered}
               transactionType={transactionType}

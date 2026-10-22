@@ -1,9 +1,14 @@
 /** Dedicated connected probe. Coordinator provisions three fresh .invalid fixtures.
  * npx tsx scripts/verify-storage-cache-zero.mjs --run
+ * --run --purge-cdn --execute-reviewed-purge opts into exact reviewed CDN invalidation.
  * No signup, email, SQL, server startup or policy change. Signed URLs stay in memory.
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { resolve } from "node:path";
+import { mediaCachePlanHash } from "../src/server/media-cache-purge.ts";
 import sharp from "sharp";
 import { createServerClient } from "@supabase/ssr";
 import {
@@ -12,17 +17,105 @@ import {
   linkQaPublication,
 } from "./qa-publication-contract.ts";
 import { emptyCommercialDetails } from "../src/lib/commercial-details.ts";
-const privateFile = ".data/storage-cache-artifacts.json",
-  reportFile = "docs/qa/storage-cache-zero.json";
-if (!process.argv.includes("--run")) {
+const purgeMode = process.argv.includes("--purge-cdn");
+const configurationOnly = process.argv.includes("--check-operator-config");
+const prefix = purgeMode ? "storage-cdn-purge" : "storage-cache";
+const privateFile = `.data/${prefix}-artifacts.json`,
+  reportFile = purgeMode
+    ? "docs/qa/storage-cdn-purge-live.json"
+    : "docs/qa/storage-cache-zero.json";
+const operatorEnv = resolve(".data/media-operator.env");
+const execFileAsync = promisify(execFile);
+async function purgeCli(args) {
+  try {
+    const result = await execFileAsync(
+      process.execPath,
+      [
+        "--env-file=" + operatorEnv,
+        "--import",
+        "tsx",
+        "scripts/purge-public-media-cache.ts",
+        ...args,
+      ],
+      { cwd: process.cwd(), timeout: 60000, maxBuffer: 32768 },
+    );
+    return JSON.parse(result.stdout.trim());
+  } catch (error) {
+    try {
+      const refused = JSON.parse(error.stderr.trim());
+      if (/^[A-Z0-9_]{1,100}$/.test(refused.code || ""))
+        purgeProof.operatorFailure = {
+          code: refused.code,
+          queuedCount: Number.isInteger(refused.queuedCount)
+            ? refused.queuedCount
+            : null,
+          remoteOutcomeUncertain: refused.remoteOutcomeUncertain === true,
+        };
+    } catch {}
+    throw new Error(
+      "operator_cli_refused_or_interrupted_inspect_private_receipt",
+    );
+  }
+}
+if (!process.argv.includes("--run") && !configurationOnly) {
   console.info(
     "Prepared only. --run requires a reviewed connected server and three fresh private fixture identities.",
   );
   process.exit(0);
 }
-const config = JSON.parse(
-  fs.readFileSync(".data/storage-cache-qa.json", "utf8"),
+if (purgeMode || configurationOnly) {
+  assert.ok(
+    configurationOnly || process.argv.includes("--execute-reviewed-purge"),
+    "Explicit purge execution flag required",
+  );
+  const mode = fs.lstatSync(operatorEnv);
+  assert.ok(
+    mode.isFile() && !mode.isSymbolicLink() && (mode.mode & 0o077) === 0,
+    "Private operator env file required",
+  );
+  // Node loads this private file only in the child. Neither this probe nor its
+  // output reads, receives or persists the operator secret.
+  try {
+    await execFileAsync(
+      process.execPath,
+      [
+        "--env-file=" + operatorEnv,
+        "--import",
+        "tsx",
+        "--input-type=module",
+        "-e",
+        "import {mediaOperatorConfiguration} from './scripts/purge-public-media-cache.ts'; mediaOperatorConfiguration(process.env); console.log('private_operator_configuration_valid');",
+      ],
+      { timeout: 10000, maxBuffer: 1024 },
+    );
+  } catch {
+    throw new Error(
+      "private_operator_configuration_required_before_fixture_use",
+    );
+  }
+}
+if (configurationOnly) {
+  console.info(
+    "Private operator configuration validated; no remote request or fixture was created.",
+  );
+  process.exit(0);
+}
+const configFile = `.data/${prefix}-qa.json`;
+assert.equal(
+  fs.statSync(configFile).mode & 0o077,
+  0,
+  "Private fixture configuration required",
 );
+const config = JSON.parse(fs.readFileSync(configFile, "utf8"));
+assert.ok(
+  config.publishableKey && !config.publishableKey.startsWith("sb_secret_"),
+  "Fixture client needs a publishable key",
+);
+assert.deepEqual(Object.keys(config.users).sort(), [
+  "admin",
+  "buyer",
+  "seller",
+]);
 assert.equal(config.origin, "http://127.0.0.1:3001");
 assert.equal(
   new URL(config.supabaseUrl).hostname,
@@ -47,6 +140,15 @@ const artifacts = {
 const checks = [],
   reads = [];
 let strong, listing, signedUrl, failure;
+const purgeProof = {
+  requested: purgeMode,
+  observationWindowMs: 60000,
+  pollingIntervalMs: 10000,
+  planReviewedAgainstOwnedInventory: false,
+  queuedCount: 0,
+  observedDefaultUrlDenied: false,
+  samples: [],
+};
 const save = () =>
   fs.writeFileSync(privateFile, JSON.stringify(artifacts, null, 2) + "\n", {
     mode: 0o600,
@@ -129,7 +231,7 @@ async function run() {
   }
   save();
   fs.writeFileSync(
-    ".data/storage-cache-manifest.json",
+    `.data/${prefix}-manifest.json`,
     JSON.stringify(
       {
         createdAt: new Date().toISOString(),
@@ -203,7 +305,9 @@ async function run() {
     }
     r = await seller.api(`listings/${listing.id}`, "PATCH", {
       version: listing.version,
-      title: "RECETTE FICTIVE — cache zéro Paris 12e",
+      title: purgeMode
+        ? "RECETTE FICTIVE — purge CDN Paris 12e"
+        : "RECETTE FICTIVE — cache zéro Paris 12e",
       description:
         "Annonce synthétique exclusivement réservée à la recette de cache et de retrait. Images, prix et caractéristiques fictifs. Aucun bien immobilier réel ni expertise ne sont revendiqués.",
       city: "Paris",
@@ -267,7 +371,7 @@ async function run() {
       "/storage/v1/object/public-approved/" +
       artifacts.media[0].id +
       ".webp";
-    async function read(name, nonce = false) {
+    async function read(name, nonce = false, timeoutMs = 40000) {
       const response = await fetch(
         path + (nonce ? "?cacheNonce=" + Date.now() : ""),
         {
@@ -277,7 +381,7 @@ async function run() {
             ...(nonce ? { "Cache-Control": "no-cache" } : {}),
           },
           ...(nonce ? { cache: "no-store" } : {}),
-          signal: AbortSignal.timeout(40000),
+          signal: AbortSignal.timeout(timeoutMs),
         },
       );
       const bytes = (await response.arrayBuffer()).byteLength;
@@ -299,15 +403,26 @@ async function run() {
       before.status === 200 &&
         /max-age=0(?:\D|$)/.test(before.cacheControl || ""),
     );
-    const sign = await sdk.storage
-      .from("public-approved")
-      .createSignedUrl(artifacts.media[0].id + ".webp", 60);
-    signed.minted = !sign.error && !!sign.data?.signedUrl;
-    if (signed.minted) {
-      signedUrl = sign.data.signedUrl;
-      const sr = await fetch(signedUrl, { signal: AbortSignal.timeout(40000) });
-      await sr.arrayBuffer();
-      signed.beforeWithdrawalStatus = sr.status;
+    if (purgeMode) {
+      const warmed = await read("published_warmed_same_token_default_url");
+      check(
+        "published_default_url_warmed_cache_hit",
+        warmed.status === 200 && warmed.cfCacheStatus === "HIT",
+      );
+    }
+    if (!purgeMode) {
+      const sign = await sdk.storage
+        .from("public-approved")
+        .createSignedUrl(artifacts.media[0].id + ".webp", 60);
+      signed.minted = !sign.error && !!sign.data?.signedUrl;
+      if (signed.minted) {
+        signedUrl = sign.data.signedUrl;
+        const sr = await fetch(signedUrl, {
+          signal: AbortSignal.timeout(40000),
+        });
+        await sr.arrayBuffer();
+        signed.beforeWithdrawalStatus = sr.status;
+      }
     }
     r = await seller.api(`listings/${listing.id}/lifecycle`, "POST", {
       version: listing.version,
@@ -322,10 +437,107 @@ async function run() {
       "fresh_origin_denies_withdrawn_media",
       [400, 401, 403, 404].includes(origin.status),
     );
-    check(
-      "default_same_token_url_denies_after_withdrawal",
-      [400, 401, 403, 404].includes(after.status),
-    );
+    if (purgeMode) {
+      purgeProof.immediateDefaultUrlDeniedBeforePurge = [
+        400, 401, 403, 404,
+      ].includes(after.status);
+      const prepared = await purgeCli(["--listing-id", listing.id]);
+      check(
+        "purge_plan_is_reads_only",
+        prepared.dryRun === true && prepared.queuedCount === 0,
+      );
+      const envelope = JSON.parse(fs.readFileSync(prepared.planFile, "utf8"));
+      assert.equal(mediaCachePlanHash(envelope.plan), prepared.planHash);
+      const snapshot = envelope.plan.snapshot;
+      assert.equal(snapshot.listing.id, listing.id);
+      assert.equal(snapshot.listing.seller_id, config.users.seller.id);
+      assert.equal(snapshot.listing.lifecycle_state, "withdrawn");
+      assert.equal(snapshot.published, false);
+      assert.deepEqual(
+        snapshot.media.map((m) => m.id).sort(),
+        artifacts.media.map((m) => m.id).sort(),
+      );
+      assert.ok(
+        snapshot.media.every(
+          (m) =>
+            m.owner_id === config.users.seller.id &&
+            m.listing_id === listing.id &&
+            m.object_key ===
+              artifacts.media.find((a) => a.id === m.id)?.objectKey,
+        ),
+      );
+      purgeProof.planReviewedAgainstOwnedInventory = true;
+      purgeProof.planHash = prepared.planHash;
+      const queued = await purgeCli([
+        "--execute",
+        "--plan-file",
+        prepared.planFile,
+        "--expected-hash",
+        prepared.planHash,
+        "--reason",
+        "Recette synthétique bornée : retrait vérifié, seuls les médias du manifeste sont ciblés.",
+      ]);
+      purgeProof.queuedCount = queued.queuedCount;
+      purgeProof.acknowledgedAt = new Date().toISOString();
+      check(
+        "owned_media_purge_acknowledged",
+        queued.status === "invalidation_queued" &&
+          queued.queuedCount === artifacts.media.length &&
+          queued.globallyRevoked === false,
+      );
+      const started = Date.now(),
+        deadline = started + 60000;
+      for (const offset of [0, 10000, 20000, 30000, 40000, 50000, 59000]) {
+        const delay = Math.min(
+          10000,
+          Math.max(0, started + offset - Date.now()),
+        );
+        if (delay) await new Promise((done) => setTimeout(done, delay));
+        const remaining = deadline - Date.now();
+        if (remaining <= 0) break;
+        let sample;
+        try {
+          sample = await read(
+            "post_purge_same_token_default_url",
+            false,
+            Math.min(8000, remaining),
+          );
+        } catch {
+          purgeProof.samples.push({
+            name: "post_purge_same_token_default_url",
+            transportInterrupted: true,
+            elapsedMs: Date.now() - started,
+          });
+          break;
+        }
+        const observed = { ...sample, elapsedMs: Date.now() - started };
+        purgeProof.samples.push(observed);
+        if (
+          [400, 401, 403, 404].includes(sample.status) &&
+          observed.elapsedMs <= 60000
+        ) {
+          purgeProof.observedDefaultUrlDenied = true;
+          break;
+        }
+      }
+      const denialCheck =
+        "same_token_default_url_denied_within_60s_after_purge_ack";
+      checks.push({
+        name: denialCheck,
+        passed: purgeProof.observedDefaultUrlDenied,
+      });
+      if (!purgeProof.observedDefaultUrlDenied) failure ||= denialCheck;
+      const finalOrigin = await read("post_purge_nonce_no_store_origin", true);
+      check(
+        "post_purge_origin_still_denies_withdrawn_media",
+        [400, 401, 403, 404].includes(finalOrigin.status),
+      );
+    } else {
+      check(
+        "default_same_token_url_denies_after_withdrawal",
+        [400, 401, 403, 404].includes(after.status),
+      );
+    }
     if (signedUrl) {
       const sr = await fetch(signedUrl, { signal: AbortSignal.timeout(40000) });
       await sr.arrayBuffer();
@@ -336,6 +548,7 @@ async function run() {
   } catch (e) {
     failure =
       checks.find((x) => !x.passed)?.name ||
+      purgeProof.operatorFailure?.code ||
       "probe_interrupted_without_secret_output";
   } finally {
     if (listing && !artifacts.withdrawn) {
@@ -371,6 +584,13 @@ async function run() {
     checks,
     reads,
     signedUrlProbe: signed,
+    ...(purgeMode
+      ? {
+          purge: purgeProof,
+          observedOneClientAndEdgeOnly: true,
+          worldwideRevocationProven: false,
+        }
+      : {}),
     adminFactorRevoked: strong?.factorRevoked || false,
     withdrawn: artifacts.withdrawn,
     cleanup: "pending",

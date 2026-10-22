@@ -717,6 +717,15 @@
   line-height: 1.5;
 }
 
+@media (max-width: 1023px) {
+  .gp-map-search-area {
+    top: 132px;
+    width: max-content;
+    max-width: calc(100% - 32px);
+    white-space: normal;
+  }
+}
+
 /* Fixed isometric parking interior. White surroundings let the concrete cutaway read clearly. */
 .gp-parking-viewer {
   min-height: 610px;
