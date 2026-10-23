@@ -20,6 +20,7 @@ import {
 import {
   areaLabel,
   money,
+  spaceLevelLabel,
   type Listing,
   type TransactionType,
 } from "@/lib/types";
@@ -51,6 +52,27 @@ export default function ListingInspector({
   }, [listing.id]);
   const visibleSpaces = searchOfferSpaces(listing, transactionType);
   const photos = listing.photos.length ? listing.photos : ["/demo/covered.png"];
+  const description = listing.description
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^bonjour[,.!\s]+/i, "");
+  const excerpt =
+    description.length > 340
+      ? `${description.slice(0, 337).replace(/\s+\S*$/, "")}…`
+      : description;
+  // Quote an explicit dated availability statement, without inferring a date.
+  const availability = listing.description
+    .split(/[.!?\n]+/)
+    .map((text) => text.trim())
+    .find(
+      (text) =>
+        text.length <= 180 &&
+        /\bdisponib(?:les?|ilit[eé])(?:\s|$)/iu.test(text) &&
+        /\b20\d{2}\b/.test(text),
+    );
+  const levels = visibleSpaces.every((space) => space.levelKnown !== false)
+    ? [...new Set(visibleSpaces.map(spaceLevelLabel))]
+    : [];
   const showcase = isPublicShowcase(listing.id);
   const favoriteLabel = favorite
     ? "Retirer des favoris"
@@ -254,6 +276,21 @@ export default function ListingInspector({
               <span>Places proposées</span>
               <strong>{visibleSpaces.length}</strong>
             </p>
+            {levels.length ? (
+              <p>
+                <span>{levels.length > 1 ? "Niveaux" : "Niveau"}</span>
+                <strong>{levels.join(" · ")}</strong>
+              </p>
+            ) : null}
+            {listing.occupancy === "vacant" ||
+            listing.occupancy === "occupied" ? (
+              <p>
+                <span>Occupation</span>
+                <strong>
+                  {listing.occupancy === "vacant" ? "Libre" : "Occupée"}
+                </strong>
+              </p>
+            ) : null}
             {listing.annualChargesCents != null ? (
               <p>
                 <span>Charges annuelles</span>
@@ -266,6 +303,37 @@ export default function ListingInspector({
                 <strong>{money(listing.propertyTaxCents)}</strong>
               </p>
             ) : null}
+            {listing.sellerName ? (
+              <p>
+                <span>Annonceur</span>
+                <strong>{listing.sellerName}</strong>
+                {listing.sellerTypeSnapshot ? (
+                  <span>
+                    {listing.sellerTypeSnapshot === "professional"
+                      ? "Professionnel"
+                      : "Particulier"}
+                  </span>
+                ) : null}
+              </p>
+            ) : null}
+            {listing.sceneAvailable ? (
+              <p>
+                <span>Plan du parking</span>
+                <strong>Vue 3D disponible</strong>
+              </p>
+            ) : null}
+            {availability ? (
+              <p className="inspector-key-wide">
+                <span>Disponibilité annoncée</span>
+                <strong>{availability}</strong>
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+        {panel && excerpt ? (
+          <div className="inspector-excerpt">
+            <h3>En quelques mots</h3>
+            <p>{excerpt}</p>
           </div>
         ) : null}
         {listing.locationPrecision === "exact_opt_in" && listing.address ? (

@@ -1416,3 +1416,26 @@
 .explorer .inspector-key-points strong {
   font-size: 16px;
 }
+
+.explorer .inspector-key-wide {
+  grid-column: 1 / -1;
+}
+.explorer .inspector-key-points strong + span {
+  margin: 4px 0 0;
+}
+.explorer .inspector-excerpt {
+  padding-top: 20px;
+  margin-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.explorer .inspector-excerpt h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.explorer .inspector-excerpt p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+}
