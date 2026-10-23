@@ -895,6 +895,7 @@ export default function Explorer({
                   className="explorer-filter-skip"
                   onClick={() => {
                     closeMoreFilters();
+                    changeView("list");
                     requestAnimationFrame(() =>
                       resultsPanel.current?.focus({ preventScroll: true }),
                     );
@@ -1185,9 +1186,11 @@ export default function Explorer({
                   className="button button-primary"
                   onClick={() => {
                     closeMoreFilters();
-                    requestAnimationFrame(() =>
-                      resultsPanel.current?.focus({ preventScroll: true }),
-                    );
+                    requestAnimationFrame(() => {
+                      const panel = resultsPanel.current;
+                      if (panel && panel.getClientRects().length > 0)
+                        panel.focus({ preventScroll: true });
+                    });
                   }}
                 >
                   {error
