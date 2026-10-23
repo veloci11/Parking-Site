@@ -722,7 +722,7 @@ export default function Explorer({
               label="Type de parking"
               value={type}
               onChange={setType}
-              applied={Boolean(type)}
+              applied
               options={[
                 { value: "", label: "Parking & box" },
                 { value: "covered", label: "Parking couvert" },
