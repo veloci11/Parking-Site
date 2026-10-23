@@ -159,8 +159,8 @@ export default function CityMap({
     if (
       !map ||
       status !== "ready" ||
-      initialViewRef.current ||
       selectedId ||
+      manualMovement.current ||
       showcaseCentered.current ||
       !listings.length ||
       !listings.every((item) => isPublicShowcase(item.id))
@@ -686,7 +686,10 @@ export default function CityMap({
         </button>
       </div>
       <div className="gp-map-note">
-        Positions de secteur pour les annonces à adresse masquée.
+        {listings.length > 0 &&
+        listings.every((item) => isPublicShowcase(item.id))
+          ? "Démonstration · points d’adresse, parking illustratif."
+          : "Positions de secteur pour les annonces à adresse masquée."}
       </div>
       {status === "loading" ? (
         <div className="gp-map-loading" role="status">
