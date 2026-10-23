@@ -30,6 +30,17 @@ test("submission guidance preserves unknown dimensions, optional painted numbers
       "Description factuelle du parking, de ses accès et des contraintes connues. Les dimensions inconnues restent à relever pendant la visite.",
   } as Listing;
   assert.deepEqual(listingIssues(listing), []);
+  for (const count of [1, 2, 3]) {
+    assert.deepEqual(
+      listingIssues({ ...listing, photos: listing.photos.slice(0, count) }),
+      [],
+      `${count} authentic photo(s) allow publication guidance`,
+    );
+  }
+  assert.deepEqual(
+    listingIssues({ ...listing, photos: [] }).map((issue) => issue.field),
+    ["listing-photos"],
+  );
   const details = emptyCommercialDetails();
   details.units.unit = {
     ...emptyUnitDetails(),

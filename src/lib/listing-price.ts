@@ -162,7 +162,9 @@ export function catalogOfferMatch(
       (filters.closed != null &&
         kinds.every((k) => k === "box") !== filters.closed) ||
       (filters.level != null &&
-        !listing.spaces.some((s) => s.level === filters.level))
+        !listing.spaces.some(
+          (s) => s.levelKnown !== false && s.level === filters.level,
+        ))
     )
       return null;
     return {
@@ -188,7 +190,8 @@ export function catalogOfferMatch(
       (filters.covered == null ||
         (kind === "covered" || kind === "box") === filters.covered) &&
       (filters.closed == null || (kind === "box") === filters.closed) &&
-      (filters.level == null || space.level === filters.level)
+      (filters.level == null ||
+        (space.levelKnown !== false && space.level === filters.level))
     );
   });
   if (!matches.length) return null;

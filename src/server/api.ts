@@ -599,12 +599,12 @@ export async function handleApi(request: Request): Promise<Response> {
           !draft.city ||
           !draft.district ||
           draft.priceCents <= 0 ||
-          draft.photos.length < 3 ||
+          draft.photos.length < 1 ||
           draft.spaces.length < 1
         )
           throw new ApiError(
             400,
-            "Complétez le titre, la description, le lieu, le prix, les places et trois photos documentaires minimum.",
+            "Complétez le titre, la description, le lieu, le prix, les places et au moins une photo du parking.",
           );
         draft.conditionObservations = attributeLocalConditions(
           draft,

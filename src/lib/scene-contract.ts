@@ -427,7 +427,7 @@ export function assertSceneMapping(
       "La localisation exacte doit être consentie dans l’annonce publiée.",
     );
   const declared = listing.spaces.filter(
-    (space) => space.level === manifest.level,
+    (space) => space.levelKnown !== false && space.level === manifest.level,
   );
   if (!declared.length || declared.length !== manifest.spaces.length)
     throw new Error(
@@ -555,6 +555,8 @@ export function publicSceneProjection(
   };
 }
 export function exampleSceneManifest(listing: Listing): SceneManifest {
+  if (listing.spaces.some((space) => space.levelKnown === false))
+    throw new Error("Précisez les niveaux avant de préparer un plan.");
   const units = listing.spaces.filter(
     (space) => space.level === (listing.spaces[0]?.level ?? -1),
   );

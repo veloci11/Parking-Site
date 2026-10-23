@@ -61,22 +61,51 @@ export function parseParkingRender(
 }
 
 const cache = new Map<number, ParkingRender>();
+const pending = new Map<number, Promise<ParkingRender>>();
+
+/** A caller leaving the viewer must not cancel another visible floor's request. */
+function waitForRender(request: Promise<ParkingRender>, signal: AbortSignal) {
+  return new Promise<ParkingRender>((resolve, reject) => {
+    const abort = () =>
+      reject(signal.reason ?? new DOMException("Aborted", "AbortError"));
+    signal.addEventListener("abort", abort, { once: true });
+    request.then(
+      (render) => {
+        signal.removeEventListener("abort", abort);
+        resolve(render);
+      },
+      (error) => {
+        signal.removeEventListener("abort", abort);
+        reject(error);
+      },
+    );
+    if (signal.aborted) abort();
+  });
+}
 
 /** These images describe only the explicitly fictional demonstration parking. */
 export async function loadDemoParkingRender(
   level: number,
   signal: AbortSignal,
 ): Promise<ParkingRender> {
+  signal.throwIfAborted();
   if (level !== -1 && level !== -2) throw new Error("Rendu indisponible");
   const cached = cache.get(level);
   if (cached) return cached;
-  const response = await fetch(
-    `/parking-renders/demo-level-minus-${-level}.json`,
-    { signal, cache: "no-cache" },
-  );
-  if (!response.ok) throw new Error("Rendu indisponible");
-  const render = parseParkingRender(await response.json(), level);
-  if (!render) throw new Error("Rendu indisponible");
-  cache.set(level, render);
-  return render;
+  let request = pending.get(level);
+  if (!request) {
+    request = (async () => {
+      const response = await fetch(
+        `/parking-renders/demo-level-minus-${-level}.json`,
+        { cache: "no-cache" },
+      );
+      if (!response.ok) throw new Error("Rendu indisponible");
+      const render = parseParkingRender(await response.json(), level);
+      if (!render) throw new Error("Rendu indisponible");
+      cache.set(level, render);
+      return render;
+    })().finally(() => pending.delete(level));
+    pending.set(level, request);
+  }
+  return waitForRender(request, signal);
 }

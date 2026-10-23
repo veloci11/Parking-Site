@@ -51,6 +51,7 @@ import { useSession } from "@/lib/client";
 import DepositSignIn from "./preparation";
 import {
   areaLabel,
+  spaceLevelLabel,
   money,
   typeLabels,
   type Listing,
@@ -1307,13 +1308,25 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                             type="number"
                             min="-20"
                             max="20"
-                            value={space.level}
+                            value={
+                              space.levelKnown === false ? "" : space.level
+                            }
+                            placeholder="Non renseigné"
                             onChange={(e) =>
-                              spaceChange(
-                                index,
-                                "level",
-                                Number(e.target.value),
-                              )
+                              change({
+                                spaces: listing.spaces.map((item, i) =>
+                                  i === index
+                                    ? {
+                                        ...item,
+                                        level:
+                                          e.target.value === ""
+                                            ? 0
+                                            : Number(e.target.value),
+                                        levelKnown: e.target.value !== "",
+                                      }
+                                    : item,
+                                ),
+                              })
                             }
                           />
                         </label>
@@ -1374,7 +1387,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                         { value: "general", label: "État commun du parking" },
                         ...listing.spaces.map((space, index) => ({
                           value: space.id,
-                          label: `${spaceLabel(space, index)} · niveau ${space.level}`,
+                          label: `${spaceLabel(space, index)} · niveau ${spaceLevelLabel(space)}`,
                         })),
                       ]}
                     />
@@ -1622,7 +1635,8 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
               </>
               <>
                 <p className="muted">
-                  Ajoutez au moins 3 photos : le parking, son accès et la place.
+                  Ajoutez au moins une photo. Trois vues sont recommandées : le
+                  parking, son accès et la place.
                 </p>
                 <div className="field">
                   <span>{"Ajouter des photos à"}</span>
@@ -1642,7 +1656,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                       },
                       ...listing.spaces.map((space, index) => ({
                         value: space.id,
-                        label: `${spaceLabel(space, index)} · niveau ${space.level}`,
+                        label: `${spaceLabel(space, index)} · niveau ${spaceLevelLabel(space)}`,
                       })),
                     ]}
                   />

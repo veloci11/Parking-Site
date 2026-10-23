@@ -45,7 +45,13 @@ export type ParkingListingGroup = ReturnType<
   typeof parkingListingGroups
 >[number];
 
-export function parkingSpaceLocation(space: { number: string; level: number }) {
+export function parkingSpaceLocation(space: {
+  number: string;
+  level: number;
+  levelKnown?: boolean;
+}) {
+  if (space.levelKnown === false)
+    return `Place ${space.number || "non numérotée"} · niveau à préciser`;
   const floor =
     space.level === 0 ? "RDC" : String(space.level).replace("-", "−");
   return `Place ${space.number || "non numérotée"} · ${floor === "RDC" ? floor : `niveau ${floor}`}`;

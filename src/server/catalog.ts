@@ -35,6 +35,7 @@ export function publicProjection(value: Listing): Listing {
     id: `${value.id}:unit:${i + 1}`,
     number: s.number,
     level: s.level,
+    ...(s.levelKnown === false ? { levelKnown: false } : {}),
     areaM2: s.areaM2,
     lengthM: s.lengthM,
     widthM: s.widthM,
@@ -87,7 +88,9 @@ export function publicProjection(value: Listing): Listing {
             ]
           : [...value.coordinates],
     sceneAvailable:
-      value.locationPrecision === "exact_opt_in" && value.sceneAvailable,
+      value.locationPrecision === "exact_opt_in" &&
+      value.spaces.every((space) => space.levelKnown !== false) &&
+      value.sceneAvailable,
     isDemo: value.isDemo,
     status: "published",
     version: value.version,

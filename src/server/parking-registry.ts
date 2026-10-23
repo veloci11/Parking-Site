@@ -202,7 +202,23 @@ function mapped(listingId: string, snapshot: Listing) {
   const rows = registryDB()
     .prepare("SELECT * FROM registry_listing_units WHERE listing_id=?")
     .all(listingId);
+  // Unknown-only listings acquire no physical claim or plan, including stale published links.
   if (
+    !rows.length &&
+    snapshot.spaces.length > 0 &&
+    snapshot.spaces.every(
+      (space) => space.levelKnown === false && space.level === 0,
+    ) &&
+    !registryDB()
+      .prepare("SELECT 1 FROM canonical_space_claims WHERE listing_id=?")
+      .get(listingId) &&
+    !registryDB()
+      .prepare("SELECT 1 FROM registry_published_units WHERE listing_id=?")
+      .get(listingId)
+  )
+    return [];
+  if (
+    snapshot.spaces.some((space) => space.levelKnown === false) ||
     rows.length !== snapshot.spaces.length ||
     rows.some((r) => r.signature !== signature(snapshot.spaces)) ||
     snapshot.spaces.some((u) => !rows.some((r) => r.unit_id === u.id))
@@ -443,6 +459,7 @@ export function localRegistryCommand(
             .get(u.spaceId);
         if (
           !unit ||
+          unit.levelKnown === false ||
           !physical ||
           physical.site_id !== c.siteId ||
           Number(physical.level_number) !== unit.level

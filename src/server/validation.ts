@@ -11,6 +11,7 @@ const spaceSchema = z
     id: z.string().uuid(),
     number: text.max(40),
     level: z.number().int().min(-20).max(20),
+    levelKnown: z.boolean().optional(),
     areaM2: z.number().positive().max(500).nullable(),
     lengthM: z.number().positive().max(50).nullable(),
     widthM: z.number().positive().max(50).nullable(),
@@ -36,7 +37,11 @@ const spaceSchema = z
       )
       .optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (space) => space.levelKnown !== false || space.level === 0,
+    "Un niveau non renseigné doit utiliser la valeur interne zéro.",
+  );
 export const qualitySchema = z.object({
   floor: text.max(500),
   lighting: text.max(500),

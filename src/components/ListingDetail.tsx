@@ -36,6 +36,7 @@ import { ConditionEvidenceSummary } from "./account/condition-evidence";
 import { CommercialSummary, PhotoCaption } from "./CommercialSummary";
 import {
   areaLabel,
+  spaceLevelLabel,
   money,
   typeLabels,
   type Conversation,
@@ -79,14 +80,14 @@ export default function ListingDetail({
     );
     setSelectedSpaceId(space?.id ?? null);
     setFocusedListingId(initialListing.id);
-    setViewLevel(space?.level);
+    setViewLevel(space?.levelKnown === false ? undefined : space?.level);
   }, [initialListing.id]);
   function chooseSpace(id: string) {
     const space = listing.spaces.find((item) => item.id === id);
     if (!space) return;
     setSelectedSpaceId(id);
     setFocusedListingId(listing.id);
-    setViewLevel(space.level);
+    setViewLevel(space.levelKnown === false ? undefined : space.level);
   }
   const sendingLock = useRef(false);
   const requestIds = useRef({
@@ -109,7 +110,7 @@ export default function ListingDetail({
   );
   const contactContext = contactSelectionContext(focusedListing, selectedSpace);
   const contactTextLimit = 4000 - contactContext.length - 2;
-  const contactReturnHref = `/annonces/${listing.id}/${listing.slug}?contact=1${selectedSpace && !relatedSelected ? `&unit=${encodeURIComponent(selectedSpace.id)}&floor=${selectedSpace.level}` : ""}`;
+  const contactReturnHref = `/annonces/${listing.id}/${listing.slug}?contact=1${selectedSpace && !relatedSelected ? `&unit=${encodeURIComponent(selectedSpace.id)}${selectedSpace.levelKnown === false ? "" : `&floor=${selectedSpace.level}`}` : ""}`;
   const focusedGroupLabel = parkingGroup
     ? parkingListingGroupLabel(
         parkingGroup,
@@ -129,7 +130,7 @@ export default function ListingDetail({
           unit.listingId === focusedListing.id &&
           unit.listingUnitId === selectedSpaceId,
       )?.id ?? selectedSpaceId;
-  const focusedHref = `/annonces/${focusedListing.id}/${focusedListing.slug}${selectedSpace ? `?parking=${encodeURIComponent(focusedListing.id)}&unit=${encodeURIComponent(selectedSpace.id)}&floor=${selectedSpace.level}` : ""}`;
+  const focusedHref = `/annonces/${focusedListing.id}/${focusedListing.slug}${selectedSpace ? `?parking=${encodeURIComponent(focusedListing.id)}&unit=${encodeURIComponent(selectedSpace.id)}${selectedSpace.levelKnown === false ? "" : `&floor=${selectedSpace.level}`}` : ""}`;
   function chooseParkingSpace(id: string, unit: string) {
     const target =
       id === listing.id
@@ -139,7 +140,7 @@ export default function ListingDetail({
     if (!space) return;
     setFocusedListingId(id);
     setSelectedSpaceId(unit);
-    setViewLevel(space.level);
+    setViewLevel(space.levelKnown === false ? undefined : space.level);
   }
   useEffect(() => {
     if (!parkingGroup) return;
@@ -486,8 +487,8 @@ export default function ListingDetail({
                         <br />
                       </>
                     ) : null}
-                    Place {selectedSpace.number} · niveau{" "}
-                    {selectedSpace.level === 0 ? "RDC" : selectedSpace.level} :{" "}
+                    Place {selectedSpace.number || "non numérotée"} · niveau{" "}
+                    {spaceLevelLabel(selectedSpace)} :{" "}
                     <SpaceOfferSummary
                       listing={focusedListing}
                       space={selectedSpace}
@@ -763,7 +764,7 @@ export default function ListingDetail({
                         }
                         onClick={() => chooseSpace(s.id)}
                       >
-                        {s.number} · {s.level === 0 ? "RDC" : s.level}
+                        {s.number || "Non numérotée"} · {spaceLevelLabel(s)}
                       </button>
                     </td>
                     <td>{spaceOfferLabel(listing, s)}</td>

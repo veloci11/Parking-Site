@@ -50,6 +50,19 @@ export default function Header() {
           >
             Mes favoris
           </Link>
+          <Link
+            onClick={() => setOpen(false)}
+            className={path.startsWith("/compte/messages") ? "active" : ""}
+            aria-current={
+              path.startsWith("/compte/messages") ? "page" : undefined
+            }
+            href={
+              user ? "/compte/messages" : "/connexion?next=%2Fcompte%2Fmessages"
+            }
+            prefetch={false}
+          >
+            Messages
+          </Link>
         </nav>
         <div className="header-actions">
           <Link

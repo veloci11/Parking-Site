@@ -4,7 +4,7 @@ import {
   spaceOfferPrice,
   offerStatusLabel,
 } from "@/lib/listing-price";
-import { type Listing, type Space } from "@/lib/types";
+import { spaceLevelLabel, type Listing, type Space } from "@/lib/types";
 
 /** The scope belongs next to every displayed price, including legacy lot prices. */
 export function pricingScope(listing: Listing): string {
@@ -78,8 +78,7 @@ export function ListingOffersTable({ listing }: { listing: Listing }) {
           {listing.spaces.map((space) => (
             <tr key={space.id}>
               <th scope="row">
-                {space.number || "Non numérotée"} ·{" "}
-                {space.level === 0 ? "RDC" : space.level}
+                {space.number || "Non numérotée"} · {spaceLevelLabel(space)}
               </th>
               <td>{spaceOfferLabel(listing, space)}</td>
               <td>{spacePrice(listing, space)}</td>

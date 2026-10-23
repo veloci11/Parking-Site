@@ -90,6 +90,8 @@ export interface Space {
   id: string;
   number: string;
   level: number;
+  /** Missing means known for legacy records; false means level is an internal placeholder. */
+  levelKnown?: boolean;
   areaM2: number | null;
   lengthM: number | null;
   widthM: number | null;
@@ -222,4 +224,14 @@ export interface AuditEntry {
   requestId?: string | null;
   before?: Record<string, string | number | null> | null;
   after?: Record<string, string | number | null> | null;
+}
+
+export function spaceLevelLabel(
+  space: Pick<Space, "level" | "levelKnown">,
+): string {
+  return space.levelKnown === false
+    ? "Non renseigné"
+    : space.level === 0
+      ? "RDC"
+      : String(space.level).replace("-", "−");
 }

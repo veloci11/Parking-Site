@@ -9,7 +9,11 @@ export function localEffectiveSceneAvailable(
   listing: Listing,
   publicSnapshots?: Listing[],
 ): boolean {
-  if (listing.locationPrecision !== "exact_opt_in") return false;
+  if (
+    listing.locationPrecision !== "exact_opt_in" ||
+    listing.spaces.some((space) => space.levelKnown === false)
+  )
+    return false;
   const group = localPublicParking(undefined, listing.id, publicSnapshots);
   if (group) return group.levels.some((level) => level.commonPlan != null);
   const scene = getLocalPublicScene(listing.id);

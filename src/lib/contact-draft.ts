@@ -23,7 +23,7 @@ export function contactSelectionContext(
 ) {
   if (space) {
     const offer = spaceOffer(listing, space);
-    return `À propos de la place ${space.number || "sans numéro renseigné"} · niveau ${space.level === 0 ? "RDC" : space.level} · ${offer.transactionType === "rent" ? "à louer" : "à vendre"} · ${spaceOfferPrice(listing, space)}.`;
+    return `À propos de la place ${space.number || "sans numéro renseigné"}${space.levelKnown === false ? "" : ` · niveau ${space.level === 0 ? "RDC" : space.level}`} · ${offer.transactionType === "rent" ? "à louer" : "à vendre"} · ${spaceOfferPrice(listing, space)}.`;
   }
   return `À propos de ${listing.spaces.length > 1 ? `l’annonce de ${listing.spaces.length} places` : "cette place"} · ${offerLabel(listing)} · ${listingPrice(listing)}${listing.pricingMode === "per_space" ? "" : " · lot entier"}.`;
 }

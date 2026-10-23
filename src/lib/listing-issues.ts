@@ -84,8 +84,8 @@ export function listingIssues(value: Listing): ListingIssue[] {
       "listing-condition",
       `Complétez les sources de ${missingEvidence} observation(s), ou corrigez leur origine déclarée.`,
     );
-  if (value.photos.length < 3)
-    add(4, "listing-photos", "Ajoutez au moins trois photos générales.");
+  if (value.photos.length < 1)
+    add(4, "listing-photos", "Ajoutez au moins une photo du parking.");
   if (
     value.pricingMode !== "per_space" &&
     (!Number.isSafeInteger(value.priceCents) || value.priceCents <= 0)

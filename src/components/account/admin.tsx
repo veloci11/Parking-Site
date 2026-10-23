@@ -13,7 +13,7 @@ import Publications from "./publications";
 import { QualitySummary } from "./unit-quality";
 import { ConditionEvidenceSummary } from "./condition-evidence";
 import { CommercialSummary } from "../CommercialSummary";
-import { type Listing, type User } from "@/lib/types";
+import { spaceLevelLabel, type Listing, type User } from "@/lib/types";
 import { listingPrice, offerLabel } from "@/lib/listing-price";
 import { pricingScope, ListingOffersTable } from "../ListingOffers";
 import { AdminModelingRequests } from "./modeling-request";
@@ -277,7 +277,8 @@ function Content({ user }: { user: User }) {
               return (
                 <div key={space.id}>
                   <strong>
-                    Place {space.number || index + 1} · niveau {space.level}
+                    Place {space.number || "non numérotée"} · niveau{" "}
+                    {spaceLevelLabel(space)}
                   </strong>
                   <p className="muted">
                     {photos.length

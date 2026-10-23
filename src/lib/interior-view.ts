@@ -22,19 +22,24 @@ export const interiorCameraSchema = z
 export type InteriorCamera = z.infer<typeof interiorCameraSchema>;
 export function readInteriorSelection(search: string, listing: Listing) {
   const params = new URLSearchParams(search),
-    fallback = listing.spaces[0]?.level ?? -1;
+    fallback =
+      listing.spaces.find((space) => space.levelKnown !== false)?.level ?? 0;
   if (params.get("parking") !== listing.id)
     return { level: fallback, unit: null as string | null };
   const raw = params.get("floor"),
     parsed = raw !== null && /^-?\d+$/.test(raw) ? Number(raw) : fallback;
-  const level = listing.spaces.some((space) => space.level === parsed)
+  const level = listing.spaces.some(
+    (space) => space.levelKnown !== false && space.level === parsed,
+  )
     ? parsed
     : fallback;
   const unit = params.get("unit");
   return {
     level,
     unit: listing.spaces.some(
-      (space) => space.level === level && space.id === unit,
+      (space) =>
+        space.id === unit &&
+        (space.levelKnown === false || space.level === level),
     )
       ? unit
       : null,
@@ -48,10 +53,22 @@ export function writeInteriorSelection(
 ) {
   const params = new URLSearchParams(search);
   params.set("parking", listing.id);
-  params.set("floor", String(level));
+  const selected = listing.spaces.find((space) => space.id === unit);
+  if (
+    selected?.levelKnown === false ||
+    !listing.spaces.some(
+      (space) => space.levelKnown !== false && space.level === level,
+    )
+  )
+    params.delete("floor");
+  else params.set("floor", String(level));
   if (
     unit &&
-    listing.spaces.some((space) => space.id === unit && space.level === level)
+    listing.spaces.some(
+      (space) =>
+        space.id === unit &&
+        (space.levelKnown === false || space.level === level),
+    )
   )
     params.set("unit", unit);
   else params.delete("unit");

@@ -1,14 +1,11 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   loadDemoParkingRender,
   type ParkingRender,
 } from "@/lib/parking-render";
-import {
-  parkingRenderBadges,
-  parkingRenderFocus,
-} from "@/lib/parking-render-navigation";
+import { parkingRenderBadges } from "@/lib/parking-render-navigation";
 import "@/styles/parking-render.css";
 
 interface RenderUnit {
@@ -21,14 +18,12 @@ export default function RenderedParkingLevel({
   level,
   units,
   selected,
-  focusRevision = 0,
   onSelect,
   onFallback,
 }: {
   level: number;
   units: RenderUnit[];
   selected: string | null;
-  focusRevision?: number;
   onSelect: (id: string) => void;
   onFallback: () => void;
 }) {
@@ -38,7 +33,6 @@ export default function RenderedParkingLevel({
   const [imageReady, setImageReady] = useState(false);
   const viewport = useRef<HTMLDivElement>(null);
   const [frameWidth, setFrameWidth] = useState(0);
-  const [overviewRevision, setOverviewRevision] = useState(-1);
   useEffect(() => {
     const node = viewport.current;
     if (!node) return;
@@ -78,7 +72,6 @@ export default function RenderedParkingLevel({
       const unit = units.find((item) => item.space.number === area.number);
       return unit ? [{ area, unit }] : [];
     }) ?? [];
-  const current = mapped.find(({ unit }) => unit.id === selected);
   const badges = visibleFrame
     ? parkingRenderBadges(
         mapped.map(({ area }) => area),
@@ -86,21 +79,8 @@ export default function RenderedParkingLevel({
         (frameWidth * visibleFrame.height) / visibleFrame.width,
       )
     : [];
-  const focused =
-    focusRevision > 0 && focusRevision !== overviewRevision && Boolean(current);
-  const mobileFocused = focusRevision !== overviewRevision && Boolean(current);
-
   return (
     <div className="gp-rendered-level" aria-busy={!imageReady} ref={viewport}>
-      {focused || mobileFocused ? (
-        <button
-          className={`gp-render-overview${!focused ? " is-mobile-only" : ""}`}
-          type="button"
-          onClick={() => setOverviewRevision(focusRevision)}
-        >
-          Vue d’ensemble
-        </button>
-      ) : null}
       <div className="gp-render-viewport">
         {!imageReady ? (
           <div className="gp-render-message" role="status">
@@ -110,26 +90,16 @@ export default function RenderedParkingLevel({
         {visibleFrame ? (
           <div
             className={`gp-render-frame${imageReady ? " is-ready" : ""}`}
-            style={
-              {
-                aspectRatio: `${visibleFrame.width} / ${visibleFrame.height}`,
-                "--parking-render-focus": parkingRenderFocus(
-                  current?.area,
-                  focused,
-                ),
-                "--parking-mobile-focus": parkingRenderFocus(
-                  current?.area,
-                  mobileFocused,
-                ),
-                "--parking-mobile-scale": mobileFocused ? 1.2 : 1,
-              } as CSSProperties
-            }
+            style={{
+              aspectRatio: `${visibleFrame.width} / ${visibleFrame.height}`,
+            }}
           >
             <img
               src={`${visibleFrame.image}?v=${visibleFrame.renderHash.slice(0, 16)}`}
               alt={`Vue en perspective du parking fictif, niveau ${String(level).replace("-", "−")}. Les places proposées sont sélectionnables.`}
               width={visibleFrame.width}
               height={visibleFrame.height}
+              decoding="async"
               draggable={false}
               onLoad={() => setImageReady(true)}
               onError={() => setFailed(true)}
