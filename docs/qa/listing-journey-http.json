@@ -830,5 +830,7 @@
     "HTTP route journey is separate from the browser UI recipe",
     "Local MFA explicitly unsupported; real AAL2 is not claimed by this run",
     "No real property, personal account or external email"
-  ]
+  ],
+  "disposableDatabaseRemoved": true,
+  "qaServersStoppedBeforeCleanup": true
 }

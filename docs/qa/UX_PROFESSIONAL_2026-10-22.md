@@ -24,3 +24,13 @@ La configuration SMTP est reportée à la demande du propriétaire. Quatre modè
 Le projet connecté autorise l'inscription et exige la confirmation email. Un compte humain confirmé a été observé en lecture seule et conservé. Les tests isolés ne valident ni l'expéditeur ni la réception en boîte email. Cette dernière vérification restera à faire après configuration.
 
 Les deux annonces du Raincy restent des exemples fictifs en lecture seule. Le domaine reste en noindex ; abonnements en V2, vrais documents de parking et purge CDN précédemment différée restent hors de cette livraison. Aucun changement des règles RLS ni migration SQL pendant cette passe.
+
+## Déploiement vérifié
+
+- Domaine : **https://parking.gilmathis.com**. Source applicative `36daa23fa7aa09cb5cf153170a2025083d934f58`, build Linux `zyfMUoRgjt8WycirgpLmB`, release `/home/mathis/gp-park/releases/20261022-36daa23-ux`.
+- Build et suite complète exécutés aussi sur Ubuntu : **245 tests, 242 réussis, 0 échec, 3 ignorés**. Les six contrôles GitHub de cette source sont réussis.
+- **33 contrôles HTTP publics réussis** après bascule : readiness Supabase, catalogue et filtres, pages comptes/dépôt/aide, fixtures en lecture seule, refus des accès privés anonymes, noindex et intégrité des visuels. Rapport `ux-professional/live-http.json`.
+- **715 fichiers comparés** à l'archive Git de cette source, aucun écart. Les commits ultérieurs de preuves/documentation ne sont pas présentés comme le code compilé.
+- Navigateur sur le domaine : barre compacte, deux prix séparés, un seul aperçu, aucune popup carte, zéro avertissement/erreur console dans le nouvel onglet. Sur mobile390×844 : document375px (barre de défilement réservée), commandes sous les prix avec19px d'écart, aucun débordement horizontal. La sélection n'est plus masquée lors de la réduction de la carte.
+- Service `gp-park`, tunnel et services voisins `encar-dashboard`/`encar-bot` actifs après bascule. Environnement et données Supabase préservés. Ancienne release conservée pour retour arrière.
+- Serveurs3000/3001/3002 arrêtés sur le Mac ; base et médias synthétiques de recette supprimés via la commande de nettoyage prévue. Seul l'onglet public est gardé comme résultat.
