@@ -1,5 +1,9 @@
 # Exploitation de GP Parking
 
+## Hébergement courant — 22 octobre 2026
+
+Le site a été déployé à la demande du propriétaire sur Ubuntu avec Cloudflare : **https://parking.gilmathis.com**. Voir la [procédure Ubuntu](../deploy/ubuntu/README.md) et la [recette de déploiement](qa/UBUNTU_DEPLOYMENT_2026-10-22.md). Le service `gp-park` utilise Supabase, sans démo publique ; catalogue réel encore vide et indexation désactivée. Les paragraphes suivants décrivent la préparation et les prévisualisations antérieures, pas une absence actuelle d’hébergement. Les opérations humaines et workers non validés restent ouverts.
+
 État au 21 octobre 2026 : prévisualisations locales sur les ports3000(démo) et3001(connecté), migrations Supabase001–027 appliquées au projet de recette et342assertions HTTP connectées réussies dans leur périmètre explicite. Aucun déploiement public ni email réel envoyé. Les preuves, le nettoyage et les limites figurent dans [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md). Une procédure décrite n’est pas une opération exécutée.
 
 ## Deux environnements distincts

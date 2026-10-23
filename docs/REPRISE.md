@@ -1,5 +1,11 @@
 # Point de reprise — 22 octobre 2026
 
+## Déploiement demandé — Ubuntu et domaine définitif
+
+**Site désormais hébergé : https://parking.gilmathis.com.** Lire `qa/UBUNTU_DEPLOYMENT_2026-10-22.md` et `../deploy/ubuntu/README.md` avant les états historiques locaux ci-dessous. Source app1fdf563, build final Linux `kEIJcoXo8PKR1eZavY5Sr`, service utilisateur `gp-park` actif/activé, port loopback3010, route Cloudflare dédiée. L’ancien nom parkin a été retiré du DNS, tunnel, HTTPS et Auth ; ne pas le recréer.
+
+Site connecté Supabase, démo désactivée et catalogue réel vide. 17 contrôles HTTPS publics passent ; carte Paris vue dans le navigateur. Site URL/callback corrigés ; absence d’email réel et de compte humain toujours explicite. `GP_PUBLIC_LAUNCH=false` garde le noindex. Secrets serveur privés, aucun service-role dans l’app. Localhost Mac arrêté. Les prérequis métier/humains, forfaitsV2 et purge CDN différée restent séparés du déploiement effectué.
+
 ## Dernière demande — boutons simplifiés
 
 Voir `qa/ARROW_CLEANUP_2026-10-22.md` : flèches décoratives retirées, Retour à l’exploration remplacé par Retour, retour mobile de messagerie lisible. Deux relectures indépendantes ; build `thIGxvEcDWfeuxmyWSI0u` et format réussis ; fiche desktop et connexion mobile vérifiées. Aucun test métier supplémentaire requis pour ces icônes/libellés. Serveur et onglets temporaires fermés, runtime nettoyé. Le zoom 200 % et le lecteur d’écran restent non validés ; ne pas poursuivre une refonte non demandée pour cette finition bornée à cinq minutes.
