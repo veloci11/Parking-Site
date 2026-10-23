@@ -15,6 +15,8 @@ export interface PageFilters {
   sort: "recent" | "price_asc" | "price_desc" | "area_asc" | "spaces_desc";
   scene: boolean;
   minPrice?: number | null;
+  annualChargesMax?: number | null;
+  propertyTaxMax?: number | null;
   minSpaces?: number | null;
   sellerType?: "private" | "professional" | null;
   covered?: boolean | null;
@@ -68,6 +70,8 @@ export function canonicalFilters(f: PageFilters): Required<PageFilters> {
     sort: f.sort,
     scene: f.scene,
     minPrice: f.minPrice ?? null,
+    annualChargesMax: f.annualChargesMax ?? null,
+    propertyTaxMax: f.propertyTaxMax ?? null,
     minSpaces: f.minSpaces ?? null,
     sellerType: f.sellerType ?? null,
     covered: f.covered ?? null,
@@ -158,7 +162,9 @@ export function parsePageQuery(url: URL) {
     (sellerType !== null &&
       !["private", "professional"].includes(sellerType)) ||
     p.getAll("sellerType").length > 1 ||
-    p.getAll("minSpaces").length > 1
+    p.getAll("minSpaces").length > 1 ||
+    p.getAll("annualChargesMax").length > 1 ||
+    p.getAll("propertyTaxMax").length > 1
   )
     invalid();
   if (
@@ -198,6 +204,8 @@ export function parsePageQuery(url: URL) {
     sort: sort as PageFilters["sort"],
     scene: bool("scene") ?? false,
     minPrice,
+    annualChargesMax: numeric("annualChargesMax", 0, 100000000, true),
+    propertyTaxMax: numeric("propertyTaxMax", 0, 100000000, true),
     minSpaces: numeric("minSpaces", 1, 500, true),
     sellerType: sellerType as PageFilters["sellerType"],
     covered: bool("covered"),
@@ -271,6 +279,12 @@ export function matchesPageFilters(item: Listing, filters: PageFilters) {
     offerMatch !== null &&
     (f.minSpaces === null || offerMatch.spaceCount >= f.minSpaces) &&
     (f.sellerType === null || item.sellerTypeSnapshot === f.sellerType) &&
+    (f.annualChargesMax === null ||
+      (item.annualChargesCents != null &&
+        item.annualChargesCents <= f.annualChargesMax)) &&
+    (f.propertyTaxMax === null ||
+      (item.propertyTaxCents != null &&
+        item.propertyTaxCents <= f.propertyTaxMax)) &&
     (f.occupancy === null || (item.occupancy ?? "unknown") === f.occupancy) &&
     (!f.ids || f.ids.includes(item.id)) &&
     (!f.bbox ||

@@ -57,6 +57,15 @@ import { type Listing } from "@/lib/types";
 import FilterSelect from "./FilterSelect";
 import ListingCard from "./ListingCard";
 import ListingInspector from "./ListingInspector";
+import AnnualCostFilters from "./AnnualCostFilters";
+
+const EmbeddedListingDetail = dynamic(() => import("./ListingDetail"), {
+  loading: () => (
+    <div className="announcement-loading" role="status">
+      Chargement de l’annonce…
+    </div>
+  ),
+});
 
 // A map refresh often returns the same nearby offers. Keep their reference so
 // existing marker elements and listing cards remain in place.
@@ -94,6 +103,15 @@ export default function Explorer({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [clusterListingIds, setClusterListingIds] = useState<string[]>([]);
   const resultsPanel = useRef<HTMLElement>(null);
+  const announcementPanel = useRef<HTMLElement>(null);
+  const [desktopDetail, setDesktopDetail] = useState(false);
+  useEffect(() => {
+    const viewport = window.matchMedia("(min-width: 768px)");
+    const update = () => setDesktopDetail(viewport.matches);
+    update();
+    viewport.addEventListener("change", update);
+    return () => viewport.removeEventListener("change", update);
+  }, []);
   const resultScrollBeforeSelection = useRef(0);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
@@ -121,6 +139,8 @@ export default function Explorer({
   const [radiusDraft, setRadiusDraft] = useState("5");
   const [mapView, setMapView] = useState<MapViewState | undefined>(undefined);
   const [minArea, setMinArea] = useState("");
+  const [annualChargesMax, setAnnualChargesMax] = useState("");
+  const [propertyTaxMax, setPropertyTaxMax] = useState("");
   const [sort, setSort] = useState("recent");
   const [more, setMore] = useState(false);
   const [viewPreference, setViewPreference] =
@@ -152,6 +172,8 @@ export default function Explorer({
       bbox,
       center,
       radiusKm,
+      annualChargesMax,
+      propertyTaxMax,
     }),
     [
       city,
@@ -168,6 +190,8 @@ export default function Explorer({
       bbox,
       center,
       radiusKm,
+      annualChargesMax,
+      propertyTaxMax,
     ],
   );
   const advancedCount = [
@@ -177,6 +201,8 @@ export default function Explorer({
     occupancy,
     level,
     radiusKm,
+    annualChargesMax,
+    propertyTaxMax,
   ].filter(Boolean).length;
   const mobileFilterCount =
     advancedCount + [type, maxPrice, minArea].filter(Boolean).length;
@@ -340,6 +366,8 @@ export default function Explorer({
     setCenter(search.center);
     setRadiusKm(search.radiusKm);
     setRadiusDraft(search.radiusKm || "5");
+    setAnnualChargesMax(search.annualChargesMax || "");
+    setPropertyTaxMax(search.propertyTaxMax || "");
   }, []);
   useEffect(() => {
     const restore = () => {
@@ -512,13 +540,22 @@ export default function Explorer({
       : filtered;
   const inspecting = visibleView === "map" && Boolean(selected);
   useEffect(() => {
+    if (!inspecting) return;
+    const panel = announcementPanel.current;
+    if (panel) {
+      panel.scrollTop = 0;
+      panel.focus({ preventScroll: true });
+    }
+  }, [inspecting, selected?.id]);
+  useEffect(() => {
     setClusterListingIds([]);
   }, [resultContext]);
   function closeSelection() {
     setSelectedId(null);
     requestAnimationFrame(() => {
       if (resultsPanel.current) {
-        resultsPanel.current.scrollTop = resultScrollBeforeSelection.current;
+        if (window.matchMedia(MOBILE_MAP_MEDIA_QUERY).matches)
+          resultsPanel.current.scrollTop = resultScrollBeforeSelection.current;
         if (window.matchMedia(MOBILE_MAP_MEDIA_QUERY).matches)
           mapViewButton.current?.focus({ preventScroll: true });
         else resultsPanel.current.focus({ preventScroll: true });
@@ -598,10 +635,6 @@ export default function Explorer({
     setMore(false);
     setSelectedId(id);
     setViewPreference("map");
-    requestAnimationFrame(() => {
-      if (resultsPanel.current) resultsPanel.current.scrollTop = 0;
-      resultsPanel.current?.focus({ preventScroll: true });
-    });
   }
   function rememberListPosition() {
     try {
@@ -645,7 +678,10 @@ export default function Explorer({
     </button>
   );
   return (
-    <main id="main" className={`explorer explorer-view-${visibleView}`}>
+    <main
+      id="main"
+      className={`explorer explorer-view-${visibleView}${inspecting ? " explorer-has-selection" : ""}`}
+    >
       <section className="search-section">
         <div className="search-heading">
           <h1 className="explorer-title">
@@ -995,6 +1031,12 @@ export default function Explorer({
                         : "Par place disponible, ou pour le lot proposé ensemble."}
                     </p>
                   </fieldset>
+                  <AnnualCostFilters
+                    annualChargesMax={annualChargesMax}
+                    setAnnualChargesMax={setAnnualChargesMax}
+                    propertyTaxMax={propertyTaxMax}
+                    setPropertyTaxMax={setPropertyTaxMax}
+                  />
                   <fieldset className="explorer-filter-group is-wide">
                     <legend>Localisation</legend>
                     <span className="explorer-filter-label">
@@ -1200,7 +1242,7 @@ export default function Explorer({
         ) : null}
       </section>
       <div
-        className={`explore-workspace mobile-${visibleView} view-${visibleView}${inspecting || (visibleView === "map" && clusterListingIds.length) ? " is-inspecting" : ""}`}
+        className={`explore-workspace mobile-${visibleView} view-${visibleView}${inspecting || (visibleView === "map" && clusterListingIds.length) ? " is-inspecting" : ""}${inspecting ? " has-selected-listing" : ""}`}
       >
         <section
           id="resultats"
@@ -1214,13 +1256,12 @@ export default function Explorer({
           }}
           className="results-panel"
           data-map-overlay={
-            inspecting || (visibleView === "map" && clusterListingIds.length)
+            !inspecting && visibleView === "map" && clusterListingIds.length
               ? "listing"
               : undefined
           }
-          aria-label={inspecting ? "Annonce sélectionnée" : "Résultats"}
+          aria-label="Résultats"
           onScroll={(event) => {
-            if (inspecting) return;
             try {
               sessionStorage.setItem(
                 "gp:explore:scroll",
@@ -1232,11 +1273,10 @@ export default function Explorer({
           }}
         >
           {visibleView === "map" &&
-          (inspecting || clusterListingIds.length > 0) ? (
+          !inspecting &&
+          clusterListingIds.length > 0 ? (
             <div className="explorer-sheet-heading">
-              <span>
-                {inspecting ? "Aperçu de l’annonce" : "Annonces à cet endroit"}
-              </span>
+              <span>Annonces à cet endroit</span>
               <button
                 type="button"
                 className="icon-button"
@@ -1250,21 +1290,7 @@ export default function Explorer({
               </button>
             </div>
           ) : null}
-          {inspecting && selected ? (
-            <ListingInspector
-              key={selected.id}
-              listing={selected}
-              favorite={favorites.ids.includes(selected.id)}
-              favoriteDisabled={
-                favorites.loading || favorites.pendingIds.includes(selected.id)
-              }
-              favoriteError={favorites.error}
-              onFavorite={() => void favorites.toggle(selected.id)}
-              transactionType={offerFilter}
-              onClose={closeSelection}
-            />
-          ) : null}
-          <div className="results-content" hidden={inspecting}>
+          <div className="results-content">
             <div className="results-heading">
               <h2>
                 {clusterListingIds.length && visibleView === "map"
@@ -1438,6 +1464,44 @@ export default function Explorer({
             ) : null}
           </div>
         </section>
+        {inspecting && selected ? (
+          <section
+            ref={announcementPanel}
+            className="announcement-panel"
+            data-map-overlay="listing"
+            tabIndex={-1}
+            aria-label="Annonce sélectionnée"
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                closeSelection();
+              }
+            }}
+          >
+            {desktopDetail ? (
+              <EmbeddedListingDetail
+                key={selected.id}
+                listing={selected}
+                embedded
+                onClose={closeSelection}
+              />
+            ) : (
+              <ListingInspector
+                key={selected.id}
+                listing={selected}
+                favorite={favorites.ids.includes(selected.id)}
+                favoriteDisabled={
+                  favorites.loading ||
+                  favorites.pendingIds.includes(selected.id)
+                }
+                favoriteError={favorites.error}
+                onFavorite={() => void favorites.toggle(selected.id)}
+                transactionType={offerFilter}
+                onClose={closeSelection}
+              />
+            )}
+          </section>
+        ) : null}
         <section
           className={`map-panel ${selected ? "has-inspector" : ""}`}
           aria-label="Carte des parkings"

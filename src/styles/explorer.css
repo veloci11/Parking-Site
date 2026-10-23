@@ -114,11 +114,11 @@
   margin: 24px auto;
 }
 
-/* One sidebar owns the results or the selected listing; the map stays clear. */
+/* Results and announcement share gallery styles without sharing scroll position. */
 .explorer .results-content[hidden] {
   display: none;
 }
-.explorer .results-panel .listing-inspector {
+.explorer :is(.results-panel, .announcement-panel) .listing-inspector {
   position: static;
   inset: auto;
   width: 100%;
@@ -201,13 +201,13 @@
 .explorer .inspector-favorite-error {
   color: #a3273b;
 }
-.explorer .results-panel .inspector-body {
+.explorer :is(.results-panel, .announcement-panel) .inspector-body {
   padding: 18px 0;
 }
-.explorer .results-panel .inspector-location {
+.explorer :is(.results-panel, .announcement-panel) .inspector-location {
   font-size: 16px;
 }
-.explorer .results-panel .inspector-body > h2 {
+.explorer :is(.results-panel, .announcement-panel) .inspector-body > h2 {
   font-size: 22px;
 }
 .explorer .results-panel .feature-row {
@@ -241,7 +241,7 @@
   box-shadow: none;
 }
 @media (max-width: 767px) {
-  .explorer .results-panel .listing-inspector {
+  .explorer :is(.results-panel, .announcement-panel) .listing-inspector {
     display: grid;
     grid-template-columns: 104px minmax(0, 1fr);
     gap: 0 16px;
@@ -250,16 +250,20 @@
   .explorer .inspector-header {
     grid-column: 1 / -1;
   }
-  .explorer .results-panel .inspector-body {
+  .explorer :is(.results-panel, .announcement-panel) .inspector-body {
     padding: 0;
   }
-  .explorer .results-panel .inspector-photo .prepared-photos > img {
+  .explorer
+    :is(.results-panel, .announcement-panel)
+    .inspector-photo
+    .prepared-photos
+    > img {
     height: 140px;
   }
-  .explorer .results-panel .inspector-body > h2 {
+  .explorer :is(.results-panel, .announcement-panel) .inspector-body > h2 {
     font-size: 18px;
   }
-  .explorer .results-panel .inspector-price {
+  .explorer :is(.results-panel, .announcement-panel) .inspector-price {
     font-size: 24px;
   }
   .explorer .results-panel .feature-row {
@@ -540,16 +544,20 @@
     min-height: 24px;
     font-size: 11px;
   }
-  .explorer .results-panel .inspector-photo .prepared-photos > img {
+  .explorer
+    :is(.results-panel, .announcement-panel)
+    .inspector-photo
+    .prepared-photos
+    > img {
     width: 100%;
     height: auto;
     aspect-ratio: 4 / 3;
     object-fit: cover;
   }
-  .explorer .results-panel .inspector-price {
+  .explorer :is(.results-panel, .announcement-panel) .inspector-price {
     font-size: 28px;
   }
-  .explorer .results-panel .inspector-description {
+  .explorer :is(.results-panel, .announcement-panel) .inspector-description {
     font-size: 13px;
   }
 }
@@ -604,11 +612,15 @@
   max-width: 100%;
   overflow-wrap: anywhere;
 }
-.explorer .results-panel .inspector-body > .button {
+.explorer :is(.results-panel, .announcement-panel) .inspector-body > .button {
   margin: 12px 0 18px;
 }
 @media (min-width: 768px) {
-  .explorer .results-panel .inspector-photo .prepared-photos > img {
+  .explorer
+    :is(.results-panel, .announcement-panel)
+    .inspector-photo
+    .prepared-photos
+    > img {
     max-height: 230px;
   }
 }
@@ -1190,5 +1202,83 @@
   .explorer .explorer-view-switch button.active {
     background: var(--surface-subtle);
     box-shadow: none;
+  }
+}
+
+/* Desktop: results stay at the left, the announcement opens beside them, then the map. */
+.explorer {
+  --explorer-announcement-width: clamp(380px, 30vw, 460px);
+}
+.explorer .announcement-panel {
+  position: relative;
+  z-index: 5;
+  flex: 0 0 var(--explorer-announcement-width);
+  width: var(--explorer-announcement-width);
+  min-width: 0;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  background: #fff;
+  border-right: 1px solid var(--border);
+}
+.explorer .announcement-panel:focus {
+  outline: none;
+}
+.explorer .announcement-loading {
+  padding: 32px 20px;
+  color: var(--muted);
+  font-size: 14px;
+}
+@media (min-width: 1280px) {
+  .explorer.explorer-has-selection .filters {
+    padding-left: calc(var(--explorer-announcement-width) + 12px);
+  }
+}
+@media (min-width: 768px) and (max-width: 1279px) {
+  .explorer {
+    --explorer-announcement-width: var(--explorer-sidebar-width);
+  }
+  .explorer .has-selected-listing .results-panel {
+    display: none;
+  }
+  .explorer .announcement-panel {
+    padding-top: var(--explorer-search-height);
+  }
+}
+@media (max-width: 767px) {
+  .explorer .mobile-map.has-selected-listing .results-panel {
+    display: none;
+  }
+  .explorer .announcement-panel {
+    position: absolute;
+    z-index: 12;
+    inset: auto 0 0;
+    width: 100%;
+    height: min(62%, 440px);
+    max-height: 70%;
+    min-height: 190px;
+    padding: 0 0 max(12px, env(safe-area-inset-bottom));
+    border: 1px solid var(--border);
+    border-bottom: 0;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -8px 32px #22193a18;
+    -webkit-overflow-scrolling: touch;
+    animation: explorer-sheet-in 0.24s ease-out;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .explorer .announcement-panel {
+    animation: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .explorer .mobile-map .announcement-panel .inspector-header {
+    display: flex;
+    grid-column: 1 / -1;
+    min-height: 44px;
+    margin-bottom: 8px;
   }
 }

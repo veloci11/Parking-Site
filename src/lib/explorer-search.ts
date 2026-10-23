@@ -49,6 +49,8 @@ export function hasExplorerFilters(state: SearchState): boolean {
       state.type,
       state.minPrice,
       state.maxPrice,
+      state.annualChargesMax,
+      state.propertyTaxMax,
       state.minArea,
       state.minSpaces,
       state.sellerType,

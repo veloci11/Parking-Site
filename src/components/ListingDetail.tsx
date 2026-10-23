@@ -18,6 +18,7 @@ import {
   contactMessageBody,
 } from "@/lib/contact-draft";
 import Image from "./SafePhoto";
+import PreparedPhotos from "./PreparedPhotos";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
@@ -29,6 +30,9 @@ import {
   MapPin,
   MessageCircle,
   ShieldCheck,
+  ChevronLeft,
+  ChevronRight,
+  X,
 } from "lucide-react";
 import { api, useSession } from "@/lib/client";
 import { useFavorites } from "@/lib/favorites";
@@ -53,11 +57,62 @@ const qualityLabels = {
   access: "Accès",
   maneuver: "Manœuvre",
 };
+function EmbeddedPhotos({ listing }: { listing: Listing }) {
+  const [index, setIndex] = useState(0);
+  if (!listing.photos.length) return null;
+  return (
+    <div className="detail-embedded-gallery">
+      <PreparedPhotos
+        photos={listing.photos}
+        index={index}
+        alt={`${listing.title} · photo ${index + 1}`}
+        width={800}
+        height={600}
+        sizes="(max-width:1279px) 350px, 440px"
+      />
+      {listing.photos.length > 1 ? (
+        <div className="gallery-controls">
+          <button
+            type="button"
+            className="gallery-arrow"
+            aria-label="Photo précédente"
+            onClick={() =>
+              setIndex(
+                (value) =>
+                  (value + listing.photos.length - 1) % listing.photos.length,
+              )
+            }
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <span>
+            {index + 1} / {listing.photos.length}
+          </span>
+          <button
+            type="button"
+            className="gallery-arrow"
+            aria-label="Photo suivante"
+            onClick={() =>
+              setIndex((value) => (value + 1) % listing.photos.length)
+            }
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 export default function ListingDetail({
   listing: initialListing,
+  embedded = false,
+  onClose,
 }: {
   listing: Listing;
+  embedded?: boolean;
+  onClose?: () => void;
 }) {
+  const Root = embedded ? "section" : "main";
   const [listing, setListing] = useState(initialListing);
   const showcase = isPublicShowcase(listing.id);
   const [unavailable, setUnavailable] = useState(false);
@@ -407,27 +462,67 @@ export default function ListingDetail({
   }
   if (unavailable)
     return (
-      <main id="main" className="page-shell">
+      <Root id={embedded ? undefined : "main"} className="page-shell">
         <h1>Ce bien n’est plus disponible.</h1>
         <p>
           Cette annonce a été retirée ou n’est plus publique. Vos conversations
           existantes restent accessibles dans votre compte.
         </p>
-        <Link className="button" href={backHref}>
-          Retour
-        </Link>
-      </main>
+        {embedded ? (
+          <button type="button" className="button" onClick={onClose}>
+            Fermer
+          </button>
+        ) : (
+          <Link className="button" href={backHref}>
+            Retour
+          </Link>
+        )}
+      </Root>
     );
   return (
-    <main id="main" className="page-shell detail-page">
+    <Root
+      id={embedded ? undefined : "main"}
+      className={`page-shell detail-page${embedded ? " detail-embedded" : ""}`}
+    >
+      {embedded ? (
+        <div className="detail-embedded-actions">
+          <strong aria-live="polite">{displayedPrice}</strong>
+          {favoriteButton}
+          {!showcase ? (
+            <a
+              className="button button-primary"
+              href="#contact"
+              onClick={(event) => {
+                event.preventDefault();
+                contact.current?.scrollIntoView({
+                  block: "start",
+                  behavior: "smooth",
+                });
+              }}
+            >
+              Contacter
+            </a>
+          ) : null}
+          <button
+            type="button"
+            className="icon-button"
+            onClick={onClose}
+            aria-label="Fermer l’annonce"
+          >
+            <X size={20} />
+          </button>
+        </div>
+      ) : null}
       {freshnessError ? (
         <p role="status" className="notice">
           {freshnessError} Les données affichées peuvent avoir changé.
         </p>
       ) : null}
-      <Link href={backHref} className="button button-secondary">
-        Retour
-      </Link>
+      {!embedded ? (
+        <Link href={backHref} className="button button-secondary">
+          Retour
+        </Link>
+      ) : null}
       <div className="section-row" style={{ marginTop: 24 }}>
         <div>
           <p className="eyebrow">
@@ -518,29 +613,33 @@ export default function ListingDetail({
             </>
           ) : (
             <>
-              <div className="detail-gallery">
-                {listing.photos.length ? (
-                  listing.photos.map((photo, i) => (
-                    <Image
-                      key={photo}
-                      src={photo}
-                      alt={
-                        listing.isDemo
-                          ? `Illustration de démonstration ${i + 1}`
-                          : `${listing.title} — photo ${i + 1}`
-                      }
-                      width={900}
-                      height={600}
-                      sizes="(max-width:767px) 100vw, 800px"
-                      loading={i ? "lazy" : "eager"}
-                    />
-                  ))
-                ) : (
-                  <div className="notice">
-                    Le vendeur n’a pas ajouté de photo.
-                  </div>
-                )}
-              </div>
+              {embedded ? (
+                <EmbeddedPhotos key={listing.id} listing={listing} />
+              ) : (
+                <div className="detail-gallery">
+                  {listing.photos.length ? (
+                    listing.photos.map((photo, i) => (
+                      <Image
+                        key={photo}
+                        src={photo}
+                        alt={
+                          listing.isDemo
+                            ? `Illustration de démonstration ${i + 1}`
+                            : `${listing.title} — photo ${i + 1}`
+                        }
+                        width={900}
+                        height={600}
+                        sizes="(max-width:767px) 100vw, 800px"
+                        loading={i ? "lazy" : "eager"}
+                      />
+                    ))
+                  ) : (
+                    <div className="notice">
+                      Le vendeur n’a pas ajouté de photo.
+                    </div>
+                  )}
+                </div>
+              )}
               {parkingLoading ? (
                 <p className="small muted" role="status">
                   Chargement du parking…
@@ -995,119 +1094,127 @@ export default function ListingDetail({
             )
           ) : null}
         </div>
-        <aside className="detail-side card">
-          {relatedSelected ? (
-            <h2 style={{ fontSize: 20 }}>{focusedListing.title}</h2>
-          ) : null}
-          <span className="badge">
-            {focusedGroupLabel ? `${focusedGroupLabel} · ` : ""}
-            {selectedSpace
-              ? `Place ${selectedSpace.number} · ${spaceOfferLabel(focusedListing, selectedSpace)}`
-              : offerLabel(focusedListing)}
-          </span>
-          <div className="detail-price-row">
-            <p className="price" aria-live="polite">
-              {displayedPrice}
+        {!embedded ? (
+          <aside className="detail-side card">
+            {relatedSelected ? (
+              <h2 style={{ fontSize: 20 }}>{focusedListing.title}</h2>
+            ) : null}
+            <span className="badge">
+              {focusedGroupLabel ? `${focusedGroupLabel} · ` : ""}
+              {selectedSpace
+                ? `Place ${selectedSpace.number} · ${spaceOfferLabel(focusedListing, selectedSpace)}`
+                : offerLabel(focusedListing)}
+            </span>
+            <div className="detail-price-row">
+              <p className="price" aria-live="polite">
+                {displayedPrice}
+              </p>
+              {favoriteButton}
+            </div>
+            {favorites.error ? (
+              <p className="error detail-favorite-error" role="alert">
+                {favorites.error}
+              </p>
+            ) : null}
+            <p className="small muted">
+              {selectedSpace
+                ? spaceOfferStatus(focusedListing, selectedSpace)
+                : pricingScope(focusedListing)}
             </p>
-            {favoriteButton}
-          </div>
+            {!relatedSelected &&
+            selectedSpace &&
+            focusedListing.pricingMode === "per_space" ? (
+              <button
+                type="button"
+                className="text-button"
+                onClick={showOffers}
+              >
+                Voir toutes les offres
+              </button>
+            ) : null}
+            <p className="muted">
+              {typeLabels[focusedListing.type]}
+              <br />
+              {areaLabel(focusedListing.spaces)} ·{" "}
+              {focusedListing.spaces.length} place
+              {focusedListing.spaces.length > 1 ? "s" : ""}
+            </p>
+            {showcase ? (
+              <p className="notice">
+                Démonstration · Prix illustratif
+                <br />
+                Aucune vente ni visite pour cet exemple.
+              </p>
+            ) : selectedUnavailable ? (
+              <button
+                type="button"
+                disabled
+                className="button button-primary full-width"
+              >
+                Place indisponible
+              </button>
+            ) : relatedSelected ? (
+              <Link
+                className="button button-primary full-width"
+                href={focusedHref}
+              >
+                Voir cette annonce et contacter
+              </Link>
+            ) : (
+              <a className="button button-primary full-width" href="#contact">
+                Demander une visite
+              </a>
+            )}
+            <div
+              style={{
+                borderTop: "1px solid var(--border)",
+                marginTop: 24,
+                paddingTop: 24,
+              }}
+            >
+              <ShieldCheck size={24} />
+              <p style={{ marginTop: 12, marginBottom: 4, fontWeight: 600 }}>
+                {focusedListing.sellerName}
+              </p>
+              <p className="small muted">
+                {showcase
+                  ? "Exemple de présentation, sans annonceur ni offre réelle à cette adresse."
+                  : focusedListing.pricingMode === "per_space"
+                    ? "Les prix et disponibilités sont propres à chaque place. Les paiements ne sont pas encaissés sur la plateforme ; les conditions sont à convenir avec l’annonceur."
+                    : focusedListing.transactionType === "rent"
+                      ? "Le loyer n’est pas encaissé sur la plateforme. Les conditions de location sont à convenir avec le bailleur."
+                      : "Le prix d’achat du parking n’est pas encaissé sur la plateforme. La vente est formalisée avec les professionnels compétents."}
+              </p>
+            </div>
+          </aside>
+        ) : null}
+      </div>
+      {!embedded ? (
+        <div className="detail-mobile-actions" aria-label="Prix et contact">
+          <p className="detail-mobile-price" aria-live="polite">
+            {displayedPrice}
+          </p>
+          {favoriteButton}
+          {showcase ? null : selectedUnavailable ? (
+            <button type="button" className="button button-primary" disabled>
+              Indisponible
+            </button>
+          ) : relatedSelected ? (
+            <Link className="button button-primary" href={focusedHref}>
+              Voir l’annonce
+            </Link>
+          ) : (
+            <a className="button button-primary" href="#contact">
+              Contacter
+            </a>
+          )}
           {favorites.error ? (
-            <p className="error detail-favorite-error" role="alert">
+            <p className="error detail-mobile-favorite-error" role="alert">
               {favorites.error}
             </p>
           ) : null}
-          <p className="small muted">
-            {selectedSpace
-              ? spaceOfferStatus(focusedListing, selectedSpace)
-              : pricingScope(focusedListing)}
-          </p>
-          {!relatedSelected &&
-          selectedSpace &&
-          focusedListing.pricingMode === "per_space" ? (
-            <button type="button" className="text-button" onClick={showOffers}>
-              Voir toutes les offres
-            </button>
-          ) : null}
-          <p className="muted">
-            {typeLabels[focusedListing.type]}
-            <br />
-            {areaLabel(focusedListing.spaces)} · {focusedListing.spaces.length}{" "}
-            place
-            {focusedListing.spaces.length > 1 ? "s" : ""}
-          </p>
-          {showcase ? (
-            <p className="notice">
-              Démonstration · Prix illustratif
-              <br />
-              Aucune vente ni visite pour cet exemple.
-            </p>
-          ) : selectedUnavailable ? (
-            <button
-              type="button"
-              disabled
-              className="button button-primary full-width"
-            >
-              Place indisponible
-            </button>
-          ) : relatedSelected ? (
-            <Link
-              className="button button-primary full-width"
-              href={focusedHref}
-            >
-              Voir cette annonce et contacter
-            </Link>
-          ) : (
-            <a className="button button-primary full-width" href="#contact">
-              Demander une visite
-            </a>
-          )}
-          <div
-            style={{
-              borderTop: "1px solid var(--border)",
-              marginTop: 24,
-              paddingTop: 24,
-            }}
-          >
-            <ShieldCheck size={24} />
-            <p style={{ marginTop: 12, marginBottom: 4, fontWeight: 600 }}>
-              {focusedListing.sellerName}
-            </p>
-            <p className="small muted">
-              {showcase
-                ? "Exemple de présentation, sans annonceur ni offre réelle à cette adresse."
-                : focusedListing.pricingMode === "per_space"
-                  ? "Les prix et disponibilités sont propres à chaque place. Les paiements ne sont pas encaissés sur la plateforme ; les conditions sont à convenir avec l’annonceur."
-                  : focusedListing.transactionType === "rent"
-                    ? "Le loyer n’est pas encaissé sur la plateforme. Les conditions de location sont à convenir avec le bailleur."
-                    : "Le prix d’achat du parking n’est pas encaissé sur la plateforme. La vente est formalisée avec les professionnels compétents."}
-            </p>
-          </div>
-        </aside>
-      </div>
-      <div className="detail-mobile-actions" aria-label="Prix et contact">
-        <p className="detail-mobile-price" aria-live="polite">
-          {displayedPrice}
-        </p>
-        {favoriteButton}
-        {showcase ? null : selectedUnavailable ? (
-          <button type="button" className="button button-primary" disabled>
-            Indisponible
-          </button>
-        ) : relatedSelected ? (
-          <Link className="button button-primary" href={focusedHref}>
-            Voir l’annonce
-          </Link>
-        ) : (
-          <a className="button button-primary" href="#contact">
-            Contacter
-          </a>
-        )}
-        {favorites.error ? (
-          <p className="error detail-mobile-favorite-error" role="alert">
-            {favorites.error}
-          </p>
-        ) : null}
-      </div>
-    </main>
+        </div>
+      ) : null}
+    </Root>
   );
 }

@@ -4,6 +4,8 @@ export interface SearchState {
   type: string;
   minPrice: string;
   maxPrice: string;
+  annualChargesMax: string;
+  propertyTaxMax: string;
   minArea: string;
   minSpaces: string;
   sellerType: string;
@@ -23,6 +25,8 @@ export const emptySearch: SearchState = {
   type: "",
   minPrice: "",
   maxPrice: "",
+  annualChargesMax: "",
+  propertyTaxMax: "",
   minArea: "",
   minSpaces: "",
   sellerType: "",
@@ -71,6 +75,18 @@ export function readSearch(p: URLSearchParams): SearchState {
     if (v && Number.isFinite(Number(v)) && Number(v) >= 0) s[key] = v;
   }
   s.only3D = p.get("scene") === "1";
+  for (const key of ["annualChargesMax", "propertyTaxMax"] as const) {
+    const value = p.get(key) || "";
+    const amount = Number(value);
+    if (
+      value &&
+      Number.isFinite(amount) &&
+      amount >= 0 &&
+      amount <= 1000000 &&
+      Math.abs(amount * 100 - Math.round(amount * 100)) < 0.000001
+    )
+      s[key] = value;
+  }
   const minSpaces = p.get("minSpaces");
   if (
     minSpaces &&
@@ -114,6 +130,16 @@ export function readSearch(p: URLSearchParams): SearchState {
   return s;
 }
 export function searchProblem(s: SearchState): string {
+  for (const value of [s.annualChargesMax, s.propertyTaxMax])
+    if (
+      value !== "" &&
+      (!Number.isFinite(Number(value)) ||
+        Number(value) < 0 ||
+        Number(value) > 1000000 ||
+        Math.abs(Number(value) * 100 - Math.round(Number(value) * 100)) >=
+          0.000001)
+    )
+      return "Indiquez un montant annuel entre 0 et 1 000 000 €, avec deux décimales maximum.";
   if (
     s.minSpaces !== "" &&
     (!Number.isInteger(Number(s.minSpaces)) ||
@@ -156,6 +182,8 @@ export function searchParams(s: SearchState, api = false): URLSearchParams {
   for (const [field, param] of [
     ["minPrice", "priceMin"],
     ["maxPrice", "priceMax"],
+    ["annualChargesMax", "annualChargesMax"],
+    ["propertyTaxMax", "propertyTaxMax"],
   ] as const)
     if (s[field])
       p.set(param, api ? String(Math.round(Number(s[field]) * 100)) : s[field]);
