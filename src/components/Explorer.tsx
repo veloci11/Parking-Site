@@ -94,6 +94,7 @@ export default function Explorer({
   const locationInput = useRef<HTMLInputElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [closingSelection, setClosingSelection] = useState(false);
+  const [expandedPreview, setExpandedPreview] = useState(false);
   const selectionCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -101,6 +102,7 @@ export default function Explorer({
     if (selectionCloseTimer.current) clearTimeout(selectionCloseTimer.current);
     selectionCloseTimer.current = null;
     setClosingSelection(false);
+    setExpandedPreview(false);
     return () => {
       if (selectionCloseTimer.current)
         clearTimeout(selectionCloseTimer.current);
@@ -1491,7 +1493,7 @@ export default function Explorer({
         {inspecting && selected ? (
           <section
             ref={announcementPanel}
-            className={`announcement-panel${closingSelection ? " is-closing" : ""}`}
+            className={`announcement-panel${closingSelection ? " is-closing" : ""}${expandedPreview ? " is-expanded" : ""}`}
             data-map-overlay={desktopDetail ? undefined : "listing"}
             data-map-announcement={desktopDetail ? "listing" : undefined}
             tabIndex={-1}
@@ -1504,7 +1506,9 @@ export default function Explorer({
             }}
           >
             <ListingInspector
-              panel={desktopDetail}
+              variant={desktopDetail ? "panel" : "sheet"}
+              expanded={expandedPreview}
+              onExpandedChange={setExpandedPreview}
               key={selected.id}
               listing={selected}
               favorite={favorites.ids.includes(selected.id)}

@@ -32,7 +32,9 @@ export default function ListingInspector({
   favoriteDisabled = false,
   favoriteError,
   onFavorite,
-  panel = false,
+  variant = "panel",
+  expanded = false,
+  onExpandedChange,
 }: {
   listing: Listing;
   onClose: () => void;
@@ -41,14 +43,20 @@ export default function ListingInspector({
   favoriteDisabled?: boolean;
   favoriteError?: string;
   onFavorite?: () => void;
-  panel?: boolean;
+  variant?: "panel" | "sheet";
+  expanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
 }) {
+  const panel = variant === "panel";
   const [index, setIndex] = useState(0);
-  const backButton = useRef<HTMLButtonElement>(null);
+  const content = useRef<HTMLDivElement>(null);
+  const dragStart = useRef<number | null>(null);
+  const dragged = useRef(false);
+  const contentId = useId();
   const favoriteNoteId = useId();
   useEffect(() => {
     setIndex(0);
-    backButton.current?.parentElement?.focus({ preventScroll: true });
+    if (content.current) content.current.scrollTop = 0;
   }, [listing.id]);
   const visibleSpaces = searchOfferSpaces(listing, transactionType);
   const photos = listing.photos.length ? listing.photos : ["/demo/covered.png"];
@@ -84,6 +92,7 @@ export default function ListingInspector({
       className="icon-button detail-favorite"
       aria-label={favoriteLabel}
       aria-pressed={favorite}
+      aria-describedby={showcase ? favoriteNoteId : undefined}
       disabled={showcase || favoriteDisabled || !onFavorite}
       onClick={() => onFavorite?.()}
     >
@@ -92,7 +101,7 @@ export default function ListingInspector({
   );
   return (
     <aside
-      className={`listing-inspector${panel ? " inspector-panel" : ""}`}
+      className={`listing-inspector ${panel ? "inspector-panel" : "inspector-sheet"}`}
       aria-label="Le bien sélectionné"
       key={listing.id}
     >
@@ -118,159 +127,150 @@ export default function ListingInspector({
           </button>
         </div>
       ) : (
-        <div
-          className="inspector-header"
-          tabIndex={-1}
-          aria-label="Aperçu de l’annonce"
-        >
+        <div className="inspector-sheet-header">
           <button
-            ref={backButton}
             type="button"
-            className="button button-secondary inspector-back-button"
+            className="inspector-sheet-handle"
+            aria-label={expanded ? "Réduire l’aperçu" : "Agrandir l’aperçu"}
+            aria-expanded={expanded}
+            aria-controls={contentId}
+            onPointerDown={(event) => {
+              dragStart.current = event.clientY;
+              dragged.current = false;
+              event.currentTarget.setPointerCapture(event.pointerId);
+            }}
+            onPointerUp={(event) => {
+              const distance =
+                event.clientY - (dragStart.current ?? event.clientY);
+              dragStart.current = null;
+              if (Math.abs(distance) > 30) {
+                dragged.current = true;
+                onExpandedChange?.(distance < 0);
+              }
+            }}
+            onPointerCancel={() => {
+              dragStart.current = null;
+              dragged.current = false;
+            }}
+            onClick={() => {
+              if (!dragged.current) onExpandedChange?.(!expanded);
+              dragged.current = false;
+            }}
+          >
+            <span aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className="icon-button"
+            aria-label="Fermer l’annonce"
             onClick={onClose}
           >
-            Retour
+            <X size={20} />
           </button>
         </div>
       )}
-      <div className="inspector-image">
-        <div className="inspector-photo">
-          <PreparedPhotos
-            key={listing.id}
-            photos={photos}
-            index={index}
-            alt={
-              listing.isDemo
-                ? "Illustration de démonstration du parking"
-                : listing.title
-            }
-            width={640}
-            height={420}
-            sizes="(max-width:767px) calc(100vw - 32px), 360px"
-          />
-          {!panel ? (
-            <button
-              type="button"
-              className="inspector-favorite-button"
-              aria-label={favoriteLabel}
-              aria-pressed={favorite}
-              aria-describedby={showcase ? favoriteNoteId : undefined}
-              title={
-                showcase
-                  ? "Favoris disponibles sur les annonces réelles"
-                  : favoriteLabel
+      <div className="inspector-content" ref={content} id={contentId}>
+        <div className="inspector-image">
+          <div className="inspector-photo">
+            <PreparedPhotos
+              key={listing.id}
+              photos={photos}
+              index={index}
+              alt={
+                listing.isDemo
+                  ? "Illustration de démonstration du parking"
+                  : listing.title
               }
-              disabled={showcase || favoriteDisabled || !onFavorite}
-              onClick={() => {
-                if (!showcase) onFavorite?.();
-              }}
+              width={640}
+              height={420}
+              sizes="(max-width:767px) calc(100vw - 32px), 360px"
+            />
+            {photos.length > 1 ? (
+              <div className="gallery-controls">
+                <button
+                  className="gallery-arrow"
+                  onClick={() =>
+                    setIndex((index - 1 + photos.length) % photos.length)
+                  }
+                  aria-label="Photo précédente"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <span>
+                  {index + 1} / {photos.length}
+                </span>
+                <button
+                  className="gallery-arrow"
+                  onClick={() => setIndex((index + 1) % photos.length)}
+                  aria-label="Photo suivante"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            ) : (
+              <span className="photo-counter">1 / 1</span>
+            )}
+          </div>
+          {showcase ? (
+            <p id={favoriteNoteId} className="inspector-favorite-note">
+              Favoris disponibles sur les annonces réelles.
+            </p>
+          ) : null}
+        </div>
+        <div className="inspector-body">
+          <p className="inspector-location">
+            {listing.city} · {listing.district.split(" · ")[0]}
+          </p>
+          <h2>{listing.title}</h2>
+          {visibleSpaces.length > 1 &&
+          visibleSpaces.some((space) => space.number.trim()) ? (
+            <p className="inspector-spaces">
+              {visibleSpaces.slice(0, 3).map((space) => (
+                <span key={space.id}>{parkingSpaceLocation(space)}</span>
+              ))}
+              {visibleSpaces.length > 3 ? (
+                <span>+ {visibleSpaces.length - 3} autres places</span>
+              ) : null}
+            </p>
+          ) : null}
+          {listing.spaces.length > 1 ? (
+            <span className="muted small">{pricingScope(listing)}</span>
+          ) : null}
+          {panel ? (
+            <Link
+              className="button button-primary full-width"
+              href={announcementHref}
             >
-              <Heart
-                size={22}
-                fill={favorite ? "currentColor" : "none"}
-                aria-hidden="true"
-              />
-            </button>
+              Consulter l’annonce
+            </Link>
           ) : null}
-          {photos.length > 1 ? (
-            <div className="gallery-controls">
-              <button
-                className="gallery-arrow"
-                onClick={() =>
-                  setIndex((index - 1 + photos.length) % photos.length)
-                }
-                aria-label="Photo précédente"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <span>
-                {index + 1} / {photos.length}
-              </span>
-              <button
-                className="gallery-arrow"
-                onClick={() => setIndex((index + 1) % photos.length)}
-                aria-label="Photo suivante"
-              >
-                <ChevronRight size={18} />
-              </button>
-            </div>
-          ) : (
-            <span className="photo-counter">1 / 1</span>
-          )}
-        </div>
-        {showcase ? (
-          <p id={favoriteNoteId} className="inspector-favorite-note">
-            Favoris disponibles sur les annonces réelles.
-          </p>
-        ) : null}
-      </div>
-      <div className="inspector-body">
-        <p className="inspector-location">
-          {listing.city} · {listing.district.split(" · ")[0]}
-        </p>
-        <h2>
-          {panel
-            ? listing.title
-            : visibleSpaces.length > 1
-              ? `${visibleSpaces.length} places${listing.pricingMode === "per_space" ? " à l’unité" : " en lot"}`
-              : visibleSpaces[0]?.number
-                ? `Place ${visibleSpaces[0].number}`
-                : "Place de parking"}
-        </h2>
-        {visibleSpaces.length > 1 &&
-        (!panel || visibleSpaces.some((space) => space.number.trim())) ? (
-          <p className="inspector-spaces">
-            {visibleSpaces.slice(0, 3).map((space) => (
-              <span key={space.id}>{parkingSpaceLocation(space)}</span>
-            ))}
-            {visibleSpaces.length > 3 ? (
-              <span>+ {visibleSpaces.length - 3} autres places</span>
-            ) : null}
-          </p>
-        ) : null}
-        {!panel ? (
-          <p className="inspector-price">
-            {listingPrice(listing, transactionType)}
-          </p>
-        ) : null}
-        {listing.spaces.length > 1 ? (
-          <span className="muted small">{pricingScope(listing)}</span>
-        ) : null}
-        <Link
-          className="button button-primary full-width"
-          href={announcementHref}
-        >
-          Consulter l’annonce
-        </Link>
-        {favoriteError && !showcase ? (
-          <p className="inspector-favorite-error" role="alert">
-            {favoriteError}
-          </p>
-        ) : null}
-        <div className="feature-row">
-          <span>
-            <Maximize size={19} />
-            {areaLabel(searchOfferSpaces(listing, transactionType))}
-          </span>
-          <span>
-            <ParkingKindIcon type={listing.type} size={20} />
-            {listing.type === "mixed"
-              ? "Lot mixte"
-              : listing.type === "box"
-                ? "Box"
-                : listing.type === "covered"
-                  ? "Couvert"
-                  : "Extérieur"}
-          </span>
-          {!panel ||
-          !["À préciser", "Non renseigné"].includes(accessLabel(listing)) ? (
+          {favoriteError && !showcase ? (
+            <p className="inspector-favorite-error" role="alert">
+              {favoriteError}
+            </p>
+          ) : null}
+          <div className="feature-row">
             <span>
-              <LockKeyhole size={19} />
-              {accessLabel(listing)}
+              <Maximize size={19} />
+              {areaLabel(searchOfferSpaces(listing, transactionType))}
             </span>
-          ) : null}
-        </div>
-        {panel ? (
+            <span>
+              <ParkingKindIcon type={listing.type} size={20} />
+              {listing.type === "mixed"
+                ? "Lot mixte"
+                : listing.type === "box"
+                  ? "Box"
+                  : listing.type === "covered"
+                    ? "Couvert"
+                    : "Extérieur"}
+            </span>
+            {!["À préciser", "Non renseigné"].includes(accessLabel(listing)) ? (
+              <span>
+                <LockKeyhole size={19} />
+                {accessLabel(listing)}
+              </span>
+            ) : null}
+          </div>
           <div className="inspector-key-points">
             <p>
               <span>Places proposées</span>
@@ -289,18 +289,6 @@ export default function ListingInspector({
                 <strong>
                   {listing.occupancy === "vacant" ? "Libre" : "Occupée"}
                 </strong>
-              </p>
-            ) : null}
-            {listing.annualChargesCents != null ? (
-              <p>
-                <span>Charges annuelles</span>
-                <strong>{money(listing.annualChargesCents)}</strong>
-              </p>
-            ) : null}
-            {listing.propertyTaxCents != null ? (
-              <p>
-                <span>Taxe foncière annuelle</span>
-                <strong>{money(listing.propertyTaxCents)}</strong>
               </p>
             ) : null}
             {listing.sellerName ? (
@@ -329,24 +317,53 @@ export default function ListingInspector({
               </p>
             ) : null}
           </div>
-        ) : null}
-        {panel && excerpt ? (
-          <div className="inspector-excerpt">
-            <h3>En quelques mots</h3>
-            <p>{excerpt}</p>
-          </div>
-        ) : null}
-        {listing.locationPrecision === "exact_opt_in" && listing.address ? (
-          <p className="inspector-description">{listing.address}</p>
-        ) : null}
-        {listing.isDemo ? (
-          <p className="demo-caption">
-            {isPublicShowcase(listing.id)
-              ? "Démonstration : prix, photos et plan fictifs. Aucun bien proposé à cette adresse."
-              : "Annonce de démonstration"}
-          </p>
-        ) : null}
+          {excerpt ? (
+            <div className="inspector-excerpt">
+              <h3>Description</h3>
+              <p>{excerpt}</p>
+            </div>
+          ) : null}
+          {listing.annualChargesCents != null ||
+          listing.propertyTaxCents != null ? (
+            <div
+              className="inspector-key-points inspector-costs"
+              aria-label="Charges et taxe foncière"
+            >
+              {listing.annualChargesCents != null ? (
+                <p>
+                  <span>Charges annuelles</span>
+                  <strong>{money(listing.annualChargesCents)}</strong>
+                </p>
+              ) : null}
+              {listing.propertyTaxCents != null ? (
+                <p>
+                  <span>Taxe foncière annuelle</span>
+                  <strong>{money(listing.propertyTaxCents)}</strong>
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+          {listing.locationPrecision === "exact_opt_in" && listing.address ? (
+            <p className="inspector-description">{listing.address}</p>
+          ) : null}
+          {listing.isDemo ? (
+            <p className="demo-caption">
+              {isPublicShowcase(listing.id)
+                ? "Démonstration : prix, photos et plan fictifs. Aucun bien proposé à cette adresse."
+                : "Annonce de démonstration"}
+            </p>
+          ) : null}
+        </div>
       </div>
+      {!panel ? (
+        <div className="inspector-sheet-actions">
+          <strong>{listingPrice(listing, transactionType)}</strong>
+          {panelFavorite}
+          <Link className="button button-primary" href={announcementHref}>
+            Consulter l’annonce
+          </Link>
+        </div>
+      ) : null}
     </aside>
   );
 }
