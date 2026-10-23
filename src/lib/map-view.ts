@@ -32,14 +32,16 @@ export function selectedMapOffset(
   canvasHeight: number,
   markerHeight: number,
   controlsTop?: number,
+  toolbarBottom = 0,
 ): [number, number] {
   if (!Number.isFinite(canvasHeight) || canvasHeight <= 0) return [0, 0];
   const bottom = Math.max(
     24,
     Math.min(canvasHeight, controlsTop ?? canvasHeight) - 16,
   );
-  const height = Math.min(Math.max(44, markerHeight), bottom - 12);
-  const anchor = (bottom + height + 12) / 2;
+  const top = Math.max(0, Math.min(toolbarBottom, bottom - 56));
+  const height = Math.min(Math.max(44, markerHeight), bottom - top - 12);
+  const anchor = (bottom + top + height + 12) / 2;
   return [0, anchor - canvasHeight / 2];
 }
 const clamp = (value: number, min: number, max: number) =>

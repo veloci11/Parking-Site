@@ -25,6 +25,31 @@ import {
 import "maplibre-gl/dist/maplibre-gl.css";
 import "@/styles/maps.css";
 
+function visibleMapBottom(canvas: HTMLElement, controls: HTMLElement | null) {
+  const rect = canvas.getBoundingClientRect();
+  const controlsRect = controls?.getBoundingClientRect();
+  let bottom =
+    controlsRect && controlsRect.width > controlsRect.height
+      ? controlsRect.top - rect.top
+      : rect.height;
+  const sheet = canvas
+    .closest(".explore-workspace")
+    ?.querySelector<HTMLElement>('[data-map-overlay="listing"]');
+  if (sheet && getComputedStyle(sheet).position === "absolute") {
+    // Use the settled sheet height while its entrance animation is running.
+    bottom = Math.min(bottom, rect.height - sheet.offsetHeight);
+  }
+  return Math.max(0, bottom);
+}
+
+function visibleMapTop(canvas: HTMLElement) {
+  const toolbar = canvas.closest(".explorer")?.querySelector(".search-section");
+  if (!toolbar) return 0;
+  const rect = canvas.getBoundingClientRect();
+  const toolbarRect = toolbar.getBoundingClientRect();
+  return Math.max(0, Math.min(rect.height, toolbarRect.bottom - rect.top + 8));
+}
+
 export interface CityMapProps {
   initialView?: MapViewState | null;
   onCameraChange?: (view: MapViewState, meta?: { transient?: boolean }) => void;
@@ -36,6 +61,7 @@ export interface CityMapProps {
   onSelect: (id: string) => void;
   transactionType?: TransactionType;
   visible?: boolean;
+  cooperativeGestures?: boolean;
   onClusterSelect?: (ids: string[]) => void;
   /** Submitted text location, and the location associated with the loaded results. */
   locationQuery?: string;
@@ -55,6 +81,7 @@ export default function CityMap({
   onSearchArea,
   transactionType,
   visible = true,
+  cooperativeGestures = true,
   onClusterSelect,
   locationQuery,
   resultsLoading = false,
@@ -155,11 +182,7 @@ export default function CityMap({
     manualAfterSelection.current = false;
     locationFocus.current.suppress();
     const canvasRect = canvas.getBoundingClientRect();
-    const controlsRect = controls.current?.getBoundingClientRect();
-    const controlsTop =
-      controlsRect && controlsRect.width > controlsRect.height
-        ? controlsRect.top - canvasRect.top
-        : undefined;
+    const controlsTop = visibleMapBottom(canvas, controls.current);
     const selectedMarker = markers.current
       .map((marker) => marker.getElement())
       .find(
@@ -180,7 +203,12 @@ export default function CityMap({
     map.easeTo({
       center: selected.coordinates,
       zoom: selectedMapZoom(map.getZoom(), selected.locationPrecision),
-      offset: selectedMapOffset(canvasRect.height, markerHeight, controlsTop),
+      offset: selectedMapOffset(
+        canvasRect.height,
+        markerHeight,
+        controlsTop,
+        visibleMapTop(canvas),
+      ),
       duration,
     });
     previousSelected.current = selected.id;
@@ -294,7 +322,7 @@ export default function CityMap({
           minZoom: 4,
           maxZoom: 19,
           attributionControl: false,
-          cooperativeGestures: true,
+          cooperativeGestures,
           // One observer owns layout changes; MapLibre's second observer would
           // resize again during gestures and synthesize another move sequence.
           trackResize: false,
@@ -433,7 +461,7 @@ export default function CityMap({
       localMap?.remove();
       mapRef.current = null;
     };
-  }, [attempt]);
+  }, [attempt, cooperativeGestures]);
 
   useEffect(() => {
     if (!visible || status !== "ready") return;
@@ -486,12 +514,10 @@ export default function CityMap({
             isIdfCoordinate(listing.coordinates),
         );
       const sizes = new Map<string, { width: number; height: number }>();
-      const canvasRect = container.current?.getBoundingClientRect();
-      const controlsRect = controls.current?.getBoundingClientRect();
-      const priceAreaHeight = canvasRect
-        ? (controlsRect && controlsRect.width > controlsRect.height
-            ? controlsRect.top - canvasRect.top
-            : canvasRect.height) - 16
+      const priceAreaHeight = container.current
+        ? visibleMapBottom(container.current, controls.current) -
+          visibleMapTop(container.current) -
+          16
         : Infinity;
       const byId = new Map(available.map((listing) => [listing.id, listing]));
       const renderPrice = (button: HTMLButtonElement, group: Listing[]) => {

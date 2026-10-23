@@ -7,7 +7,7 @@
   background: #f0effa;
   isolation: isolate;
 }
-.gp-city-canvas {
+.gp-city-map .gp-city-canvas {
   position: absolute;
   inset: 0;
 }

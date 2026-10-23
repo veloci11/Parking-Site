@@ -293,6 +293,12 @@
   height: 100%;
   min-height: 100%;
 }
+.gp-viewer-city[hidden] {
+  display: none;
+}
+.gp-viewer-city .maplibregl-canvas {
+  touch-action: none;
+}
 @media (max-width: 767px) {
   .gp-viewer-lots {
     padding: 0 12px 12px;

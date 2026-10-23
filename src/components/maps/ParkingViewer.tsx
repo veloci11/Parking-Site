@@ -468,6 +468,7 @@ export default function ParkingViewer(props: ParkingViewerProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const [focusRevision, setFocusRevision] = useState(0);
   const [mode, setMode] = useState<Mode>("3d");
+  const [mapRequested, setMapRequested] = useState(false);
   const [individualScene, setIndividualScene] = useState<PublicScene | null>(
     null,
   );
@@ -791,7 +792,10 @@ export default function ParkingViewer(props: ParkingViewerProps) {
             type="button"
             className={effectiveMode === "map" ? "is-active" : ""}
             aria-pressed={effectiveMode === "map"}
-            onClick={() => setMode("map")}
+            onClick={() => {
+              setMapRequested(true);
+              setMode("map");
+            }}
           >
             <MapPin size={17} />
             Carte
@@ -893,12 +897,15 @@ export default function ParkingViewer(props: ParkingViewerProps) {
         ) : null}
         <div className="gp-viewer-level-layer" ref={levelLayer}>
           <div className="gp-viewer-stage">
-            {effectiveMode === "map" ? (
-              <div className="gp-viewer-city">
+            {mapRequested ? (
+              <div className="gp-viewer-city" hidden={effectiveMode !== "map"}>
                 <CityMap
+                  key={contextId}
                   listings={[photoListing]}
                   selectedId={photoListing.id}
                   onSelect={() => {}}
+                  visible={effectiveMode === "map"}
+                  cooperativeGestures={false}
                   initialView={{
                     center: photoListing.coordinates,
                     zoom: 15.5,
@@ -907,7 +914,8 @@ export default function ParkingViewer(props: ParkingViewerProps) {
                   }}
                 />
               </div>
-            ) : effectiveMode === "photo" ? (
+            ) : null}
+            {effectiveMode === "map" ? null : effectiveMode === "photo" ? (
               <Photos
                 listing={photoListing}
                 selectedId={selectedReference?.listingUnitId || null}

@@ -52,6 +52,7 @@ import {
   type ExplorerViewPreference,
 } from "@/lib/map-demand";
 import "@/styles/explorer.css";
+import "@/styles/explorer-filters.css";
 import { type Listing } from "@/lib/types";
 import FilterSelect from "./FilterSelect";
 import ListingCard from "./ListingCard";
@@ -83,6 +84,8 @@ export default function Explorer({
   const windowRequest = useRef<AbortController | null>(null);
   const resultWindow = useRef<{ context: string; count: number } | null>(null);
   const moreFiltersButton = useRef<HTMLButtonElement>(null);
+  const moreFiltersPanel = useRef<HTMLDivElement>(null);
+  const mapViewButton = useRef<HTMLButtonElement>(null);
   const [missingFavorites, setMissingFavorites] = useState<string[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
   const [resultsLocationQuery, setResultsLocationQuery] = useState("");
@@ -176,6 +179,11 @@ export default function Explorer({
     radiusKm,
     only3D,
   ].filter((v) => v !== "" && v !== false).length;
+  const mobileFilterCount =
+    advancedCount + [type, maxPrice, minArea].filter(Boolean).length;
+  useEffect(() => {
+    if (more) moreFiltersPanel.current?.focus({ preventScroll: true });
+  }, [more]);
   const apiQuery = searchParams(searchState, true).toString();
   const resultContext = `${favoritesOnly ? "favorites" : "explore"}:${allFavoriteOffers ? "all" : "single"}:${apiQuery}`;
   const offerFilterKey = `${favoritesOnly}:${allFavoriteOffers}:${favoriteKey}:${explorerOfferFilterKey(searchState)}`;
@@ -374,9 +382,11 @@ export default function Explorer({
     if (!initialized) return;
     if (previousView.current && previousView.current !== visibleView) {
       const top = scrollPositions.current[visibleView];
-      const frame = requestAnimationFrame(() =>
-        window.scrollTo({ top, behavior: "instant" }),
-      );
+      const frame = requestAnimationFrame(() => {
+        if (window.matchMedia(MOBILE_MAP_MEDIA_QUERY).matches) {
+          if (resultsPanel.current) resultsPanel.current.scrollTop = top;
+        } else window.scrollTo({ top, behavior: "instant" });
+      });
       previousView.current = visibleView;
       return () => cancelAnimationFrame(frame);
     }
@@ -442,9 +452,11 @@ export default function Explorer({
           saved.top >= 0
         ) {
           scrollPositions.current.list = saved.top;
-          const frame = requestAnimationFrame(() =>
-            window.scrollTo({ top: saved.top, behavior: "instant" }),
-          );
+          const frame = requestAnimationFrame(() => {
+            if (window.matchMedia(MOBILE_MAP_MEDIA_QUERY).matches) {
+              if (panel) panel.scrollTop = saved.top;
+            } else window.scrollTo({ top: saved.top, behavior: "instant" });
+          });
           return () => cancelAnimationFrame(frame);
         }
       } else if (panel) {
@@ -509,7 +521,9 @@ export default function Explorer({
     requestAnimationFrame(() => {
       if (resultsPanel.current) {
         resultsPanel.current.scrollTop = resultScrollBeforeSelection.current;
-        resultsPanel.current.focus({ preventScroll: true });
+        if (window.matchMedia(MOBILE_MAP_MEDIA_QUERY).matches)
+          mapViewButton.current?.focus({ preventScroll: true });
+        else resultsPanel.current.focus({ preventScroll: true });
       }
     });
   }
@@ -519,11 +533,7 @@ export default function Explorer({
     setClusterListingIds(ids);
     requestAnimationFrame(() => {
       resultsPanel.current?.focus({ preventScroll: true });
-      if (window.matchMedia(MOBILE_MAP_MEDIA_QUERY).matches)
-        resultsPanel.current?.scrollIntoView({
-          block: "nearest",
-          behavior: "auto",
-        });
+      if (resultsPanel.current) resultsPanel.current.scrollTop = 0;
     });
   }
   useEffect(() => {
@@ -570,7 +580,11 @@ export default function Explorer({
   }
   function changeView(view: ExplorerView) {
     if (view === visibleView && viewPreference !== "auto") return;
-    scrollPositions.current[visibleView] = window.scrollY;
+    scrollPositions.current[visibleView] = window.matchMedia(
+      MOBILE_MAP_MEDIA_QUERY,
+    ).matches
+      ? (resultsPanel.current?.scrollTop ?? 0)
+      : window.scrollY;
     const params = favoritesOnly
       ? favoritesSearchParams(searchState, allFavoriteOffers)
       : searchParams(searchState);
@@ -588,11 +602,7 @@ export default function Explorer({
     setViewPreference("map");
     requestAnimationFrame(() => {
       if (resultsPanel.current) resultsPanel.current.scrollTop = 0;
-      if (window.matchMedia(MOBILE_MAP_MEDIA_QUERY).matches)
-        resultsPanel.current?.scrollIntoView({
-          block: "nearest",
-          behavior: "auto",
-        });
+      resultsPanel.current?.focus({ preventScroll: true });
     });
   }
   function rememberListPosition() {
@@ -601,7 +611,9 @@ export default function Explorer({
         "gp:explore:list-scroll",
         JSON.stringify({
           href: window.location.pathname + window.location.search,
-          top: window.scrollY,
+          top: window.matchMedia(MOBILE_MAP_MEDIA_QUERY).matches
+            ? (resultsPanel.current?.scrollTop ?? 0)
+            : window.scrollY,
         }),
       );
     } catch {
@@ -680,97 +692,103 @@ export default function Explorer({
           </form>
         </div>
         <div className="filters">
-          <FilterSelect
-            label="Type d’offre"
-            value={allFavoriteOffers ? "all" : transactionType}
-            applied={!allFavoriteOffers}
-            onChange={(value) => {
-              setAllFavoriteOffers(favoritesOnly && value === "all");
-              if (value === "all") setCompare([]);
-              if (value !== "all") setTransactionType(value as "sale" | "rent");
-              if (value === "all" && sort.startsWith("price_"))
-                setSort("recent");
-              setMinPrice("");
-              setMaxPrice("");
-              setSelectedId(null);
-            }}
-            options={[
-              ...(favoritesOnly
-                ? [{ value: "all", label: "Tous mes favoris" }]
-                : []),
-              { value: "sale", label: "À vendre" },
-              { value: "rent", label: "À louer" },
-            ]}
-          />
-          <FilterSelect
-            label="Type de parking"
-            value={type}
-            onChange={setType}
-            applied={Boolean(type)}
-            options={[
-              { value: "", label: "Parking & box" },
-              { value: "covered", label: "Parking couvert" },
-              { value: "box", label: "Box fermé" },
-              { value: "outdoor", label: "Extérieur" },
-              { value: "mixed", label: "Lot mixte" },
-            ]}
-          />
-          <FilterSelect
-            label="Budget maximum"
-            disabled={allFavoriteOffers}
-            hint={
-              transactionType === "rent"
-                ? "Loyer mensuel par place, ou du lot proposé ensemble"
-                : "Prix par place, ou du lot proposé ensemble"
-            }
-            value={maxPrice}
-            onChange={setMaxPrice}
-            applied={Boolean(maxPrice || minPrice)}
-            options={[
-              { value: "", label: "Budget maximum" },
-              ...(maxPrice &&
-              !(
+          <div className="explorer-offer-filter">
+            <FilterSelect
+              label="Type d’offre"
+              value={allFavoriteOffers ? "all" : transactionType}
+              applied={!allFavoriteOffers}
+              onChange={(value) => {
+                setAllFavoriteOffers(favoritesOnly && value === "all");
+                if (value === "all") setCompare([]);
+                if (value !== "all")
+                  setTransactionType(value as "sale" | "rent");
+                if (value === "all" && sort.startsWith("price_"))
+                  setSort("recent");
+                setMinPrice("");
+                setMaxPrice("");
+                setSelectedId(null);
+              }}
+              options={[
+                ...(favoritesOnly
+                  ? [{ value: "all", label: "Tous mes favoris" }]
+                  : []),
+                { value: "sale", label: "À vendre" },
+                { value: "rent", label: "À louer" },
+              ]}
+            />
+          </div>
+          <div className="explorer-desktop-filters">
+            <FilterSelect
+              label="Type de parking"
+              value={type}
+              onChange={setType}
+              applied={Boolean(type)}
+              options={[
+                { value: "", label: "Parking & box" },
+                { value: "covered", label: "Parking couvert" },
+                { value: "box", label: "Box fermé" },
+                { value: "outdoor", label: "Extérieur" },
+                { value: "mixed", label: "Lot mixte" },
+              ]}
+            />
+            <FilterSelect
+              label="Budget maximum"
+              disabled={allFavoriteOffers}
+              hint={
                 transactionType === "rent"
-                  ? ["50", "100", "150", "200"]
-                  : ["20000", "25000", "30000", "50000"]
-              ).includes(maxPrice)
-                ? [
-                    {
-                      value: maxPrice,
-                      label: `Jusqu’à ${Number(maxPrice).toLocaleString("fr-FR")} €`,
-                    },
-                  ]
-                : []),
-              ...(transactionType === "rent"
-                ? [
-                    { value: "50", label: "Jusqu’à 50 € / mois" },
-                    { value: "100", label: "Jusqu’à 100 € / mois" },
-                    { value: "150", label: "Jusqu’à 150 € / mois" },
-                    { value: "200", label: "Jusqu’à 200 € / mois" },
-                  ]
-                : [
-                    { value: "20000", label: "Jusqu’à 20 000 €" },
-                    { value: "25000", label: "Jusqu’à 25 000 €" },
-                    { value: "30000", label: "Jusqu’à 30 000 €" },
-                    { value: "50000", label: "Jusqu’à 50 000 €" },
-                  ]),
-            ]}
-          />
-          <FilterSelect
-            label="Surface minimum par place"
-            value={minArea}
-            onChange={setMinArea}
-            applied={Boolean(minArea)}
-            options={[
-              { value: "", label: "Surface" },
-              { value: "12", label: "12 m² minimum" },
-              { value: "14", label: "14 m² minimum" },
-              { value: "16", label: "16 m² minimum" },
-            ]}
-          />
+                  ? "Loyer mensuel par place, ou du lot proposé ensemble"
+                  : "Prix par place, ou du lot proposé ensemble"
+              }
+              value={maxPrice}
+              onChange={setMaxPrice}
+              applied={Boolean(maxPrice || minPrice)}
+              options={[
+                { value: "", label: "Budget maximum" },
+                ...(maxPrice &&
+                !(
+                  transactionType === "rent"
+                    ? ["50", "100", "150", "200"]
+                    : ["20000", "25000", "30000", "50000"]
+                ).includes(maxPrice)
+                  ? [
+                      {
+                        value: maxPrice,
+                        label: `Jusqu’à ${Number(maxPrice).toLocaleString("fr-FR")} €`,
+                      },
+                    ]
+                  : []),
+                ...(transactionType === "rent"
+                  ? [
+                      { value: "50", label: "Jusqu’à 50 € / mois" },
+                      { value: "100", label: "Jusqu’à 100 € / mois" },
+                      { value: "150", label: "Jusqu’à 150 € / mois" },
+                      { value: "200", label: "Jusqu’à 200 € / mois" },
+                    ]
+                  : [
+                      { value: "20000", label: "Jusqu’à 20 000 €" },
+                      { value: "25000", label: "Jusqu’à 25 000 €" },
+                      { value: "30000", label: "Jusqu’à 30 000 €" },
+                      { value: "50000", label: "Jusqu’à 50 000 €" },
+                    ]),
+              ]}
+            />
+            <FilterSelect
+              label="Surface minimum par place"
+              value={minArea}
+              onChange={setMinArea}
+              applied={Boolean(minArea)}
+              options={[
+                { value: "", label: "Surface" },
+                { value: "12", label: "12 m² minimum" },
+                { value: "14", label: "14 m² minimum" },
+                { value: "16", label: "16 m² minimum" },
+              ]}
+            />
+          </div>
           <button
             ref={moreFiltersButton}
-            className={`filter-chip ${more || advancedCount > 0 ? "filter-applied" : ""}`}
+            aria-label="Filtres de recherche"
+            className={`filter-chip explorer-all-filters ${more || mobileFilterCount > 0 ? "filter-applied" : ""}`}
             onClick={() => (more ? closeMoreFilters() : setMore(true))}
             onKeyDown={(event) => {
               if (event.key === "Escape" && more) {
@@ -782,9 +800,17 @@ export default function Explorer({
             aria-controls="explorer-more-filters"
           >
             <SlidersHorizontal size={18} />
-            Plus de filtres
+            <span className="explorer-desktop-label">Plus de filtres</span>
+            <span className="explorer-mobile-label">Filtres</span>
             {advancedCount ? (
-              <span className="filter-count">{advancedCount}</span>
+              <span className="filter-count explorer-desktop-label">
+                {advancedCount}
+              </span>
+            ) : null}
+            {mobileFilterCount ? (
+              <span className="filter-count explorer-mobile-label">
+                {mobileFilterCount}
+              </span>
             ) : null}
           </button>
           {hasOptionFilters ? (
@@ -809,6 +835,7 @@ export default function Explorer({
             </button>
             <button
               type="button"
+              ref={mapViewButton}
               onClick={() => changeView("map")}
               aria-pressed={visibleView === "map"}
               className={visibleView === "map" ? "active" : ""}
@@ -819,218 +846,359 @@ export default function Explorer({
           </div>
         </div>
         {more ? (
-          <div
-            className="filter-popover"
-            id="explorer-more-filters"
-            onKeyDown={(event) => {
-              if (event.key === "Escape" && !event.defaultPrevented) {
-                event.preventDefault();
-                closeMoreFilters();
-              }
-            }}
-          >
-            <div className="section-row">
-              <strong>Affiner la découverte</strong>
-              <button
-                className="icon-button"
-                onClick={closeMoreFilters}
-                aria-label="Fermer les filtres"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="explorer-advanced-grid">
-              <label className="field">
-                {transactionType === "rent"
-                  ? "Loyer minimum mensuel (€)"
-                  : "Budget minimum (€)"}
-                <input
-                  className="input"
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={minPrice}
-                  disabled={allFavoriteOffers}
-                  onChange={(e) => setMinPrice(e.target.value)}
-                  placeholder="Sans minimum"
-                />
-              </label>
-              <label className="field">
-                {transactionType === "rent"
-                  ? "Loyer maximum mensuel (€)"
-                  : "Budget maximum (€)"}
-                <input
-                  className="input"
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={maxPrice}
-                  disabled={allFavoriteOffers}
-                  onChange={(e) => setMaxPrice(e.target.value)}
-                  placeholder="Sans maximum"
-                />
-              </label>
-              <div className="field">
-                <span>Couverture</span>
-                <FilterSelect
-                  label="Couverture"
-                  variant="field"
-                  value={covered}
-                  onChange={setCovered}
-                  applied={Boolean(covered)}
-                  options={[
-                    { value: "", label: "Indifférent" },
-                    { value: "1", label: "Couvert (parking ou box)" },
-                    { value: "0", label: "Extérieur" },
-                  ]}
-                />
+          <>
+            <div
+              className="explorer-filter-backdrop"
+              aria-hidden="true"
+              onClick={closeMoreFilters}
+            />
+            <div
+              ref={moreFiltersPanel}
+              tabIndex={-1}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="explorer-filter-title"
+              className="filter-popover explorer-filter-panel"
+              id="explorer-more-filters"
+              onKeyDown={(event) => {
+                if (event.key === "Escape" && !event.defaultPrevented) {
+                  event.preventDefault();
+                  closeMoreFilters();
+                }
+                if (event.key !== "Tab" || event.defaultPrevented) return;
+                const panel = moreFiltersPanel.current;
+                if (!panel?.contains(event.target as Node)) return;
+                const controls = Array.from(
+                  panel.querySelectorAll<HTMLElement>(
+                    'button:not([disabled]), input:not([disabled]), select:not([disabled]), summary, a[href], [tabindex="0"]',
+                  ),
+                ).filter((control) => control.getClientRects().length > 0);
+                const first = controls[0],
+                  last = controls.at(-1);
+                if (
+                  event.shiftKey &&
+                  (document.activeElement === first ||
+                    document.activeElement === panel)
+                ) {
+                  event.preventDefault();
+                  last?.focus();
+                } else if (!event.shiftKey && document.activeElement === last) {
+                  event.preventDefault();
+                  first?.focus();
+                }
+              }}
+            >
+              <header className="explorer-filter-header">
+                <h2 id="explorer-filter-title">Tous les filtres</h2>
+                <button
+                  type="button"
+                  className="explorer-filter-skip"
+                  onClick={() => {
+                    closeMoreFilters();
+                    requestAnimationFrame(() =>
+                      resultsPanel.current?.focus({ preventScroll: true }),
+                    );
+                  }}
+                >
+                  Aller aux résultats
+                </button>
+                <button
+                  type="button"
+                  className="icon-button"
+                  onClick={closeMoreFilters}
+                  aria-label="Fermer les filtres"
+                >
+                  <X size={20} />
+                </button>
+              </header>
+              <div className="explorer-filter-body">
+                <div className="explorer-filter-groups">
+                  <fieldset className="explorer-filter-group">
+                    <legend>Type de parking</legend>
+                    <FilterSelect
+                      label="Type de parking"
+                      variant="field"
+                      value={type}
+                      onChange={setType}
+                      applied={Boolean(type)}
+                      options={[
+                        { value: "", label: "Tous les types" },
+                        { value: "covered", label: "Parking couvert" },
+                        { value: "box", label: "Box fermé" },
+                        { value: "outdoor", label: "Extérieur" },
+                        { value: "mixed", label: "Lot mixte" },
+                      ]}
+                    />
+                  </fieldset>
+                  <fieldset className="explorer-filter-group">
+                    <legend>Surface par place</legend>
+                    <FilterSelect
+                      label="Surface minimum par place"
+                      variant="field"
+                      value={minArea}
+                      onChange={setMinArea}
+                      applied={Boolean(minArea)}
+                      options={[
+                        { value: "", label: "Toutes les surfaces" },
+                        ...(minArea && !["12", "14", "16"].includes(minArea)
+                          ? [{ value: minArea, label: `${minArea} m² minimum` }]
+                          : []),
+                        { value: "12", label: "12 m² minimum" },
+                        { value: "14", label: "14 m² minimum" },
+                        { value: "16", label: "16 m² minimum" },
+                      ]}
+                    />
+                    <p className="explorer-filter-hint">
+                      Surface inconnue exclue si un minimum est choisi.
+                    </p>
+                  </fieldset>
+                  <fieldset className="explorer-filter-group is-wide">
+                    <legend>
+                      {transactionType === "rent"
+                        ? "Loyer mensuel (€)"
+                        : "Budget (€)"}
+                    </legend>
+                    <div className="explorer-filter-pair">
+                      <label
+                        className={`field${minPrice ? " is-applied" : ""}`}
+                      >
+                        <span>Minimum</span>
+                        <input
+                          className="input"
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={minPrice}
+                          disabled={allFavoriteOffers}
+                          onChange={(e) => setMinPrice(e.target.value)}
+                          placeholder="Sans minimum"
+                        />
+                      </label>
+                      <label
+                        className={`field${maxPrice ? " is-applied" : ""}`}
+                      >
+                        <span>Maximum</span>
+                        <input
+                          className="input"
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={maxPrice}
+                          disabled={allFavoriteOffers}
+                          onChange={(e) => setMaxPrice(e.target.value)}
+                          placeholder="Sans maximum"
+                        />
+                      </label>
+                    </div>
+                    <p className="explorer-filter-hint">
+                      {allFavoriteOffers
+                        ? "Choisissez « À vendre » ou « À louer » pour filtrer le budget."
+                        : "Par place disponible, ou pour le lot proposé ensemble."}
+                    </p>
+                  </fieldset>
+                  <fieldset className="explorer-filter-group is-wide">
+                    <legend>Localisation</legend>
+                    <span className="explorer-filter-label">
+                      Rayon depuis le centre de la carte
+                    </span>
+                    <div
+                      className="explorer-radius-options"
+                      role="group"
+                      aria-label="Rayon de recherche"
+                    >
+                      {[
+                        "1",
+                        "3",
+                        "5",
+                        "10",
+                        "20",
+                        ...(radiusDraft &&
+                        !["1", "3", "5", "10", "20"].includes(radiusDraft)
+                          ? [radiusDraft]
+                          : []),
+                      ].map((radius) => (
+                        <button
+                          key={radius}
+                          type="button"
+                          aria-pressed={radiusDraft === radius}
+                          onClick={() => setRadiusDraft(radius)}
+                        >
+                          {radius} km
+                        </button>
+                      ))}
+                    </div>
+                    <div className="explorer-geography-actions">
+                      <button
+                        type="button"
+                        className="button button-secondary"
+                        disabled={
+                          !mapView ||
+                          !Number.isFinite(Number(radiusDraft)) ||
+                          Number(radiusDraft) < 0.1 ||
+                          Number(radiusDraft) > 200
+                        }
+                        onClick={() => {
+                          if (!mapView) return;
+                          setCenter(mapView.center.join(","));
+                          setRadiusKm(radiusDraft);
+                          setBbox("");
+                          setSelectedId(null);
+                        }}
+                      >
+                        Appliquer le rayon
+                      </button>
+                      {visibleView === "list" ? (
+                        <button
+                          type="button"
+                          className="text-button"
+                          onClick={() => {
+                            setMore(false);
+                            changeView("map");
+                          }}
+                        >
+                          <MapIcon size={16} /> Choisir sur la carte
+                        </button>
+                      ) : null}
+                    </div>
+                    {!mapView ? (
+                      <p className="explorer-filter-hint">
+                        Ouvrez la carte pour choisir son centre.
+                      </p>
+                    ) : null}
+                    {bbox || radiusKm ? (
+                      <div className="explorer-active-area" role="status">
+                        <span>
+                          {bbox
+                            ? "Zone visible de la carte"
+                            : `Rayon actif : ${radiusKm} km`}
+                        </span>
+                        <button
+                          type="button"
+                          className="text-button"
+                          aria-label="Retirer la limite géographique"
+                          onClick={() => {
+                            setBbox("");
+                            setCenter("");
+                            setRadiusKm("");
+                          }}
+                        >
+                          Retirer
+                        </button>
+                      </div>
+                    ) : null}
+                  </fieldset>
+                  <details
+                    className="explorer-filter-characteristics is-wide"
+                    open={Boolean(covered || closed || occupancy || level)}
+                  >
+                    <summary>
+                      Caractéristiques{" "}
+                      <span>
+                        {[covered, closed, occupancy, level].filter(Boolean)
+                          .length || "Facultatif"}
+                      </span>
+                    </summary>
+                    <div className="explorer-filter-pair">
+                      <div className="field">
+                        <span>Couverture</span>
+                        <FilterSelect
+                          label="Couverture"
+                          variant="field"
+                          value={covered}
+                          onChange={setCovered}
+                          applied={Boolean(covered)}
+                          options={[
+                            { value: "", label: "Indifférente" },
+                            { value: "1", label: "Couvert" },
+                            { value: "0", label: "Extérieur" },
+                          ]}
+                        />
+                      </div>
+                      <div className="field">
+                        <span>Fermeture</span>
+                        <FilterSelect
+                          label="Fermeture"
+                          variant="field"
+                          value={closed}
+                          onChange={setClosed}
+                          applied={Boolean(closed)}
+                          options={[
+                            { value: "", label: "Indifférente" },
+                            { value: "1", label: "Box fermé" },
+                            { value: "0", label: "Place ouverte" },
+                          ]}
+                        />
+                      </div>
+                      <div className="field">
+                        <span>Occupation</span>
+                        <FilterSelect
+                          label="Occupation déclarée"
+                          variant="field"
+                          value={occupancy}
+                          onChange={setOccupancy}
+                          applied={Boolean(occupancy)}
+                          options={[
+                            { value: "", label: "Indifférente" },
+                            { value: "vacant", label: "Libre" },
+                            { value: "occupied", label: "Occupée" },
+                            { value: "unknown", label: "Non renseignée" },
+                          ]}
+                        />
+                      </div>
+                      <label className="field">
+                        <span>Niveau</span>
+                        <input
+                          className="input"
+                          type="number"
+                          min="-20"
+                          max="50"
+                          step="1"
+                          value={level}
+                          onChange={(e) => setLevel(e.target.value)}
+                          placeholder="Tous"
+                        />
+                      </label>
+                    </div>
+                  </details>
+                  <label className="checkbox-field explorer-filter-model is-wide">
+                    <input
+                      type="checkbox"
+                      checked={only3D}
+                      onChange={(e) => setOnly3D(e.target.checked)}
+                    />
+                    <Layers3 size={18} />
+                    <span>Plan 3D disponible</span>
+                  </label>
+                </div>
               </div>
-              <div className="field">
-                <span>Fermeture</span>
-                <FilterSelect
-                  label="Fermeture"
-                  variant="field"
-                  value={closed}
-                  onChange={setClosed}
-                  applied={Boolean(closed)}
-                  options={[
-                    { value: "", label: "Indifférent" },
-                    { value: "1", label: "Box fermé" },
-                    { value: "0", label: "Place ouverte" },
-                  ]}
-                />
-              </div>
-              <div className="field">
-                <span>Occupation déclarée</span>
-                <FilterSelect
-                  label="Occupation déclarée"
-                  variant="field"
-                  value={occupancy}
-                  onChange={setOccupancy}
-                  applied={Boolean(occupancy)}
-                  options={[
-                    { value: "", label: "Indifférente" },
-                    { value: "vacant", label: "Libre" },
-                    { value: "occupied", label: "Occupée" },
-                    { value: "unknown", label: "Non renseignée" },
-                  ]}
-                />
-              </div>
-              <label className="field">
-                Niveau d’au moins une place
-                <input
-                  className="input"
-                  type="number"
-                  min="-20"
-                  max="50"
-                  step="1"
-                  value={level}
-                  onChange={(e) => setLevel(e.target.value)}
-                  placeholder="Tous les niveaux"
-                />
-              </label>
-            </div>
-            <fieldset className="explorer-geography">
-              <legend>Zone de recherche</legend>
-              <p className="small muted">
-                Déplacez la carte puis utilisez « Rechercher dans cette zone »,
-                ou choisissez un rayon autour de son centre. Les distances
-                utilisent la position publique : elles restent approximatives
-                pour une annonce localisée au quartier.
-              </p>
-              {visibleView === "list" ? (
+              <footer className="explorer-filter-actions">
                 <button
                   type="button"
                   className="text-button"
+                  disabled={!hasFilters}
+                  onClick={reset}
+                >
+                  Réinitialiser
+                </button>
+                <button
+                  type="button"
+                  className="button button-primary"
                   onClick={() => {
-                    setMore(false);
-                    changeView("map");
+                    closeMoreFilters();
+                    requestAnimationFrame(() =>
+                      resultsPanel.current?.focus({ preventScroll: true }),
+                    );
                   }}
                 >
-                  <MapIcon size={16} />
-                  Ouvrir la carte pour choisir une zone
+                  {error
+                    ? "Voir les résultats"
+                    : loading
+                      ? "Afficher les annonces"
+                      : `Afficher ${total} annonce${total > 1 ? "s" : ""}`}
                 </button>
-              ) : null}
-              <label className="field">
-                Rayon autour du centre de la carte (km)
-                <input
-                  className="input"
-                  type="number"
-                  min="0.1"
-                  max="200"
-                  step="0.1"
-                  value={radiusDraft}
-                  onChange={(e) => setRadiusDraft(e.target.value)}
-                />
-              </label>
-              <button
-                className="button button-secondary"
-                disabled={
-                  !mapView ||
-                  !Number.isFinite(Number(radiusDraft)) ||
-                  Number(radiusDraft) < 0.1 ||
-                  Number(radiusDraft) > 200
-                }
-                onClick={() => {
-                  if (!mapView) return;
-                  setCenter(mapView.center.join(","));
-                  setRadiusKm(radiusDraft);
-                  setBbox("");
-                  setSelectedId(null);
-                }}
-              >
-                Appliquer autour du centre de la carte
-              </button>
-              {bbox || radiusKm ? (
-                <div className="notice" role="status">
-                  <p>
-                    {bbox
-                      ? "Recherche limitée à la zone de carte sélectionnée."
-                      : `Recherche dans un rayon de ${radiusKm} km autour du centre sélectionné.`}{" "}
-                    Le déplacement de la carte ne change pas ce filtre
-                    automatiquement.
-                  </p>
-                  <button
-                    className="text-button"
-                    onClick={() => {
-                      setBbox("");
-                      setCenter("");
-                      setRadiusKm("");
-                    }}
-                  >
-                    Retirer la limite géographique
-                  </button>
-                </div>
-              ) : null}
-            </fieldset>
-            <label className="checkbox-field">
-              <input
-                type="checkbox"
-                checked={only3D}
-                onChange={(e) => setOnly3D(e.target.checked)}
-              />
-              <Layers3 size={18} />
-              Avec un plan 3D disponible
-            </label>
-            <p className="small muted">
-              Les surfaces inconnues sont exclues lorsqu’un minimum est choisi.
-              {allFavoriteOffers
-                ? " Choisissez « À vendre » ou « À louer » pour filtrer par budget."
-                : transactionType === "rent"
-                  ? "Le budget s’applique au loyer mensuel d’une place disponible ; pour un lot indivisible, au loyer total du lot."
-                  : "Le budget s’applique au prix d’une place disponible ; pour un lot indivisible, au prix total du lot."}
-            </p>
-            <button
-              className="button button-primary full-width"
-              onClick={closeMoreFilters}
-            >
-              {error
-                ? "Revenir aux résultats"
-                : loading
-                  ? "Voir la recherche en cours"
-                  : `Voir les ${total} résultats`}
-            </button>
-          </div>
+              </footer>
+            </div>
+          </>
         ) : null}
       </section>
       <div
@@ -1047,6 +1215,11 @@ export default function Explorer({
             }
           }}
           className="results-panel"
+          data-map-overlay={
+            inspecting || (visibleView === "map" && clusterListingIds.length)
+              ? "listing"
+              : undefined
+          }
           aria-label={inspecting ? "Annonce sélectionnée" : "Résultats"}
           onScroll={(event) => {
             if (inspecting) return;
@@ -1060,6 +1233,25 @@ export default function Explorer({
             }
           }}
         >
+          {visibleView === "map" &&
+          (inspecting || clusterListingIds.length > 0) ? (
+            <div className="explorer-sheet-heading">
+              <span>
+                {inspecting ? "Aperçu de l’annonce" : "Annonces à cet endroit"}
+              </span>
+              <button
+                type="button"
+                className="icon-button"
+                aria-label="Fermer l’aperçu"
+                onClick={() => {
+                  setClusterListingIds([]);
+                  closeSelection();
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+          ) : null}
           {inspecting && selected ? (
             <ListingInspector
               key={selected.id}
@@ -1246,6 +1438,7 @@ export default function Explorer({
         >
           {initialized && mapRequested ? (
             <CityMap
+              cooperativeGestures={false}
               listings={filtered}
               visible={visibleView === "map"}
               transactionType={offerFilter}

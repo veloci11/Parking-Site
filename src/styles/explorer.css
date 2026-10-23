@@ -183,32 +183,6 @@
   box-shadow: none;
 }
 @media (max-width: 767px) {
-  .explorer .mobile-map.is-inspecting {
-    display: flex;
-    flex-direction: column;
-    height: auto;
-    min-height: 0;
-    padding-bottom: 110px;
-  }
-  .explorer .mobile-map.is-inspecting .map-panel {
-    order: 0;
-    flex: none;
-    height: 320px;
-    min-height: 320px;
-  }
-  .explorer .mobile-map.is-inspecting .gp-city-map {
-    min-height: 320px;
-  }
-  .explorer .mobile-map.is-inspecting .results-panel {
-    order: 1;
-    display: block;
-    width: 100%;
-    max-width: none;
-    min-width: 0;
-    overflow: visible;
-    border-right: 0;
-    border-top: 1px solid var(--border);
-  }
   .explorer .results-panel .listing-inspector {
     display: grid;
     grid-template-columns: 104px minmax(0, 1fr);
@@ -545,28 +519,8 @@
   }
 }
 @media (max-width: 767px) {
-  .explorer.explorer-view-map:has(.mobile-map:not(.is-inspecting)) {
-    display: flex;
-    flex-direction: column;
-    height: calc(100dvh - 64px);
-    min-height: 620px;
-  }
   .explorer.explorer-view-map .search-section {
     flex-shrink: 0;
-  }
-  .explorer .mobile-map:not(.is-inspecting) {
-    display: flex;
-    flex: 1;
-    height: auto;
-    min-height: 340px;
-  }
-  .explorer .mobile-map:not(.is-inspecting) .map-panel {
-    flex: 1;
-    height: auto;
-  }
-  .explorer .mobile-map:not(.is-inspecting) .gp-city-map {
-    position: absolute;
-    inset: 0;
   }
   .explorer .search-section {
     padding: 12px 16px;
@@ -588,23 +542,6 @@
   }
   .explorer .explorer-view-switch {
     margin-left: auto;
-  }
-  .explorer .mobile-map .map-panel {
-    height: 58dvh;
-    min-height: 340px;
-  }
-  .explorer .mobile-map .gp-city-map {
-    min-height: 340px;
-  }
-  .explorer .mobile-map.is-inspecting .map-panel {
-    height: 300px;
-    min-height: 300px;
-  }
-  .explorer .mobile-map.is-inspecting .gp-city-map {
-    min-height: 300px;
-  }
-  .explorer .mobile-map.is-inspecting {
-    padding-bottom: 24px;
   }
 }
 
@@ -639,5 +576,562 @@
 @media (min-width: 768px) {
   .explorer.explorer-view-map .gp-city-map {
     min-height: 0;
+  }
+}
+
+/* Mobile search is an application viewport, with scrolling confined to results. */
+.explorer-offer-filter,
+.explorer-desktop-filters {
+  display: contents;
+}
+.explorer-mobile-label,
+.explorer-mobile-filter-field,
+.explorer-filter-backdrop,
+.explorer-sheet-heading {
+  display: none;
+}
+.explorer-filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.explorer-filter-actions > .text-button {
+  flex: none;
+}
+@media (max-width: 767px) {
+  html:has(main.explorer),
+  body:has(main.explorer) {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+  body:has(main.explorer) .site-footer {
+    display: none;
+  }
+  body:has(main.explorer) .site-header-explorer {
+    height: 64px;
+    position: fixed;
+    inset: 0 0 auto;
+  }
+  main.explorer.explorer-view-map,
+  main.explorer.explorer-view-list {
+    position: fixed;
+    top: 64px;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - 64px);
+    min-height: 0;
+    overflow: hidden;
+  }
+  .explorer .search-section {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 7px;
+    padding: 8px 12px;
+    z-index: 20;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+  }
+  .explorer .search-heading {
+    flex: none;
+    width: 100%;
+  }
+  .explorer .location-search {
+    min-height: 42px;
+    height: 42px;
+    border-radius: 9px;
+  }
+  .explorer .location-search > input {
+    font-size: 16px;
+  }
+  .explorer .location-search > input::placeholder {
+    font-size: 14px;
+  }
+  .explorer .filters {
+    display: grid;
+    grid-template-columns: minmax(82px, 1fr) auto auto;
+    align-items: center;
+    flex: none;
+    gap: 6px;
+    padding: 0;
+    width: 100%;
+    overflow: visible;
+  }
+  .explorer .explorer-desktop-filters,
+  .explorer .explorer-desktop-label,
+  .explorer .filters > .clear-filters {
+    display: none;
+  }
+  .explorer .explorer-mobile-label {
+    display: inline;
+  }
+  .explorer .filter-count.explorer-mobile-label {
+    display: grid;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+  }
+  .explorer .explorer-offer-filter {
+    display: block;
+    min-width: 0;
+  }
+  .explorer .explorer-offer-filter .gp-select-chip {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .explorer .explorer-offer-filter .gp-select-chip > span {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .explorer .filters .gp-select-chip,
+  .explorer .filters .filter-chip {
+    min-height: 40px;
+    height: 40px;
+    padding: 8px;
+    gap: 6px;
+    font-size: 12px;
+  }
+  .explorer .filters .gp-select-chip > svg,
+  .explorer .filters .filter-chip > svg {
+    width: 15px;
+    height: 15px;
+    flex: none;
+  }
+  .explorer .explorer-view-switch {
+    margin: 0;
+    padding: 2px;
+    gap: 0;
+    flex: none;
+    height: 40px;
+  }
+  .explorer .explorer-view-switch button {
+    min-height: 34px;
+    padding: 7px 8px;
+    gap: 5px;
+    font-size: 12px;
+  }
+  .explorer .explorer-view-switch button svg {
+    width: 14px;
+    height: 14px;
+  }
+  .explorer .explore-workspace.view-list,
+  .explorer .explore-workspace.mobile-map,
+  .explorer .explore-workspace.mobile-map.is-inspecting {
+    position: relative;
+    display: block;
+    flex: 1 1 0;
+    min-height: 0;
+    height: auto;
+    padding: 0;
+    overflow: hidden;
+  }
+  .explorer .view-list .results-panel {
+    height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    scroll-padding-top: 12px;
+  }
+  .explorer .view-list .results-heading {
+    padding: 16px 16px 12px;
+  }
+  .explorer .view-list .results-list {
+    padding: 0 16px;
+    gap: 20px;
+  }
+  .explorer .mobile-map .map-panel,
+  .explorer .mobile-map.is-inspecting .map-panel {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+  .explorer .mobile-map .gp-city-map,
+  .explorer .mobile-map.is-inspecting .gp-city-map {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    min-height: 0;
+  }
+  .explorer .mobile-map .results-panel {
+    display: none;
+  }
+  .explorer .mobile-map.is-inspecting .results-panel {
+    position: absolute;
+    z-index: 12;
+    display: block;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    height: min(58%, 420px);
+    min-height: 190px;
+    max-height: 70%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 0 max(12px, env(safe-area-inset-bottom));
+    border: 1px solid var(--border);
+    border-bottom: 0;
+    border-radius: 18px 18px 0 0;
+    background: #fff;
+    box-shadow: 0 -8px 32px #22193a18;
+    animation: explorer-sheet-in 0.24s ease-out;
+  }
+  .explorer .explorer-sheet-heading {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 46px;
+    padding: 0 12px 0 16px;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .explorer .explorer-sheet-heading .icon-button {
+    width: 42px;
+    height: 42px;
+  }
+  .explorer .mobile-map .listing-inspector {
+    display: grid;
+    grid-template-columns: 106px minmax(0, 1fr);
+    gap: 12px;
+    padding: 14px 16px 10px;
+  }
+  .explorer .mobile-map .inspector-header {
+    display: none;
+  }
+  .explorer .mobile-map .inspector-image {
+    align-self: start;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .explorer .mobile-map .inspector-image > img {
+    display: block;
+    width: 106px;
+    height: 120px;
+    object-fit: cover;
+  }
+  .explorer .mobile-map .inspector-body {
+    min-width: 0;
+    padding: 0;
+  }
+  .explorer .mobile-map .inspector-location {
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+  .explorer .mobile-map .inspector-body > h2 {
+    font-size: 18px;
+  }
+  .explorer .mobile-map .inspector-price {
+    font-size: 24px;
+    line-height: 1.2;
+  }
+  .explorer .mobile-map .inspector-body > .button {
+    min-height: 40px;
+    padding: 10px;
+    margin: 10px 0 14px;
+    font-size: 12px;
+  }
+  .explorer .mobile-map .inspector-spaces,
+  .explorer .mobile-map .feature-row,
+  .explorer .mobile-map .inspector-description,
+  .explorer .mobile-map .demo-caption {
+    font-size: 11px;
+  }
+  .explorer .mobile-map .feature-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .explorer .mobile-map .feature-row svg {
+    width: 15px;
+    height: 15px;
+  }
+  .explorer .mobile-map .results-heading {
+    padding: 14px 16px 10px;
+  }
+  .explorer .explorer-filter-backdrop {
+    display: block;
+    position: fixed;
+    z-index: 45;
+    inset: 64px 0 0;
+    background: #19132724;
+  }
+  .explorer .filter-popover {
+    position: fixed;
+    z-index: 50;
+    top: 122px;
+    left: 10px;
+    right: 10px;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    width: auto;
+    max-height: none;
+    padding: 16px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 14px;
+    outline: none;
+  }
+  .explorer .explorer-mobile-filter-field {
+    display: flex;
+  }
+  .explorer .explorer-advanced-grid {
+    gap: 14px 12px;
+  }
+  .explorer .filter-popover .input {
+    font-size: 16px;
+  }
+  .explorer .explorer-filter-actions {
+    position: sticky;
+    bottom: -16px;
+    z-index: 2;
+    margin: 16px -16px -16px;
+    padding: 12px 16px;
+    background: #fff;
+    border-top: 1px solid var(--border);
+  }
+  .explorer .explorer-compare {
+    flex: none;
+    min-height: 42px;
+    font-size: 12px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+}
+@media (max-width: 359px) {
+  .explorer .filters {
+    grid-template-columns: minmax(78px, 1fr) 42px auto;
+    gap: 4px;
+  }
+  .explorer .explorer-all-filters > .explorer-mobile-label:not(.filter-count) {
+    display: none;
+  }
+  .explorer .explorer-all-filters {
+    position: relative;
+    justify-content: center;
+  }
+  .explorer .explorer-all-filters > .filter-count {
+    position: absolute;
+    right: -3px;
+    top: -4px;
+  }
+}
+@keyframes explorer-sheet-in {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .explorer .mobile-map.is-inspecting .results-panel {
+    animation: none;
+  }
+}
+
+/* Validated map layout: the search belongs to the list; filters float on the map. */
+.explorer.explorer-view-map {
+  --explorer-sidebar-width: 380px;
+  --explorer-search-height: 68px;
+  position: relative;
+}
+.explorer.explorer-view-map .search-section {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 20;
+  background: transparent;
+  border: 0;
+  pointer-events: none;
+}
+.explorer.explorer-view-map .search-heading,
+.explorer.explorer-view-map .filters > button,
+.explorer.explorer-view-map .filters .gp-select-trigger,
+.explorer.explorer-view-map .explorer-view-switch {
+  pointer-events: auto;
+}
+.explorer.explorer-view-map .filters .gp-select-trigger,
+.explorer.explorer-view-map .filters .filter-chip,
+.explorer.explorer-view-map .explorer-view-switch {
+  background: #fff;
+  box-shadow: 0 2px 8px #21163713;
+}
+.explorer.explorer-view-map .filters .gp-select-trigger.is-applied,
+.explorer.explorer-view-map .filters .filter-chip.filter-applied {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+}
+.explorer.explorer-view-map .filters > .clear-filters {
+  display: none;
+}
+@media (min-width: 768px) {
+  .explorer.explorer-view-map .search-section {
+    display: grid;
+    grid-template-columns: var(--explorer-sidebar-width) minmax(0, 1fr);
+    align-items: start;
+    gap: 0;
+    padding: 0;
+  }
+  .explorer.explorer-view-map .search-heading {
+    width: 100%;
+    min-width: 0;
+    height: var(--explorer-search-height);
+    padding: 12px 20px;
+    background: #fff;
+    border-right: 1px solid var(--border);
+  }
+  .explorer.explorer-view-map .location-search {
+    max-width: none;
+    height: 44px;
+    min-height: 44px;
+  }
+  .explorer.explorer-view-map .filters {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: start;
+    gap: 8px;
+    min-width: 0;
+    min-height: var(--explorer-search-height);
+    margin: 0;
+    padding: 12px;
+    overflow: visible;
+    pointer-events: none;
+  }
+  .explorer.explorer-view-map .explorer-offer-filter {
+    display: block;
+    flex: none;
+  }
+  .explorer.explorer-view-map .explorer-desktop-filters {
+    display: flex;
+    flex: 0 1 auto;
+    align-items: start;
+    gap: 8px;
+    min-width: 0;
+    max-width: 100%;
+    padding: 0 0 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    pointer-events: none;
+  }
+  .explorer.explorer-view-map .explorer-desktop-filters::-webkit-scrollbar {
+    display: none;
+  }
+  .explorer.explorer-view-map .filters .gp-select-trigger,
+  .explorer.explorer-view-map .filters .filter-chip {
+    flex: none;
+    min-height: 42px;
+    height: 42px;
+    padding: 9px 11px;
+    gap: 8px;
+    font-size: 12px;
+    border-radius: 9px;
+  }
+  .explorer.explorer-view-map .explorer-view-switch {
+    flex: none;
+    margin-left: auto;
+    height: 42px;
+    padding: 3px;
+    gap: 2px;
+    white-space: nowrap;
+  }
+  .explorer.explorer-view-map .explorer-view-switch button {
+    min-height: 34px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .explorer.explorer-view-map .results-panel {
+    width: var(--explorer-sidebar-width);
+    min-width: var(--explorer-sidebar-width);
+    max-width: var(--explorer-sidebar-width);
+    padding-top: var(--explorer-search-height);
+    scroll-padding-top: var(--explorer-search-height);
+  }
+  .explorer.explorer-view-map .results-panel .inspector-header {
+    top: var(--explorer-search-height);
+  }
+}
+@media (min-width: 768px) and (max-width: 1199px) {
+  .explorer.explorer-view-map {
+    --explorer-sidebar-width: 350px;
+  }
+  .explorer.explorer-view-map .search-heading {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+  .explorer.explorer-view-map .filters {
+    padding-right: 10px;
+    padding-left: 10px;
+    gap: 6px;
+  }
+  .explorer.explorer-view-map .explorer-all-filters > .explorer-desktop-label {
+    display: none;
+  }
+  .explorer.explorer-view-map .explorer-all-filters {
+    width: 42px;
+    justify-content: center;
+  }
+  .explorer.explorer-view-map .explorer-view-switch button {
+    padding-right: 8px;
+    padding-left: 8px;
+    gap: 5px;
+  }
+}
+@media (max-width: 767px) {
+  main.explorer.explorer-view-map {
+    position: fixed;
+    top: 64px;
+    right: 0;
+    left: 0;
+    bottom: 0;
+  }
+  .explorer.explorer-view-map .search-section {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 7px;
+    padding: 10px 12px 0;
+    min-height: 0;
+    background: transparent;
+    border: 0;
+  }
+  .explorer.explorer-view-map .search-heading {
+    flex: none;
+    width: 100%;
+    background: transparent;
+    padding: 0;
+  }
+  .explorer.explorer-view-map .location-search {
+    background: #fff;
+    box-shadow: 0 2px 10px #21163716;
+  }
+  .explorer.explorer-view-map .filters {
+    min-height: 40px;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    pointer-events: none;
+  }
+  .explorer.explorer-view-map .explorer-view-switch {
+    background: #fff;
+  }
+  .explorer.explorer-view-map .explorer-view-switch button.active {
+    background: var(--surface-subtle);
+    box-shadow: none;
   }
 }

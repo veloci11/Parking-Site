@@ -39,7 +39,11 @@ export default function ListingInspector({
         tabIndex={-1}
         aria-label="Aperçu de l’annonce"
       >
-        <button ref={backButton} className="text-button" onClick={onClose}>
+        <button
+          ref={backButton}
+          className="button button-secondary"
+          onClick={onClose}
+        >
           Retour
         </button>
       </div>

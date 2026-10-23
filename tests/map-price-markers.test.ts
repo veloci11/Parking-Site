@@ -160,3 +160,19 @@ test("a two-price stack remains visible above mobile controls after the canvas s
   assert.ok(580 / 2 + desktopOffset < 480);
   assert.deepEqual(selectedMapOffset(0, markerHeight), [0, 0]);
 });
+
+test("selected prices stay between floating filters and the mobile listing sheet", () => {
+  const canvasHeight = 780;
+  const sheetTop = 328;
+  const filtersBottom = 108;
+  const markerHeight = 96;
+  const [, offset] = selectedMapOffset(
+    canvasHeight,
+    markerHeight,
+    sheetTop,
+    filtersBottom,
+  );
+  const markerBottom = canvasHeight / 2 + offset;
+  assert.ok(markerBottom <= sheetTop - 16);
+  assert.ok(markerBottom - markerHeight >= filtersBottom + 12);
+});

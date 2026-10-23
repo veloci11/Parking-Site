@@ -408,7 +408,7 @@ export default function ListingDetail({
           {freshnessError} Les données affichées peuvent avoir changé.
         </p>
       ) : null}
-      <Link href={backHref} className="text-button">
+      <Link href={backHref} className="button button-secondary">
         Retour
       </Link>
       <div className="section-row" style={{ marginTop: 24 }}>
