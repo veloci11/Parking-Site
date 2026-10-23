@@ -50,13 +50,6 @@ export default function Header() {
           >
             Mes favoris
           </Link>
-          <Link
-            onClick={() => setOpen(false)}
-            className={path === "/comment-acheter" ? "active" : ""}
-            href="/comment-acheter"
-          >
-            Acheter ou louer
-          </Link>
         </nav>
         <div className="header-actions">
           <Link

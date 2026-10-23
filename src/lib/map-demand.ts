@@ -11,9 +11,9 @@ export function readExplorerView(
 }
 export function resolveExplorerView(
   preference: ExplorerViewPreference,
-  mobile: boolean,
+  _mobile: boolean,
 ): ExplorerView {
-  return preference === "auto" ? (mobile ? "list" : "map") : preference;
+  return preference === "auto" ? "map" : preference;
 }
 export interface MapDemandViewport {
   readonly matches: boolean;

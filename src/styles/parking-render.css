@@ -56,6 +56,7 @@
 }
 .gp-render-frame {
   transform-origin: center;
+  transform: var(--parking-render-focus, translate(0%, 0%) scale(1));
   transition:
     opacity 0.2s ease,
     transform 0.45s cubic-bezier(0.2, 0.65, 0.25, 1);
@@ -93,6 +94,55 @@
   font: inherit;
   font-size: 12px;
   cursor: pointer;
+}
+.gp-render-overview.is-mobile-only,
+.gp-mobile-lot-numbers,
+.gp-level-compact-numbers,
+.gp-viewer-spaces-mobile,
+.gp-viewer-expand {
+  display: none;
+}
+.gp-parking-viewer .gp-viewer-spaces-mobile {
+  display: none;
+}
+.gp-parking-viewer.is-expanded {
+  position: fixed;
+  z-index: 1500;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+  outline: none;
+}
+.gp-viewer-expand {
+  position: absolute;
+  z-index: 5;
+  top: 8px;
+  left: 8px;
+  align-items: center;
+  gap: 5px;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fffffff2;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.gp-parking-viewer.is-expanded .gp-viewer-expand {
+  display: inline-flex;
+}
+.gp-viewer-expand:focus-visible {
+  outline: 2px solid #6d28ff;
+  outline-offset: 2px;
 }
 .gp-viewer-workspace {
   display: grid;
@@ -338,6 +388,210 @@
 @media (prefers-reduced-motion: reduce) {
   .gp-render-frame,
   .gp-render-space {
+    transition: none;
+  }
+}
+
+/* On phones the plan takes priority over duplicated lot and floor thumbnails. */
+@media (max-width: 767px) {
+  .gp-parking-viewer:not(.is-expanded) {
+    height: auto;
+    min-height: 0;
+  }
+  .gp-parking-viewer .gp-viewer-heading {
+    padding: 8px 8px 6px;
+    gap: 6px;
+  }
+  .gp-parking-viewer .gp-viewer-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: 100%;
+    min-width: 0;
+    border-radius: 10px;
+  }
+  .gp-parking-viewer .gp-viewer-tabs button {
+    justify-content: center;
+    min-width: 0;
+    height: 38px;
+    padding: 0 3px;
+    font-size: 12px;
+    gap: 4px;
+    border-radius: 7px;
+  }
+  .gp-parking-viewer .gp-viewer-lots {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    padding: 0 8px 6px;
+  }
+  .gp-parking-viewer .gp-viewer-lots button {
+    min-width: 0;
+    padding: 7px 8px;
+    border-left-width: 3px;
+    border-radius: 8px;
+  }
+  .gp-parking-viewer .gp-viewer-lots strong {
+    font-size: 12px;
+    gap: 5px;
+  }
+  .gp-parking-viewer .gp-viewer-lots strong span,
+  .gp-parking-viewer .gp-viewer-lots small:first-of-type {
+    display: none;
+  }
+  .gp-mobile-lot-numbers {
+    display: block;
+    margin-top: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--muted);
+  }
+  .gp-parking-viewer .gp-viewer-lots small:last-of-type {
+    margin-top: 3px;
+    font-size: 12px;
+    line-height: 1.4;
+    font-weight: 600;
+  }
+  .gp-parking-viewer .gp-viewer-workspace.has-levels {
+    display: flex;
+    flex-direction: column;
+  }
+  .gp-parking-viewer .gp-viewer-level-rail {
+    padding: 0 8px 6px;
+  }
+  .gp-parking-viewer .gp-level-rail-title,
+  .gp-parking-viewer .gp-level-preview > img,
+  .gp-parking-viewer .gp-level-preview-placeholder,
+  .gp-parking-viewer .gp-level-place-buttons {
+    display: none;
+  }
+  .gp-parking-viewer .gp-level-cards {
+    display: flex;
+    gap: 6px;
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 1px;
+  }
+  .gp-parking-viewer .gp-level-card {
+    flex: 1 0 112px;
+    min-width: 0;
+    box-shadow: none;
+    border-radius: 8px;
+  }
+  .gp-parking-viewer .gp-level-preview {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    min-height: 42px;
+    padding: 6px 9px;
+  }
+  .gp-parking-viewer .gp-level-preview strong {
+    padding: 0;
+    flex: none;
+    font-size: 12px;
+  }
+  .gp-level-compact-numbers {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .gp-parking-viewer .gp-viewer-workspace.has-render-plates .gp-viewer-stage,
+  .gp-parking-viewer
+    .gp-viewer-workspace.has-render-plates
+    .gp-viewer-level-layer,
+  .gp-parking-viewer .gp-rendered-level {
+    min-height: 0;
+  }
+  .gp-parking-viewer .gp-render-viewport {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1.15;
+  }
+  .gp-render-frame {
+    grid-area: 1 / 1;
+    transform: var(--parking-mobile-focus, translate(0%, 0%) scale(1));
+    scale: var(--parking-mobile-scale, 1);
+    transition:
+      opacity 0.2s ease,
+      transform 0.35s ease,
+      scale 0.35s ease;
+  }
+  .gp-render-overview.is-mobile-only,
+  .gp-viewer-expand {
+    display: inline-flex;
+  }
+  .gp-parking-viewer .gp-render-overview {
+    top: 8px;
+    right: 8px;
+    min-height: 36px;
+    padding: 7px 9px;
+    font-size: 11px;
+  }
+  .gp-parking-viewer .gp-viewer-spaces-mobile {
+    display: flex;
+  }
+  .gp-parking-viewer .gp-viewer-spaces {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 7px 8px;
+    gap: 6px;
+  }
+  .gp-parking-viewer .gp-viewer-spaces button {
+    flex: 0 0 auto;
+    min-height: 40px;
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+  .gp-parking-viewer .gp-viewer-spaces button span {
+    display: none;
+  }
+  .gp-parking-viewer .gp-viewer-footer {
+    padding: 8px 10px;
+    gap: 4px;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  .gp-parking-viewer .gp-selection-key {
+    max-width: 100%;
+    flex-wrap: wrap;
+    font-size: 12px;
+  }
+  .gp-parking-viewer .gp-viewer-provenance {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+  .gp-parking-viewer .gp-viewer-disclaimer {
+    display: none;
+  }
+  .gp-parking-viewer.is-expanded {
+    height: 100dvh;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .gp-parking-viewer.is-expanded .gp-viewer-workspace.has-render-plates {
+    flex: 1 1 auto;
+    min-height: 240px;
+  }
+  .gp-parking-viewer.is-expanded .has-render-plates .gp-viewer-level-layer,
+  .gp-parking-viewer.is-expanded .has-render-plates .gp-viewer-stage,
+  .gp-parking-viewer.is-expanded .gp-rendered-level {
+    height: 100%;
+  }
+  .gp-parking-viewer.is-expanded .gp-render-viewport {
+    height: 100%;
+    min-height: 240px;
+    aspect-ratio: auto;
+  }
+}
+@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+  .gp-render-frame {
     transition: none;
   }
 }

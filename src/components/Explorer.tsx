@@ -126,7 +126,7 @@ export default function Explorer({
   const [only3D, setOnly3D] = useState(false);
   const [viewPreference, setViewPreference] =
     useState<ExplorerViewPreference>("auto");
-  const [visibleView, setVisibleView] = useState<ExplorerView>("list");
+  const [visibleView, setVisibleView] = useState<ExplorerView>("map");
   const scrollPositions = useRef({ list: 0, map: 0 });
   const previousView = useRef<ExplorerView | null>(null);
   const [mapRequested, setMapRequested] = useState(false);
@@ -1393,7 +1393,9 @@ export default function Explorer({
                   onFavorite={() => void favorites.toggle(l.id)}
                   compare={compare.includes(l.id)}
                   onCompare={
-                    allFavoriteOffers ? undefined : () => toggleCompare(l.id)
+                    allFavoriteOffers || visibleView !== "list"
+                      ? undefined
+                      : () => toggleCompare(l.id)
                   }
                 />
               ))}
@@ -1462,7 +1464,7 @@ export default function Explorer({
           )}
         </section>
       </div>
-      {compare.length > 0 ? (
+      {compare.length > 0 && visibleView === "list" ? (
         <a
           className="mobile-compare explorer-compare button"
           href={

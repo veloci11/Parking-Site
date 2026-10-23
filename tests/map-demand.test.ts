@@ -28,10 +28,10 @@ function viewport(initialMobile: boolean) {
     },
   };
 }
-test("mobile list never requests a map while its panel remains hidden", () => {
+test("explicit mobile list never requests a map while its panel remains hidden", () => {
   const v = viewport(true);
   let requests = 0;
-  const dispose = observeCityMapDemand(v.source, "auto", () => requests++);
+  const dispose = observeCityMapDemand(v.source, "list", () => requests++);
   v.resize(true);
   v.resize(true);
   assert.equal(requests, 0);
@@ -49,17 +49,18 @@ test("opening Carte requests once; repeated viewport events do not request again
   assert.equal(requests, 1);
   dispose();
 });
-test("desktop requests immediately even when the mobile preference is Liste", () => {
+test("desktop opens the map immediately without an explicit view preference", () => {
   const v = viewport(false);
   let requests = 0;
   const dispose = observeCityMapDemand(v.source, "auto", () => requests++);
   assert.equal(requests, 1);
   dispose();
 });
-test("resizing a hidden mobile list into desktop requests the visible map", () => {
+test("mobile opens the map by default and resizing does not request it twice", () => {
   const v = viewport(true);
   let requests = 0;
   const dispose = observeCityMapDemand(v.source, "auto", () => requests++);
+  assert.equal(requests, 1, "mobile immediately requests the default map");
   v.resize(false);
   assert.equal(requests, 1);
   v.resize(true);
@@ -70,7 +71,7 @@ test("resizing a hidden mobile list into desktop requests the visible map", () =
 test("changing the mobile view cleans up the previous observer before demand", () => {
   const v = viewport(true);
   let requests = 0;
-  const disposeList = observeCityMapDemand(v.source, "auto", () => requests++);
+  const disposeList = observeCityMapDemand(v.source, "list", () => requests++);
   const stale = [...v.listeners][0];
   disposeList();
   const disposeMap = observeCityMapDemand(v.source, "map", () => requests++);
@@ -97,7 +98,7 @@ test("explicit Liste never requests map, including desktop and resizing", () => 
   assert.deepEqual(views, ["list", "list", "list"]);
   dispose();
 });
-test("automatic default adapts but explicit choice remains stable", () => {
+test("automatic default stays Carte across phone and desktop sizes", () => {
   const v = viewport(true);
   const views: string[] = [];
   const dispose = observeCityMapDemand(
@@ -108,6 +109,6 @@ test("automatic default adapts but explicit choice remains stable", () => {
   );
   v.resize(false);
   v.resize(true);
-  assert.deepEqual(views, ["list", "map", "list"]);
+  assert.deepEqual(views, ["map", "map", "map"]);
   dispose();
 });

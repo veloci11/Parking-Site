@@ -121,13 +121,12 @@ export default function Comparison() {
     <main id="main" className="page-shell">
       <div className="comparison-heading">
         <div>
-          <p className="eyebrow">Comparer pour mieux choisir</p>
-          <h1>Chaque détail compte.</h1>
+          <h1>Comparer les annonces</h1>
           <p className="muted">
-            Jusqu’à trois biens, côte à côte. Les inconnus restent visibles.
+            Prix, surfaces et caractéristiques des parkings sélectionnés.
           </p>
         </div>
-        <Link href="/" className="button button-secondary">
+        <Link href="/?display=list" className="button button-secondary">
           Retour
         </Link>
       </div>

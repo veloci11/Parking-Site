@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import {
   loadDemoParkingRender,
   type ParkingRender,
@@ -88,12 +88,13 @@ export default function RenderedParkingLevel({
     : [];
   const focused =
     focusRevision > 0 && focusRevision !== overviewRevision && Boolean(current);
+  const mobileFocused = focusRevision !== overviewRevision && Boolean(current);
 
   return (
     <div className="gp-rendered-level" aria-busy={!imageReady} ref={viewport}>
-      {focused ? (
+      {focused || mobileFocused ? (
         <button
-          className="gp-render-overview"
+          className={`gp-render-overview${!focused ? " is-mobile-only" : ""}`}
           type="button"
           onClick={() => setOverviewRevision(focusRevision)}
         >
@@ -109,10 +110,20 @@ export default function RenderedParkingLevel({
         {visibleFrame ? (
           <div
             className={`gp-render-frame${imageReady ? " is-ready" : ""}`}
-            style={{
-              aspectRatio: `${visibleFrame.width} / ${visibleFrame.height}`,
-              transform: parkingRenderFocus(current?.area, focused),
-            }}
+            style={
+              {
+                aspectRatio: `${visibleFrame.width} / ${visibleFrame.height}`,
+                "--parking-render-focus": parkingRenderFocus(
+                  current?.area,
+                  focused,
+                ),
+                "--parking-mobile-focus": parkingRenderFocus(
+                  current?.area,
+                  mobileFocused,
+                ),
+                "--parking-mobile-scale": mobileFocused ? 1.2 : 1,
+              } as CSSProperties
+            }
           >
             <img
               src={`${visibleFrame.image}?v=${visibleFrame.renderHash.slice(0, 16)}`}

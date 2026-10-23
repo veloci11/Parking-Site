@@ -60,6 +60,22 @@ import {
 } from "../src/lib/search-client";
 import { mapResultBounds, groupMapMarkers } from "../src/lib/map-result-bounds";
 
+test("Carte is the default on phones and desktops while explicit Liste links are respected", () => {
+  for (const mobile of [true, false]) {
+    const implicit = readExplorerView(new URLSearchParams());
+    assert.equal(resolveExplorerView(implicit, mobile), "map");
+    const explicit = readExplorerView(new URLSearchParams("display=list"));
+    assert.equal(resolveExplorerView(explicit, mobile), "list");
+    assert.equal(
+      resolveExplorerView(
+        readExplorerView(new URLSearchParams("listing=lot-13")),
+        mobile,
+      ),
+      "map",
+    );
+  }
+});
+
 test("view URLs preserve filters and selection while keeping display out of catalog query", () => {
   const url = new URLSearchParams(
     "display=list&transactionType=rent&city=Paris&priceMax=200&sort=price_asc&listing=demo-id",

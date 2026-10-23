@@ -16,6 +16,8 @@ import {
   ImageIcon,
   Layers3,
   MapPin,
+  Maximize,
+  Minimize,
   MousePointer2,
 } from "lucide-react";
 import { areaLabel, type Listing, type Space } from "@/lib/types";
@@ -468,6 +470,19 @@ export default function ParkingViewer(props: ParkingViewerProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const [focusRevision, setFocusRevision] = useState(0);
   const [mode, setMode] = useState<Mode>("3d");
+  const [expanded, setExpanded] = useState(false);
+  const viewerRoot = useRef<HTMLElement>(null);
+  const expandButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!expanded) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    viewerRoot.current?.focus({ preventScroll: true });
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      expandButton.current?.focus({ preventScroll: true });
+    };
+  }, [expanded]);
   const [mapRequested, setMapRequested] = useState(false);
   const [individualScene, setIndividualScene] = useState<PublicScene | null>(
     null,
@@ -749,7 +764,39 @@ export default function ParkingViewer(props: ParkingViewerProps) {
     : `Niveau ${floorLabel(level)}`;
   return (
     <section
-      className="gp-parking-viewer"
+      ref={viewerRoot}
+      className={`gp-parking-viewer${expanded ? " is-expanded" : ""}`}
+      role={expanded ? "dialog" : undefined}
+      aria-modal={expanded || undefined}
+      tabIndex={expanded ? -1 : undefined}
+      onKeyDown={(event) => {
+        if (!expanded) return;
+        if (event.key === "Escape") {
+          event.preventDefault();
+          setExpanded(false);
+          return;
+        }
+        if (event.key !== "Tab") return;
+        const root = viewerRoot.current;
+        if (!root) return;
+        const controls = Array.from(
+          root.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), a[href], summary, [tabindex="0"]',
+          ),
+        ).filter((control) => control.getClientRects().length > 0);
+        const first = controls[0],
+          last = controls.at(-1);
+        if (
+          event.shiftKey &&
+          (document.activeElement === first || document.activeElement === root)
+        ) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }}
       aria-label={
         group ? `Plan intérieur de ${group.name}` : "Plan intérieur du parking"
       }
@@ -818,6 +865,7 @@ export default function ParkingViewer(props: ParkingViewerProps) {
               aria-pressed={selectedLot?.key === lot.key}
               onClick={() => chooseLot(lot.key)}
               style={{ borderLeftColor: lot.color }}
+              aria-label={`${lot.label}, ${lot.spaces.map(parkingSpaceLocation).join(", ")}, ${listingPrice(lot.listing, lot.transactionType)}`}
             >
               <strong>
                 <i style={{ background: lot.color }} />
@@ -827,6 +875,12 @@ export default function ParkingViewer(props: ParkingViewerProps) {
                 </span>
               </strong>
               <small>{lot.spaces.map(parkingSpaceLocation).join(" / ")}</small>
+              <span className="gp-mobile-lot-numbers">
+                Place{lot.spaces.length > 1 ? "s" : ""}{" "}
+                {lot.spaces
+                  .map((space) => space.number || "sans numéro")
+                  .join(", ")}
+              </span>
               <small>{listingPrice(lot.listing, lot.transactionType)}</small>
             </button>
           ))}
@@ -859,6 +913,11 @@ export default function ParkingViewer(props: ParkingViewerProps) {
                       onClick={() => chooseLevel(floor.level)}
                     >
                       <strong>Niveau {floorLabel(floor.level)}</strong>
+                      <span className="gp-level-compact-numbers">
+                        {floorUnits
+                          .map((unit) => unit.space.number || "sans numéro")
+                          .join(", ") || "Aucune place"}
+                      </span>
                       <LevelPreview
                         level={floor.level}
                         demo={Boolean(demoAllowed)}
@@ -897,6 +956,21 @@ export default function ParkingViewer(props: ParkingViewerProps) {
         ) : null}
         <div className="gp-viewer-level-layer" ref={levelLayer}>
           <div className="gp-viewer-stage">
+            <button
+              type="button"
+              ref={expandButton}
+              className="gp-viewer-expand"
+              aria-label={
+                expanded
+                  ? "Fermer la vue agrandie du parking"
+                  : "Agrandir la vue du parking"
+              }
+              aria-haspopup={expanded ? undefined : "dialog"}
+              onClick={() => setExpanded((value) => !value)}
+            >
+              {expanded ? <Minimize size={16} /> : <Maximize size={16} />}
+              {expanded ? "Réduire" : "Agrandir"}
+            </button>
             {mapRequested ? (
               <div className="gp-viewer-city" hidden={effectiveMode !== "map"}>
                 <CityMap
@@ -991,9 +1065,9 @@ export default function ParkingViewer(props: ParkingViewerProps) {
           </div>
         </div>
       </div>
-      {effectiveMode === "3d" && !showLevelRail && levelUnits.length ? (
+      {effectiveMode === "3d" && levelUnits.length ? (
         <div
-          className="gp-viewer-spaces"
+          className={`gp-viewer-spaces${showLevelRail ? " gp-viewer-spaces-mobile" : ""}`}
           role="group"
           aria-label="Places proposées à ce niveau"
         >

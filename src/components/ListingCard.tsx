@@ -6,7 +6,7 @@ import { searchOfferSpaces } from "@/lib/search-offers";
 import { isPublicShowcase } from "@/lib/public-showcase";
 import { pricingScope } from "./ListingOffers";
 import Image from "./SafePhoto";
-import { Heart, Layers3, ScanEye } from "lucide-react";
+import { Check, Heart, Layers3, Square } from "lucide-react";
 import {
   areaLabel,
   typeLabels,
@@ -138,12 +138,14 @@ export default function ListingCard({
         </span>
         {onCompare ? (
           <button
-            className={`text-button ${compare ? "is-checked" : ""}`}
+            type="button"
+            className={`listing-compare-button ${compare ? "is-checked" : ""}`}
             onClick={onCompare}
             aria-pressed={compare}
+            aria-label={`${compare ? "Retirer de la comparaison" : "Comparer"} : ${listing.title}`}
           >
-            <ScanEye size={14} />
-            {compare ? "Ajouté" : "Comparer"}
+            {compare ? <Check size={16} /> : <Square size={16} />}
+            {compare ? "Sélectionné" : "Comparer"}
           </button>
         ) : null}
       </div>

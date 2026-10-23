@@ -744,6 +744,31 @@ small {
 .listing-card-footer .is-checked {
   color: var(--brand);
 }
+.listing-compare-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.listing-compare-button:hover,
+.listing-compare-button[aria-pressed="true"] {
+  background: #f3efff;
+  border-color: #d5c7fb;
+  color: var(--brand);
+}
+.listing-compare-button:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
 .results-note {
   padding: 24px 28px 12px;
   display: flex;

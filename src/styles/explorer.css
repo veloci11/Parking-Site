@@ -295,16 +295,9 @@
 
 /* Compact search workspace: the map and prices are the main content. */
 .explorer .search-section {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px 20px;
-  padding: 10px 20px;
   flex: none;
 }
 .explorer .search-heading {
-  flex: 0 1 300px;
-  min-width: 240px;
   margin: 0;
   gap: 0;
 }
@@ -403,6 +396,9 @@
   grid-column: 1 / -1;
 }
 @media (min-width: 768px) {
+  html:has(main.explorer) {
+    scrollbar-gutter: stable;
+  }
   .explorer.explorer-view-map {
     display: flex;
     flex-direction: column;
@@ -500,12 +496,6 @@
   }
 }
 @media (min-width: 768px) and (max-width: 1199px) {
-  .explorer .search-heading {
-    flex-basis: 100%;
-  }
-  .explorer .location-search {
-    max-width: 420px;
-  }
   .explorer.explorer-view-map .results-panel {
     width: 350px;
     min-width: 350px;
@@ -521,14 +511,6 @@
 @media (max-width: 767px) {
   .explorer.explorer-view-map .search-section {
     flex-shrink: 0;
-  }
-  .explorer .search-section {
-    padding: 12px 16px;
-    gap: 10px;
-  }
-  .explorer .search-heading {
-    flex-basis: 100%;
-    min-width: 0;
   }
   .explorer .filters {
     flex-wrap: wrap;
@@ -630,8 +612,6 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 7px;
-    padding: 8px 12px;
     z-index: 20;
     background: #fff;
     border-bottom: 1px solid var(--border);
@@ -945,24 +925,29 @@
   }
 }
 
-/* Validated map layout: the search belongs to the list; filters float on the map. */
-.explorer.explorer-view-map {
+/* Shared search geometry keeps Liste / Carte controls in the same position.
+   Only Carte overlays this toolbar on the map; Liste reserves its normal row. */
+.explorer {
   --explorer-sidebar-width: 380px;
   --explorer-search-height: 68px;
   position: relative;
 }
+.explorer .search-section {
+  position: relative;
+  z-index: 20;
+  flex: none;
+}
 .explorer.explorer-view-map .search-section {
   position: absolute;
   inset: 0 0 auto;
-  z-index: 20;
   background: transparent;
   border: 0;
   pointer-events: none;
 }
-.explorer.explorer-view-map .search-heading,
-.explorer.explorer-view-map .filters > button,
-.explorer.explorer-view-map .filters .gp-select-trigger,
-.explorer.explorer-view-map .explorer-view-switch {
+.explorer .search-heading,
+.explorer .filters > button,
+.explorer .filters .gp-select-trigger,
+.explorer .explorer-view-switch {
   pointer-events: auto;
 }
 .explorer.explorer-view-map .filters .gp-select-trigger,
@@ -976,18 +961,18 @@
   background: var(--accent-soft);
   border-color: var(--accent-border);
 }
-.explorer.explorer-view-map .filters > .clear-filters {
+.explorer .filters > .clear-filters {
   display: none;
 }
 @media (min-width: 768px) {
-  .explorer.explorer-view-map .search-section {
+  .explorer .search-section {
     display: grid;
     grid-template-columns: var(--explorer-sidebar-width) minmax(0, 1fr);
     align-items: start;
     gap: 0;
     padding: 0;
   }
-  .explorer.explorer-view-map .search-heading {
+  .explorer .search-heading {
     width: 100%;
     min-width: 0;
     height: var(--explorer-search-height);
@@ -995,12 +980,12 @@
     background: #fff;
     border-right: 1px solid var(--border);
   }
-  .explorer.explorer-view-map .location-search {
+  .explorer .location-search {
     max-width: none;
     height: 44px;
     min-height: 44px;
   }
-  .explorer.explorer-view-map .filters {
+  .explorer .filters {
     display: flex;
     flex-wrap: nowrap;
     align-items: start;
@@ -1012,11 +997,11 @@
     overflow: visible;
     pointer-events: none;
   }
-  .explorer.explorer-view-map .explorer-offer-filter {
+  .explorer .explorer-offer-filter {
     display: block;
     flex: none;
   }
-  .explorer.explorer-view-map .explorer-desktop-filters {
+  .explorer .explorer-desktop-filters {
     display: flex;
     flex: 0 1 auto;
     align-items: start;
@@ -1029,11 +1014,11 @@
     scrollbar-width: none;
     pointer-events: none;
   }
-  .explorer.explorer-view-map .explorer-desktop-filters::-webkit-scrollbar {
+  .explorer .explorer-desktop-filters::-webkit-scrollbar {
     display: none;
   }
-  .explorer.explorer-view-map .filters .gp-select-trigger,
-  .explorer.explorer-view-map .filters .filter-chip {
+  .explorer .filters .gp-select-trigger,
+  .explorer .filters .filter-chip {
     flex: none;
     min-height: 42px;
     height: 42px;
@@ -1042,7 +1027,7 @@
     font-size: 12px;
     border-radius: 9px;
   }
-  .explorer.explorer-view-map .explorer-view-switch {
+  .explorer .explorer-view-switch {
     flex: none;
     margin-left: auto;
     height: 42px;
@@ -1050,7 +1035,7 @@
     gap: 2px;
     white-space: nowrap;
   }
-  .explorer.explorer-view-map .explorer-view-switch button {
+  .explorer .explorer-view-switch button {
     min-height: 34px;
     padding: 6px 10px;
     font-size: 12px;
@@ -1067,70 +1052,70 @@
   }
 }
 @media (min-width: 768px) and (max-width: 1199px) {
-  .explorer.explorer-view-map {
+  .explorer {
     --explorer-sidebar-width: 350px;
   }
-  .explorer.explorer-view-map .search-heading {
+  .explorer .search-heading {
     padding-right: 16px;
     padding-left: 16px;
   }
-  .explorer.explorer-view-map .filters {
+  .explorer .filters {
     padding-right: 10px;
     padding-left: 10px;
     gap: 6px;
   }
-  .explorer.explorer-view-map .explorer-all-filters > .explorer-desktop-label {
+  .explorer .explorer-all-filters > .explorer-desktop-label {
     display: none;
   }
-  .explorer.explorer-view-map .explorer-all-filters {
+  .explorer .explorer-all-filters {
     width: 42px;
     justify-content: center;
   }
-  .explorer.explorer-view-map .explorer-view-switch button {
+  .explorer .explorer-view-switch button {
     padding-right: 8px;
     padding-left: 8px;
     gap: 5px;
   }
 }
 @media (max-width: 767px) {
-  main.explorer.explorer-view-map {
-    position: fixed;
-    top: 64px;
-    right: 0;
-    left: 0;
-    bottom: 0;
-  }
-  .explorer.explorer-view-map .search-section {
+  .explorer .search-section {
     display: flex;
     flex-direction: column;
     align-items: stretch;
     gap: 7px;
-    padding: 10px 12px 0;
+    padding: 10px 12px;
     min-height: 0;
-    background: transparent;
-    border: 0;
   }
-  .explorer.explorer-view-map .search-heading {
+  .explorer .search-heading {
     flex: none;
+    min-width: 0;
     width: 100%;
     background: transparent;
     padding: 0;
   }
-  .explorer.explorer-view-map .location-search {
+  .explorer .location-search {
+    max-width: none;
+    width: 100%;
+    height: 42px;
+    min-height: 42px;
     background: #fff;
+  }
+  .explorer.explorer-view-map .location-search {
     box-shadow: 0 2px 10px #21163716;
   }
-  .explorer.explorer-view-map .filters {
+  .explorer .filters {
     min-height: 40px;
     margin: 0;
     padding: 0;
     background: transparent;
+  }
+  .explorer.explorer-view-map .filters {
     pointer-events: none;
   }
-  .explorer.explorer-view-map .explorer-view-switch {
+  .explorer .explorer-view-switch {
     background: #fff;
   }
-  .explorer.explorer-view-map .explorer-view-switch button.active {
+  .explorer .explorer-view-switch button.active {
     background: var(--surface-subtle);
     box-shadow: none;
   }
