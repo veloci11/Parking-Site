@@ -4,7 +4,37 @@ import { readExplorerView, resolveExplorerView } from "../src/lib/map-demand";
 import {
   hasExplorerFilters,
   resetExplorerFilters,
+  searchByLocation,
+  searchVisibleMapArea,
 } from "../src/lib/explorer-search";
+
+test("searching a new location replaces the previous map restriction without dropping offer filters", () => {
+  const previous = {
+    ...emptySearch,
+    city: "Paris",
+    transactionType: "rent" as const,
+    maxPrice: "150",
+    bbox: "2,48,3,49",
+    center: "2.5,48.5",
+    radiusKm: "5",
+  };
+  const next = searchByLocation(previous, "  Le Raincy  ");
+  assert.equal(next.city, "Le Raincy");
+  assert.equal(next.bbox, "");
+  assert.equal(next.center, "");
+  assert.equal(next.radiusKm, "");
+  assert.equal(next.transactionType, "rent");
+  assert.equal(next.maxPrice, "150");
+  const moved = searchVisibleMapArea(next, {
+    bbox: [2.2, 48.7, 2.4, 48.9],
+    center: [2.3, 48.8],
+  });
+  assert.equal(moved.city, "");
+  assert.equal(moved.bbox, "2.2,48.7,2.4,48.9");
+  assert.equal(moved.transactionType, "rent");
+  assert.equal(moved.maxPrice, "150");
+  assert.equal(searchParams(moved, true).has("q"), false);
+});
 import {
   emptySearch,
   readSearch,

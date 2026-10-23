@@ -1,4 +1,33 @@
 import { emptySearch, type SearchState } from "./search-client";
+import type { MapSearchArea } from "./map-view";
+
+/** A new location replaces the old geographic restriction, keeping offer filters. */
+export function searchByLocation(
+  state: SearchState,
+  query: string,
+): SearchState {
+  return {
+    ...state,
+    city: query.trim().slice(0, 80),
+    bbox: "",
+    center: "",
+    radiusKm: "",
+  };
+}
+
+/** Moving the map searches its visible area rather than intersecting an old city. */
+export function searchVisibleMapArea(
+  state: SearchState,
+  area: MapSearchArea,
+): SearchState {
+  return {
+    ...state,
+    city: "",
+    bbox: area.bbox.join(","),
+    center: "",
+    radiusKm: "",
+  };
+}
 
 /** Resetting filters keeps the buyer's explicit sale/rent intent. */
 export function resetExplorerFilters(state: SearchState): SearchState {

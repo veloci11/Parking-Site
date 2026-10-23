@@ -325,7 +325,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 12px 20px;
-  padding: 14px 24px;
+  padding: 10px 20px;
   flex: none;
 }
 .explorer .search-heading {
@@ -366,6 +366,21 @@
 }
 .explorer .location-search > input::placeholder {
   font-size: 14px;
+}
+.explorer .location-clear {
+  display: grid;
+  place-items: center;
+  flex: 0 0 30px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+.explorer .location-clear:hover {
+  background: var(--border);
 }
 .explorer .search-submit {
   width: 36px;
@@ -417,7 +432,7 @@
   .explorer.explorer-view-map {
     display: flex;
     flex-direction: column;
-    height: calc(100dvh - 80px);
+    height: calc(100dvh - 68px);
     min-height: 460px;
   }
   .explorer.explorer-view-map .explore-workspace {
@@ -426,12 +441,12 @@
     min-height: 0;
   }
   .explorer.explorer-view-map .results-panel {
-    width: 400px;
+    width: 380px;
     min-width: 340px;
-    max-width: 400px;
+    max-width: 380px;
   }
   .explorer.explorer-view-map .results-heading {
-    padding: 20px 20px 14px;
+    padding: 16px 20px 10px;
   }
   .explorer.explorer-view-map .results-list {
     padding: 0 20px;
@@ -530,6 +545,29 @@
   }
 }
 @media (max-width: 767px) {
+  .explorer.explorer-view-map:has(.mobile-map:not(.is-inspecting)) {
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - 64px);
+    min-height: 620px;
+  }
+  .explorer.explorer-view-map .search-section {
+    flex-shrink: 0;
+  }
+  .explorer .mobile-map:not(.is-inspecting) {
+    display: flex;
+    flex: 1;
+    height: auto;
+    min-height: 340px;
+  }
+  .explorer .mobile-map:not(.is-inspecting) .map-panel {
+    flex: 1;
+    height: auto;
+  }
+  .explorer .mobile-map:not(.is-inspecting) .gp-city-map {
+    position: absolute;
+    inset: 0;
+  }
   .explorer .search-section {
     padding: 12px 16px;
     gap: 10px;

@@ -21,6 +21,8 @@ import {
 import {
   hasExplorerFilters,
   resetExplorerFilters,
+  searchByLocation,
+  searchVisibleMapArea,
 } from "@/lib/explorer-search";
 import {
   encodeExplorerContinuation,
@@ -75,6 +77,8 @@ export default function Explorer({
   const moreFiltersButton = useRef<HTMLButtonElement>(null);
   const [missingFavorites, setMissingFavorites] = useState<string[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
+  const [resultsLocationQuery, setResultsLocationQuery] = useState("");
+  const locationInput = useRef<HTMLInputElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [clusterListingIds, setClusterListingIds] = useState<string[]>([]);
   const resultsPanel = useRef<HTMLElement>(null);
@@ -160,7 +164,6 @@ export default function Explorer({
     closed,
     occupancy,
     level,
-    bbox,
     radiusKm,
     only3D,
   ].filter((v) => v !== "" && v !== false).length;
@@ -181,9 +184,7 @@ export default function Explorer({
   }
   function searchArea(area: MapSearchArea) {
     setClusterListingIds([]);
-    setBbox(area.bbox.join(","));
-    setCenter("");
-    setRadiusKm("");
+    applySearch(searchVisibleMapArea(searchState, area));
     setSelectedId(null);
   }
 
@@ -213,6 +214,7 @@ export default function Explorer({
           if (!ids.length) {
             if (generation === requestGeneration.current) {
               setListings([]);
+              setResultsLocationQuery(searchState.city);
               setMissingFavorites([]);
               setTotal(0);
               setNextCursor(null);
@@ -241,6 +243,7 @@ export default function Explorer({
             const data = await loadAllFavoriteOffers(searchState, ids, request);
             if (generation !== requestGeneration.current) return;
             setListings(data);
+            setResultsLocationQuery(searchState.city);
             setNextCursor(null);
             setTotal(data.length);
             resultWindow.current = {
@@ -271,6 +274,7 @@ export default function Explorer({
         );
         if (!result || generation !== requestGeneration.current) return;
         setListings(result.data);
+        setResultsLocationQuery(searchState.city);
         setNextCursor(result.nextCursor);
         setTotal(result.total);
         resultWindow.current = {
@@ -466,6 +470,13 @@ export default function Explorer({
   }
   const filtered = !loading && !error ? listings : [];
   const hasFilters = hasExplorerFilters(searchState);
+  const hasOptionFilters = hasExplorerFilters({
+    ...searchState,
+    city: "",
+    bbox: "",
+    center: "",
+    radiusKm: "",
+  });
   const selected = filtered.find((l) => l.id === selectedId) || null;
   const sidebarListings =
     visibleView === "map" && clusterListingIds.length
@@ -616,16 +627,35 @@ export default function Explorer({
             className="location-search"
             onSubmit={(e) => {
               e.preventDefault();
-              setCity(query);
+              applySearch(searchByLocation(searchState, query));
+              setClusterListingIds([]);
+              setSelectedId(null);
             }}
           >
             <MapPin size={25} />
             <input
-              aria-label="Ville ou quartier"
-              placeholder="Ville ou quartier"
+              ref={locationInput}
+              aria-label="Rechercher une ville ou un quartier"
+              placeholder="Rechercher un lieu"
+              maxLength={80}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
+            {query ? (
+              <button
+                type="button"
+                className="location-clear"
+                aria-label="Effacer le lieu recherché"
+                onClick={() => {
+                  applySearch(searchByLocation(searchState, ""));
+                  setSelectedId(null);
+                  setClusterListingIds([]);
+                  locationInput.current?.focus();
+                }}
+              >
+                <X size={15} />
+              </button>
+            ) : null}
             <button className="search-submit" aria-label="Rechercher">
               <Search size={25} />
             </button>
@@ -739,7 +769,7 @@ export default function Explorer({
               <span className="filter-count">{advancedCount}</span>
             ) : null}
           </button>
-          {hasFilters ? (
+          {hasOptionFilters ? (
             <button className="text-button clear-filters" onClick={reset}>
               <X size={15} />
               Effacer
@@ -1204,6 +1234,9 @@ export default function Explorer({
               selectedId={selected?.id || null}
               onSelect={choose}
               initialView={mapView}
+              locationQuery={city}
+              resultsLoading={loading}
+              resultsLocationQuery={resultsLocationQuery}
               onCameraChange={cameraChanged}
               onSearchArea={searchArea}
               onClusterSelect={chooseCluster}

@@ -18,7 +18,7 @@ export default function Header() {
         Aller au contenu
       </a>
       <header
-        className="site-header"
+        className={`site-header${["/", "/explorer", "/favoris"].includes(path) ? " site-header-explorer" : ""}`}
         onKeyDown={(event) => {
           if (event.key === "Escape" && open) {
             event.preventDefault();

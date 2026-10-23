@@ -1,6 +1,10 @@
 "use client";
 import { expandMapPrices, mapMarkerPriceLines } from "@/lib/map-marker-label";
 import { withPoiIconFallback } from "@/lib/map-style";
+import {
+  createMapAreaSearch,
+  createMapLocationFocus,
+} from "@/lib/map-auto-search";
 import { isPublicShowcase } from "@/lib/public-showcase";
 import { PARIS_CENTER, IDF_BOUNDS, isIdfCoordinate } from "@/lib/paris-region";
 
@@ -33,6 +37,10 @@ export interface CityMapProps {
   transactionType?: TransactionType;
   visible?: boolean;
   onClusterSelect?: (ids: string[]) => void;
+  /** Submitted text location, and the location associated with the loaded results. */
+  locationQuery?: string;
+  resultsLoading?: boolean;
+  resultsLocationQuery?: string;
 }
 
 /** Coordinates reaching this component must already be the public projection. */
@@ -48,6 +56,9 @@ export default function CityMap({
   transactionType,
   visible = true,
   onClusterSelect,
+  locationQuery,
+  resultsLoading = false,
+  resultsLocationQuery,
 }: CityMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const controls = useRef<HTMLDivElement>(null);
@@ -75,8 +86,19 @@ export default function CityMap({
     onSearchArea,
   };
   const manualMovement = useRef(false);
+  const userHasMoved = useRef(false);
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
+  const areaSearch = useRef<ReturnType<typeof createMapAreaSearch> | null>(
+    null,
+  );
+  const locationFocus = useRef(createMapLocationFocus());
+  locationFocus.current.setQuery(locationQuery);
   const transientLocation = useRef(false);
-  const [searchAreaReady, setSearchAreaReady] = useState(false);
+  const cancelAreaSearch = () => {
+    manualMovement.current = false;
+    areaSearch.current?.cancel();
+  };
   const readArea = (map: MapLibreMap) => {
     const bounds = map.getBounds(),
       center = map.getCenter();
@@ -128,6 +150,8 @@ export default function CityMap({
     );
     const canvas = container.current;
     if (!selected || !canvas) return;
+    cancelAreaSearch();
+    locationFocus.current.suppress();
     const canvasRect = canvas.getBoundingClientRect();
     const controlsRect = controls.current?.getBoundingClientRect();
     const controlsTop =
@@ -168,6 +192,9 @@ export default function CityMap({
       !map ||
       status !== "ready" ||
       selectedId ||
+      locationQuery?.trim() ||
+      resultsLoading ||
+      userHasMoved.current ||
       manualMovement.current ||
       showcaseCentered.current ||
       !listings.length ||
@@ -175,15 +202,53 @@ export default function CityMap({
     )
       return;
     showcaseCentered.current = true;
+    cancelAreaSearch();
     map.jumpTo({ center: listings[0].coordinates, zoom: 16.5 });
-  }, [listings, selectedId, status]);
-  const publicCities = [...new Set(listings.map((listing) => listing.city))];
-  const mapLabel =
-    publicCities.length === 1
-      ? publicCities[0]
-      : publicCities.length > 1
-        ? "Île-de-France"
-        : "Paris · Île-de-France";
+  }, [listings, selectedId, status, locationQuery, resultsLoading]);
+  useEffect(() => {
+    areaSearch.current?.reset();
+  }, [locationQuery]);
+  useEffect(() => {
+    if (!visible) cancelAreaSearch();
+  }, [visible]);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (
+      !map ||
+      !visible ||
+      status !== "ready" ||
+      selectedId ||
+      !locationFocus.current.takeReady(resultsLocationQuery, resultsLoading)
+    )
+      return;
+    const bounds = mapResultBounds(
+      listings.map((listing) => listing.coordinates),
+    );
+    if (!bounds) return;
+    cancelAreaSearch();
+    map.stop();
+    map.resize();
+    map.fitBounds(bounds, {
+      padding: Math.min(
+        70,
+        Math.max(32, (container.current?.clientHeight ?? 320) / 5),
+      ),
+      maxZoom: listings.some((listing) => listing.locationPrecision === "area")
+        ? 15
+        : 16.5,
+      duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? 0
+        : 450,
+    });
+  }, [
+    visible,
+    status,
+    selectedId,
+    locationQuery,
+    resultsLocationQuery,
+    resultsLoading,
+    listings,
+  ]);
   onSelectRef.current = onSelect;
 
   useEffect(() => {
@@ -192,6 +257,15 @@ export default function CityMap({
     let timeout: ReturnType<typeof setTimeout> | undefined;
     previousSelected.current = null;
     showcaseCentered.current = false;
+    const automaticSearch = createMapAreaSearch({
+      readArea: () => (localMap ? readArea(localMap) : null),
+      enabled: () =>
+        !disposed &&
+        visibleRef.current &&
+        !!cameraCallbacks.current.onSearchArea,
+      search: (area) => cameraCallbacks.current.onSearchArea?.(area),
+    });
+    areaSearch.current = automaticSearch;
     setStatus("loading");
     async function mount() {
       try {
@@ -290,8 +364,15 @@ export default function CityMap({
           setMapLoaded((value) => value + 1);
         });
         localMap.on("movestart", (event) => {
-          if ("originalEvent" in event && event.originalEvent) {
-            manualMovement.current = true;
+          const manual = !!(
+            ("originalEvent" in event && event.originalEvent) ||
+            ("gpAreaSearch" in event && event.gpAreaSearch === true)
+          );
+          manualMovement.current = manual;
+          automaticSearch.begin(manual);
+          if (manual) {
+            userHasMoved.current = true;
+            locationFocus.current.suppress();
             transientLocation.current = false;
           }
         });
@@ -300,10 +381,8 @@ export default function CityMap({
           publishCamera(localMap);
           setIs3D(localMap.getPitch() > 0);
           setMarkerView((value) => value + 1);
-          if (manualMovement.current) {
-            setSearchAreaReady(true);
-            manualMovement.current = false;
-          }
+          automaticSearch.end();
+          manualMovement.current = false;
         });
         localMap.on("resize", () => {
           if (!disposed) setMarkerView((value) => value + 1);
@@ -336,6 +415,8 @@ export default function CityMap({
     void mount();
     return () => {
       disposed = true;
+      automaticSearch.dispose();
+      if (areaSearch.current === automaticSearch) areaSearch.current = null;
       if (timeout) clearTimeout(timeout);
       markers.current.forEach((marker) => marker.remove());
       markers.current = [];
@@ -357,7 +438,8 @@ export default function CityMap({
       width = canvas.clientWidth;
       height = canvas.clientHeight;
       if (changed || force) {
-        map.stop();
+        cancelAreaSearch();
+        if (changed || selectionRef.current.selectedId) map.stop();
         map.resize();
         focusSelectionRef.current(map, 0);
       }
@@ -433,6 +515,8 @@ export default function CityMap({
         if (interactive)
           button.addEventListener("click", () => {
             if (group.length > 1 && onClusterSelectRef.current) {
+              cancelAreaSearch();
+              locationFocus.current.suppress();
               onClusterSelectRef.current(group.map((item) => item.id));
               const bounds = mapResultBounds(
                 group.map((item) => item.coordinates),
@@ -533,6 +617,7 @@ export default function CityMap({
       previousSelected.current === selectedId
     )
       return;
+    cancelAreaSearch();
     map.resize();
     focusSelectionRef.current(
       map,
@@ -541,6 +626,7 @@ export default function CityMap({
   }, [selectedId, listings, status]);
 
   const toggleDimension = () => {
+    cancelAreaSearch();
     const next = !is3D;
     setIs3D(next);
     mapRef.current?.easeTo({
@@ -558,35 +644,6 @@ export default function CityMap({
       aria-label="Carte interactive des parkings"
     >
       <div ref={container} className="gp-city-canvas" />
-      <div className="gp-map-toolbar">
-        <span className="gp-map-location">
-          <MapPin size={16} /> {mapLabel} <span>· {is3D ? "3D" : "2D"}</span>
-        </span>
-        {onSearchArea ? (
-          <button
-            type="button"
-            className="gp-map-search-area button button-secondary"
-            disabled={!searchAreaReady || status !== "ready"}
-            aria-label="Rechercher dans cette zone"
-            title={
-              searchAreaReady
-                ? "Rechercher les annonces dans la zone affichée"
-                : "Déplacez la carte pour choisir une nouvelle zone"
-            }
-            onClick={() => {
-              const map = mapRef.current;
-              if (!map) return;
-              const area = readArea(map);
-              if (area) {
-                cameraCallbacks.current.onSearchArea?.(area);
-                setSearchAreaReady(false);
-              }
-            }}
-          >
-            Rechercher ici
-          </button>
-        ) : null}
-      </div>
       <div
         ref={controls}
         className="gp-map-controls"
@@ -595,9 +652,8 @@ export default function CityMap({
         <button
           type="button"
           onClick={() => {
-            manualMovement.current = true;
             transientLocation.current = false;
-            mapRef.current?.zoomIn({ duration: 200 });
+            mapRef.current?.zoomIn({ duration: 200 }, { gpAreaSearch: true });
           }}
           disabled={status !== "ready"}
           aria-label="Agrandir la carte"
@@ -607,9 +663,8 @@ export default function CityMap({
         <button
           type="button"
           onClick={() => {
-            manualMovement.current = true;
             transientLocation.current = false;
-            mapRef.current?.zoomOut({ duration: 200 });
+            mapRef.current?.zoomOut({ duration: 200 }, { gpAreaSearch: true });
           }}
           disabled={status !== "ready"}
           aria-label="Réduire la carte"
@@ -618,7 +673,10 @@ export default function CityMap({
         </button>
         <button
           type="button"
-          onClick={() => mapRef.current?.resetNorth({ duration: 300 })}
+          onClick={() => {
+            cancelAreaSearch();
+            mapRef.current?.resetNorth({ duration: 300 });
+          }}
           disabled={status !== "ready"}
           aria-label="Orienter la carte au nord"
         >
