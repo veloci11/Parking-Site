@@ -85,7 +85,7 @@ export default function ContextReports({ admin = false }: { admin?: boolean }) {
         <h2>
           {admin
             ? "Conversations et messages signalés"
-            : "Mes signalements de conversations"}
+            : "Signalements envoyés"}
         </h2>
         <button
           className="button button-secondary"
@@ -101,8 +101,7 @@ export default function ContextReports({ admin = false }: { admin?: boolean }) {
       <p className="muted">
         {admin
           ? "Seul le contexte explicitement transmis dans un signalement est accessible. L’ouverture d’un dossier est journalisée ; aucun accès général aux messages privés n’est proposé."
-          : "Retrouvez les décisions motivées. Un réexamen peut être demandé une fois après la décision ; il ne supprime pas l’historique du dossier."}{" "}
-        Liste limitée à cent dossiers récents.
+          : "Consultez la réponse de l’équipe aux messages ou conversations que vous avez signalés."}
       </p>
       {error ? (
         <p className="error" role="alert">
@@ -129,8 +128,8 @@ export default function ContextReports({ admin = false }: { admin?: boolean }) {
                 <strong>{reportCategories[item.category]}</strong>
                 <span>
                   {item.targetType === "message" ? "Message" : "Conversation"} ·{" "}
-                  {new Date(item.createdAt).toLocaleDateString("fr-FR")} ·
-                  version {item.version}
+                  {new Date(item.createdAt).toLocaleDateString("fr-FR")}
+                  {admin ? ` · version ${item.version}` : ""}
                 </span>
               </span>
               <span className="badge">{reportStatusLabels[item.status]}</span>
@@ -138,7 +137,7 @@ export default function ContextReports({ admin = false }: { admin?: boolean }) {
           ))}
         </div>
       ) : (
-        <p className="notice">Aucun dossier de conversation à afficher.</p>
+        <p className="muted">Aucun signalement.</p>
       )}
       {reading ? <p role="status">Ouverture du dossier…</p> : null}
       {detail ? (
@@ -261,11 +260,12 @@ export default function ContextReports({ admin = false }: { admin?: boolean }) {
           >
             Fermer le dossier
           </button>
-          <p className="muted">
-            La décision n’envoie aucun email automatiquement et ne suspend pas
-            un compte sans une action administrative distincte. Ce suivi interne
-            ne remplace pas les autres voies de recours applicables.
-          </p>
+          {admin ? (
+            <p className="muted">
+              Cette décision ne suspend pas le compte. La gestion des comptes
+              est accessible aux administrateurs.
+            </p>
+          ) : null}
         </article>
       ) : null}
     </section>

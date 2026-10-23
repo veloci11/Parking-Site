@@ -3,17 +3,10 @@ import { listingPrice, offerLabel } from "@/lib/listing-price";
 import { pricingScope } from "../ListingOffers";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  Bell,
-  CheckCircle2,
-  ClipboardList,
-  Mail,
-  Plus,
-  Sparkles,
-} from "lucide-react";
+import { Bell, CheckCircle2, ClipboardList, Mail, Plus } from "lucide-react";
 import { NotificationFeed } from "./notifications";
 import { AccountGate, AccountShell, api, statusLabels } from "./shared";
-import { money, type Listing, type User, type Conversation } from "@/lib/types";
+import { type Listing, type User, type Conversation } from "@/lib/types";
 function DashboardContent({ user }: { user: User }) {
   const [listings, setListings] = useState<Listing[]>([]),
     [conversations, setConversations] = useState<Conversation[]>([]),
@@ -34,7 +27,7 @@ function DashboardContent({ user }: { user: User }) {
   return (
     <AccountShell
       user={user}
-      title={`Bonjour ${user.name.split(" ")[0]}.`}
+      title="Mon compte"
       action={
         <Link href="/deposer" className="button button-primary">
           <Plus size={18} />
@@ -42,24 +35,6 @@ function DashboardContent({ user }: { user: User }) {
         </Link>
       }
     >
-      <section className="account-welcome">
-        <div>
-          <span className="badge">VOS PROJETS, EN UN COUP D’ŒIL</span>
-          <h2>
-            Votre prochaine étape
-            <br />
-            commence ici.
-          </h2>
-          <p>
-            Suivez vos annonces et échangez directement avec les personnes
-            intéressées.
-          </p>
-          <Link href="/explorer">Explorer les parkings</Link>
-        </div>
-        <div className="account-welcome-symbol">
-          <Sparkles size={48} />
-        </div>
-      </section>
       {error ? (
         <p className="error" role="alert">
           {error}
@@ -129,13 +104,10 @@ function DashboardContent({ user }: { user: User }) {
       ) : (
         <div className="empty-state account-empty">
           <CheckCircle2 size={32} />
-          <h3>Votre espace est prêt.</h3>
-          <p>
-            Déposez votre premier parking ou explorez les annonces pour trouver
-            votre place.
-          </p>
+          <h3>Aucune annonce</h3>
+          <p>Vos annonces apparaîtront ici.</p>
           <Link href="/deposer" className="button button-secondary">
-            Créer ma première annonce
+            Déposer une annonce
           </Link>
         </div>
       )}

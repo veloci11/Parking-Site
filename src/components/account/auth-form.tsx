@@ -1,56 +1,44 @@
 "use client";
-import FilterSelect from "../FilterSelect";
+import "@/styles/auth.css";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { api } from "./shared";
 import { safeAuthReturn, type AuthPolicy } from "@/lib/auth-return";
 type Mode = "login" | "register" | "verify" | "forgot" | "reset";
-const config: Record<
-  Mode,
-  { eyebrow: string; title: string; intro: string; button: string }
-> = {
+const config: Record<Mode, { title: string; intro: string; button: string }> = {
   login: {
-    eyebrow: "HEUREUX DE VOUS RETROUVER",
-    title: "Vos places. Vos projets.",
-    intro:
-      "Retrouvez vos annonces, vos favoris et vos échanges au même endroit.",
+    title: "Connexion",
+    intro: "",
     button: "Se connecter",
   },
   register: {
-    eyebrow: "BIENVENUE CHEZ GP",
-    title: "Une place pour vos projets.",
-    intro:
-      "Créez votre compte pour découvrir, échanger et publier vos annonces gratuitement.",
+    title: "Créer un compte",
+    intro: "",
     button: "Créer mon compte",
   },
   verify: {
-    eyebrow: "PLUS QU’UNE ÉTAPE",
-    title: "Confirmez votre email.",
-    intro:
-      "Le lien reçu permet de confirmer votre adresse email. Cela ne constitue pas une vérification de propriété.",
+    title: "Confirmer mon email",
+    intro: "Ouvrez le lien reçu par email dans ce navigateur.",
     button: "Vérifier mon email",
   },
   forgot: {
-    eyebrow: "ON VOUS AIDE",
-    title: "Retrouvons votre accès.",
-    intro:
-      "Nous vous indiquerons la marche à suivre pour choisir un nouveau mot de passe.",
-    button: "Demander un lien",
+    title: "Mot de passe oublié",
+    intro: "Indiquez l’adresse email de votre compte.",
+    button: "Envoyer le lien",
   },
   reset: {
-    eyebrow: "UN NOUVEAU DÉPART",
-    title: "Votre nouveau mot de passe.",
-    intro: "Choisissez un mot de passe personnel d’au moins 12 caractères.",
+    title: "Nouveau mot de passe",
+    intro: "Utilisez au moins 12 caractères.",
     button: "Enregistrer le mot de passe",
   },
 };
 export default function AuthForm({ mode }: { mode: Mode }) {
   const c = config[mode];
   const [name, setName] = useState(""),
-    [sellerType, setSellerType] = useState(""),
     [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
+    [repeatPassword, setRepeatPassword] = useState(""),
     [token, setToken] = useState(""),
     [show, setShow] = useState(false),
     [busy, setBusy] = useState(false),
@@ -92,14 +80,21 @@ export default function AuthForm({ mode }: { mode: Mode }) {
     setReturnTo(safeAuthReturn(q.get("next")));
     if (q.get("authError"))
       setError(
-        "Ce lien est invalide ou a expiré. Reconnectez-vous ou demandez un nouveau lien de récupération.",
+        mode === "forgot"
+          ? "Ce lien n’est plus valide. Demandez un nouveau lien ci-dessous."
+          : "Ce lien n’est plus valide. Connectez-vous ou demandez un nouveau lien.",
       );
   }, []);
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (busy) return;
     setError("");
     setSuccess("");
     setLocalLink("");
+    if (mode === "reset" && password !== repeatPassword) {
+      setError("Les deux mots de passe ne correspondent pas.");
+      return;
+    }
     setBusy(true);
     try {
       const endpoint =
@@ -135,7 +130,6 @@ export default function AuthForm({ mode }: { mode: Mode }) {
                   name,
                   email,
                   password,
-                  sellerType,
                   termsAccepted,
                   termsVersion: policy?.termsVersion,
                   privacyVersion: policy?.privacyVersion,
@@ -187,7 +181,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
       if (mode === "register")
         setSuccess(
           result.message ||
-            "Votre compte est créé. Confirmez votre adresse email avant votre première soumission.",
+            "Un lien de confirmation vous a été envoyé. Ouvrez-le dans ce navigateur pour activer votre compte.",
         );
       else if (mode === "verify")
         setSuccess(
@@ -200,7 +194,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
       else
         setSuccess(
           result.message ||
-            "Si cette adresse correspond à un compte, un lien de récupération sera préparé.",
+            "Si cette adresse correspond à un compte, vous recevrez un lien pour choisir un nouveau mot de passe.",
         );
     } catch (e) {
       setError((e as Error).message);
@@ -209,27 +203,10 @@ export default function AuthForm({ mode }: { mode: Mode }) {
     }
   }
   return (
-    <main id="main" className="page-shell account-auth">
-      <section className="account-auth-story">
-        <span className="account-eyebrow">LE BON ENDROIT COMMENCE ICI</span>
-        <h2>
-          Un peu plus près
-          <br />
-          de votre prochaine place.
-        </h2>
-        <p>
-          Une vision claire du quartier, du parking et de la place. Et des
-          échanges simples, de la découverte à la visite.
-        </p>
-        <div className="account-story-note">
-          <ShieldCheck size={24} />
-          <span>Vos échanges restent dans votre espace privé.</span>
-        </div>
-      </section>
+    <main id="main" className="page-shell account-auth account-auth-compact">
       <section className="account-auth-card">
-        <p className="account-eyebrow">{c.eyebrow}</p>
         <h1>{c.title}</h1>
-        <p className="muted">{c.intro}</p>
+        {c.intro ? <p className="muted">{c.intro}</p> : null}
         {error ? (
           <p className="error" role="alert">
             {error}
@@ -249,9 +226,9 @@ export default function AuthForm({ mode }: { mode: Mode }) {
               <Link
                 href={`/verifier-email?next=${encodeURIComponent(returnTo)}`}
               >
-                Confirmer mon email
+                Je n’ai pas reçu le lien
               </Link>
-            ) : mode === "verify" ? (
+            ) : mode === "verify" && demo ? (
               <Link href={returnTo}>Continuer dans mon espace</Link>
             ) : mode === "reset" ? (
               <Link href={`/connexion?next=${encodeURIComponent(returnTo)}`}>
@@ -329,13 +306,48 @@ export default function AuthForm({ mode }: { mode: Mode }) {
           </div>
         ) : null}
         {mode === "verify" && !demo ? (
-          <div className="notice">
-            <p>
-              Ouvrez le lien de confirmation envoyé à votre adresse email. Il
-              validera votre compte et vous ramènera dans votre espace.
-            </p>
-            <Link href="/compte">Revenir à mon compte</Link>
-          </div>
+          <form
+            className="account-form"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (busy) return;
+              setBusy(true);
+              setError("");
+              setSuccess("");
+              try {
+                const result = await api<{ message: string }>(
+                  "/api/auth/commands/resend",
+                  {
+                    method: "POST",
+                    body: JSON.stringify({ email, next: returnTo }),
+                  },
+                );
+                setSuccess(result.message);
+              } catch (e) {
+                setError((e as Error).message);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <label className="field">
+              Adresse email
+              <input
+                className="input"
+                type="email"
+                autoComplete="email"
+                value={email}
+                required
+                disabled={busy}
+                maxLength={254}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </label>
+            <button className="button button-primary" disabled={busy}>
+              {busy ? "Envoi…" : "Renvoyer le lien de confirmation"}
+            </button>
+            <p className="muted">Vérifiez aussi vos courriers indésirables.</p>
+          </form>
         ) : (
           <form onSubmit={submit} className="account-form">
             {mode === "register" ? (
@@ -349,7 +361,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
                   maxLength={80}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Comment souhaitez-vous apparaître ?"
+                  placeholder="Nom affiché sur vos annonces"
                 />
               </label>
             ) : null}
@@ -402,6 +414,21 @@ export default function AuthForm({ mode }: { mode: Mode }) {
                 </span>
               </label>
             ) : null}
+            {mode === "reset" ? (
+              <label className="field">
+                Confirmer le nouveau mot de passe
+                <input
+                  className="input"
+                  type={show ? "text" : "password"}
+                  autoComplete="new-password"
+                  required
+                  minLength={12}
+                  maxLength={128}
+                  value={repeatPassword}
+                  onChange={(e) => setRepeatPassword(e.target.value)}
+                />
+              </label>
+            ) : null}
             {demo && (mode === "verify" || mode === "reset") ? (
               <label className="field">
                 Code du lien de confirmation
@@ -414,31 +441,6 @@ export default function AuthForm({ mode }: { mode: Mode }) {
                   placeholder="Copiez le code du lien reçu"
                 />
               </label>
-            ) : null}
-            {mode === "register" ? (
-              <div className="field">
-                <span>{"Vous publiez en tant que"}</span>
-                <FilterSelect
-                  label={"Vous publiez en tant que"}
-                  variant="field"
-                  value={sellerType}
-                  required={true}
-                  onChange={(selectedValue) => setSellerType(selectedValue)}
-                  options={[
-                    {
-                      value: "",
-                      label: "Choisir mon statut déclaré",
-                      disabled: true,
-                    },
-                    { value: "private", label: "Particulier" },
-                    { value: "professional", label: "Professionnel" },
-                  ]}
-                />
-                <span className="muted">
-                  Cette déclaration ne vaut pas vérification et n’accorde aucun
-                  droit administratif.
-                </span>
-              </div>
             ) : null}
             {mode === "register" ? (
               <label className="account-checkbox">
@@ -458,38 +460,28 @@ export default function AuthForm({ mode }: { mode: Mode }) {
                     politique de confidentialité
                   </Link>
                   .
-                  {policy ? (
-                    <span className="muted">
-                      {" "}
-                      Versions affichées : conditions {policy.termsVersion} ;
-                      confidentialité {policy.privacyVersion}. Documents de
-                      préparation, à compléter par l’opérateur avant ouverture.
-                    </span>
-                  ) : null}
                 </span>
               </label>
             ) : null}
-            {mode === "register" ? (
+            {mode === "register" && !policy ? (
               <button
                 className="account-link-button"
                 type="button"
                 disabled={busy}
                 onClick={() => void loadPolicy()}
               >
-                Actualiser les versions des documents
+                Réessayer
               </button>
             ) : null}
             {mode === "reset" && resetReady === false && !demo ? (
               <p className="notice">
-                Ce parcours nécessite un nouveau lien de récupération ouvert
-                dans cet onglet.{" "}
+                Ce lien n’est plus disponible.{" "}
                 <Link
                   href={`/mot-de-passe-oublie?next=${encodeURIComponent(returnTo)}`}
                 >
                   Demander un lien
                 </Link>
-                . Pour changer un mot de passe connu, utilisez vos paramètres et
-                confirmez le mot de passe actuel.
+                .
               </p>
             ) : null}
             <button
@@ -506,7 +498,10 @@ export default function AuthForm({ mode }: { mode: Mode }) {
         )}
         {mode === "login" ? (
           <>
-            <Link className="account-forgot" href="/mot-de-passe-oublie">
+            <Link
+              className="account-forgot"
+              href={`/mot-de-passe-oublie?next=${encodeURIComponent(returnTo)}`}
+            >
               Mot de passe oublié ?
             </Link>
             <p className="account-auth-switch">
@@ -525,7 +520,9 @@ export default function AuthForm({ mode }: { mode: Mode }) {
           </p>
         ) : (
           <p className="account-auth-switch">
-            <Link href="/connexion">Revenir à la connexion</Link>
+            <Link href={`/connexion?next=${encodeURIComponent(returnTo)}`}>
+              Se connecter
+            </Link>
           </p>
         )}
       </section>

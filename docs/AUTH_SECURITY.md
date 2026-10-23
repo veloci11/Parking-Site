@@ -1,4 +1,4 @@
-# Authentification et déclarations versionnées — V1 locale
+# Authentification et déclarations versionnées
 
 Le module `src/server/auth-commands.ts` utilise Supabase Auth avec les cookies SSR. Le mode démo reste séparé, limité à la boucle locale, et ne prouve pas la livraison d’un email réel.
 
@@ -13,7 +13,7 @@ Le module `src/server/auth-commands.ts` utilise Supabase Auth avec les cookies S
 
 L’inscription reçoit les versions présentées et une confirmation explicite. Le serveur compare ces versions à sa politique courante avant l’appel Auth. Un trigger enregistre la déclaration initiale immuable ; modifier ultérieurement les métadonnées Auth ne réécrit pas cette trace. Les anciens comptes restent sans acceptation jusqu’à une démarche explicite dans leurs paramètres. Les données sont visibles uniquement par leur propriétaire via RLS.
 
-Les retours après connexion passent par une liste de pages internes autorisées. Les paramètres de recherche et l’intention de contact admis sont reconstruits ; URLs externes, chemins API, séparateurs encodés et contrôles sont refusés. La préparation locale d’annonce et le texte de contact restent dans le stockage de session du navigateur, sans créer de session Auth ou envoyer de message automatiquement.
+Les retours après connexion passent par une liste de pages internes autorisées. Les paramètres de recherche et l’intention de contact admis sont reconstruits ; URLs externes, chemins API, séparateurs encodés et contrôles sont refusés. Le retour conserve l’intention de contact sans créer de session Auth ou envoyer de message automatiquement.
 
 La récupération exige un état signé de type récupération, lié au compte par un digest HMAC sans adresse email en clair, et un échange PKCE réussi dont le marqueur du vérificateur est explicitement `recovery`. Un code de confirmation ordinaire et l’état de récupération d’un autre compte sont refusés. Le serveur vérifie l’utilisateur via Auth et les claims JWT avec le SDK avant d’émettre une autorisation HttpOnly de 15 minutes, liée à l’utilisateur et à l’identifiant de session. Une session ordinaire, un paramètre `next=/reinitialiser` ou un état d’inscription ne permettent pas une réinitialisation. Le nonce est consommé une seule fois en base avant la modification du mot de passe. Un échec du fournisseur après consommation nécessite un nouveau lien ; aucun succès n’est affiché sans réponse positive d’Auth.
 
@@ -23,8 +23,15 @@ Les anciennes branches Supabase d’inscription, récupération, réinitialisati
 
 La migration025 définit `gp_private.configuration.mfa_required=true` : modération et administration connectées exigent une session AAL2 en plus du rôle, de l’activation du compte et de la vérification email. Les RPC et policies RLS consomment ce réglage privé ; les membres ne peuvent pas le désactiver. Le registre et les dérogations de quotas conservent leur garde AAL2 explicite. `GP_REQUIRE_ADMIN_MFA=true` dans l’exemple ajoute un contrôle applicatif. La démonstration SQLite en boucle locale conserve son exception déclarée sans faux TOTP. L’enrôlement et la récupération des opérateurs humains restent à réaliser ; l’application de la migration ne les effectue pas.
 
+## Emails et parcours simplifiés
+
+L’inscription demande le nom public, l’email, le mot de passe et le consentement. Le statut vendeur reste nullable et modifiable dans les paramètres ; il ne donne aucun rôle administratif. Le renvoi de confirmation utilise `POST /api/auth/commands/resend`, avec un nouveau vérificateur PKCE et un état signé lié à l’adresse. Les erreurs du fournisseur SMTP et les limites d’envoi restent des échecs visibles, sans annoncer un email envoyé. Un échec d’échange de récupération conserve le retour souhaité et conduit au formulaire de demande d’un nouveau lien. Un compte ne correspondant pas à l’état signé entraîne la fermeture de la session échangée.
+
+Les modèles prêts à installer et les limites de livraison sont dans [`supabase/templates/auth/README.md`](../supabase/templates/auth/README.md). Ils ne deviennent actifs qu’après configuration et enregistrement dans Supabase.
+
 ## Preuves et limites
 
+- `tests/auth-connected.test.ts` : SDK Supabase SSR réel, transport réseau isolé, challenges et cookies PKCE, inscription et renvoi, récupération liée au compte, consommation unique, refus SMTP, limites, expiration et absence de vérificateur. Aucun email réel.
 - `tests/auth-commands.test.ts` : retours autorisés/refusés, signatures altérées/expirées, consentement obligatoire et versions, enregistrement démo, ancien mot de passe requis, fermeture de session, retour sûr après callback invalide.
 - `supabase/tests/auth-commands-consent.sql` : trigger de déclaration, absence d’acceptation automatique, RLS, refus des versions obsolètes et confirmations nulles, consommation liée à la session, replay et privilèges directs. Exécution réelle sous transaction annulée ; aucun appel réseau Auth ni email.
 - `supabase/tests/moderation-mfa-default.sql` : politique installée par025, refus AAL1, permissions distinctes modérateur/admin en AAL2, refus d’un membre et de comptes non vérifiés/suspendus, lecture privée protégée et impossibilité de désactiver le réglage ; transaction annulée, aucun secret TOTP.

@@ -106,7 +106,7 @@ function Content({ user }: { user: User }) {
   return (
     <AccountShell
       user={user}
-      title="La qualité commence ici."
+      title="Modération des annonces"
       eyebrow="MODÉRATION"
       action={
         <button

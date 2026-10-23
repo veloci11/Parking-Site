@@ -613,7 +613,7 @@ export default function ListingDetail({
               </strong>
             </div>
           </div>
-          <h2>La place, dans les détails.</h2>
+          <h2>Description</h2>
           <CommercialSummary listing={listing} />
           {listing.photos.map((url, index) =>
             listing.commercialDetails?.photoMetadata[
@@ -626,7 +626,7 @@ export default function ListingDetail({
             ) : null,
           )}
           <p style={{ whiteSpace: "pre-line" }}>{listing.description}</p>
-          <h2 style={{ marginTop: 32 }}>Un état clair, pour décider.</h2>
+          <h2 style={{ marginTop: 32 }}>État du parking</h2>
           <p className="muted small">
             Informations déclarées par le vendeur
             {listing.observedAt
@@ -653,9 +653,7 @@ export default function ListingDetail({
           <ConditionEvidenceSummary values={listing.conditionObservations} />
           <h2 style={{ marginTop: 32 }}>Photos de chaque place</h2>
           <p className="muted small">
-            Les vues générales et les photos liées à une place ont des
-            périmètres distincts. Une photo ne constitue pas une vérification de
-            toutes ses caractéristiques.
+            Les photos de chaque place complètent les vues générales du parking.
           </p>
           {listing.spaces.map((space) => {
             const photos = listing.spacePhotos?.[space.id] || [];
@@ -802,7 +800,7 @@ export default function ListingDetail({
           >
             {showcase ? (
               <>
-                <h2>Une démonstration pour explorer le site.</h2>
+                <h2>Annonce de démonstration</h2>
                 <p className="notice">
                   Ces annonces, prix et plans sont fictifs. Vous pouvez explorer
                   les places et les niveaux ; les messages et demandes de visite
@@ -814,7 +812,7 @@ export default function ListingDetail({
               </>
             ) : (
               <>
-                <h2>Rencontrez votre prochaine place.</h2>
+                <h2>Contacter l’annonceur</h2>
                 <p className="muted">
                   Posez vos questions à {focusedListing.sellerName} et convenez
                   d’une visite. Une demande n’est confirmée qu’après accord sur

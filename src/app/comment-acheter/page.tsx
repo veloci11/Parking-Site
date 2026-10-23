@@ -1,33 +1,28 @@
 import Link from "next/link";
 import { MapPinned, MessageCircle, KeyRound } from "lucide-react";
 import Footer from "@/components/Footer";
-export const metadata = { title: "Comment acheter un parking" };
+export const metadata = { title: "Acheter ou louer un parking" };
 export default function HowToBuy() {
   return (
     <>
       <main id="main" className="page-shell">
-        <p className="eyebrow">De la découverte à la visite</p>
-        <h1>Votre place. En toute clarté.</h1>
-        <p className="content-lead">
-          Explorez un quartier, regardez chaque détail du parking et échangez
-          directement avec le vendeur.
-        </p>
+        <h1>Acheter ou louer un parking</h1>
         <div className="steps-grid">
           {[
             {
               icon: MapPinned,
-              title: "Trouvez le bon emplacement",
-              text: "Comparez les prix totaux, les dimensions et le type de parking. La carte situe les biens ; les plans intérieurs disponibles précisent la place et ses contraintes.",
+              title: "Rechercher",
+              text: "Choisissez une ville, un budget et le type de parking. Consultez les résultats sur la carte ou dans la liste.",
             },
             {
               icon: MessageCircle,
-              title: "Posez toutes vos questions",
-              text: "Consultez les photos et l’état déclaré. Demandez les informations manquantes : charges, accès, hauteur libre, occupation et documents du bien.",
+              title: "Consulter l’annonce",
+              text: "Vérifiez le prix, les dimensions, les accès et les charges. Les photos et les plans disponibles complètent la description. Contactez l’annonceur pour les précisions manquantes.",
             },
             {
               icon: KeyRound,
-              title: "Visitez avant de décider",
-              text: "Demandez une visite dans la messagerie. Vérifiez sur place la manœuvre, les accès, les dimensions et l’état réel. Formalisez ensuite la vente avec les professionnels compétents.",
+              title: "Organiser une visite",
+              text: "Proposez un rendez-vous depuis l’annonce. Retrouvez les échanges et la confirmation de la visite dans vos messages.",
             },
           ].map((step, i) => (
             <article className="card" key={step.title}>
@@ -38,21 +33,9 @@ export default function HowToBuy() {
             </article>
           ))}
         </div>
-        <section className="card prose">
-          <h2>La 3D aide à comprendre le lieu.</h2>
-          <p>
-            Un schéma représentatif pour mieux comprendre le parking et ses
-            places.
-          </p>
-          <p>
-            GP park. facilite la mise en relation. Le prix du bien est affiché,
-            mais son paiement et la signature de la vente sont réalisés hors de
-            la plateforme.
-          </p>
-          <Link className="button button-primary" href="/">
-            Trouver ma prochaine place
-          </Link>
-        </section>
+        <Link className="button button-primary" href="/">
+          Rechercher un parking
+        </Link>
       </main>
       <Footer />
     </>

@@ -128,11 +128,8 @@ export function AccountGate({
     return (
       <div id="main" role="main" className="page-shell account-gate">
         <UserRound size={32} />
-        <h1>Un espace qui vous ressemble.</h1>
-        <p className="muted">
-          Connectez-vous pour retrouver vos annonces, vos messages et vos
-          projets.
-        </p>
+        <h1>Connexion requise</h1>
+        <p className="muted">Connectez-vous pour accéder à cette page.</p>
         <Link
           className="button button-primary"
           href={`/connexion?next=${encodeURIComponent(path)}`}
@@ -191,7 +188,7 @@ export function AccountGate({
           L’accès à la modération nécessite une authentification renforcée.
         </p>
         <Link className="button button-primary" href="/compte/securite">
-          Sécuriser ma session
+          Vérification de sécurité
         </Link>
       </div>
     );
@@ -228,7 +225,7 @@ export function AccountNav({ user }: { user: User }) {
         </div>
         <div>
           <strong>{user.name}</strong>
-          <span className="muted">Votre espace personnel</span>
+          <span className="muted">Mon compte</span>
         </div>
       </div>
       <nav aria-label="Mon espace">
@@ -241,14 +238,28 @@ export function AccountNav({ user }: { user: User }) {
         </Link>
         <Link
           href="/compte/annonces"
-          aria-current={path === "/compte/annonces" ? "page" : undefined}
+          aria-current={
+            path.startsWith("/compte/annonces") ||
+            [
+              "/compte/scenes",
+              "/compte/parkings",
+              "/compte/abonnement",
+            ].includes(path)
+              ? "page"
+              : undefined
+          }
         >
           <ListChecks size={18} />
           Mes annonces
         </Link>
         <Link
           href="/compte/messages"
-          aria-current={path === "/compte/messages" ? "page" : undefined}
+          aria-current={
+            path.startsWith("/compte/messages") ||
+            path === "/compte/signalements"
+              ? "page"
+              : undefined
+          }
         >
           <Mail size={18} />
           Messages
@@ -268,54 +279,24 @@ export function AccountNav({ user }: { user: User }) {
             </span>
           ) : null}
         </Link>
-        <Link
-          href="/compte/signalements"
-          aria-current={path === "/compte/signalements" ? "page" : undefined}
-        >
-          <Flag size={18} />
-          Mes signalements
-        </Link>
-        <Link
-          href="/compte/scenes"
-          aria-current={path === "/compte/scenes" ? "page" : undefined}
-        >
-          <Box size={18} />
-          Mes plans et vues 3D
-        </Link>
-        <Link
-          href="/compte/parkings"
-          aria-current={path === "/compte/parkings" ? "page" : undefined}
-        >
-          <Box size={18} />
-          Mes parkings rattachés
-        </Link>
         <Link href="/favoris">
           <House size={18} />
           Mes favoris
         </Link>
         <Link
-          href="/compte/securite"
-          aria-current={path === "/compte/securite" ? "page" : undefined}
-        >
-          <ShieldCheck size={18} />
-          Sécurité du compte
-        </Link>
-        <Link
-          href="/compte/abonnement"
-          aria-current={path === "/compte/abonnement" ? "page" : undefined}
-        >
-          <ListChecks size={18} />
-          Mon forfait et mes limites
-        </Link>
-        <Link
           href="/compte/parametres"
-          aria-current={path === "/compte/parametres" ? "page" : undefined}
+          aria-current={
+            ["/compte/parametres", "/compte/securite"].includes(path)
+              ? "page"
+              : undefined
+          }
         >
           <Settings size={18} />
           Paramètres
         </Link>
         {user.role !== "member" ? (
           <>
+            <p className="account-nav-label">Administration</p>
             <Link
               href="/admin"
               aria-current={path === "/admin" ? "page" : undefined}
@@ -335,7 +316,7 @@ export function AccountNav({ user }: { user: User }) {
               aria-current={path === "/admin/scenes" ? "page" : undefined}
             >
               <Box size={18} />
-              Scènes à relire
+              Plans 3D à vérifier
             </Link>
           </>
         ) : null}
@@ -360,7 +341,7 @@ export function AccountNav({ user }: { user: User }) {
               aria-current={path === "/admin/limites" ? "page" : undefined}
             >
               <ListChecks size={18} />
-              Limites de la V1
+              Limites des comptes
             </Link>
             <Link
               href="/admin/journal"
@@ -372,10 +353,6 @@ export function AccountNav({ user }: { user: User }) {
           </>
         ) : null}
       </nav>
-      <div className="account-free">
-        <span className="badge">Gratuit pour commencer</span>
-        <p>Publiez vos annonces sans abonnement pendant la V1.</p>
-      </div>
     </aside>
   );
 }
@@ -398,7 +375,7 @@ export function AccountShell({
       <main id="main" className="account-main">
         <div className="account-title">
           <div>
-            <p className="account-eyebrow">{eyebrow || "MON ESPACE GP"}</p>
+            {eyebrow ? <p className="account-eyebrow">{eyebrow}</p> : null}
             <h1>{title}</h1>
           </div>
           {action}

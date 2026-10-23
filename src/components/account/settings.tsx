@@ -82,9 +82,6 @@ function Content({ user }: { user: User }) {
   }
   return (
     <AccountShell user={user} title="Mes paramètres">
-      <p className="muted account-lead">
-        Votre profil et vos données, sous votre contrôle.
-      </p>
       {error ? (
         <p className="error" role="alert">
           {error}
@@ -98,8 +95,7 @@ function Content({ user }: { user: User }) {
       <section className="card account-settings-card">
         <h2>Profil public</h2>
         <p className="muted">
-          Votre nom et votre statut déclaré de particulier ou professionnel sont
-          destinés à votre présentation publique.
+          Ce nom et ce statut apparaissent sur vos annonces.
         </p>
         <form className="account-form" onSubmit={save}>
           <label className="field">
@@ -129,18 +125,16 @@ function Content({ user }: { user: User }) {
             />
           </div>
           <p className="muted">
-            Statut déclaré par vos soins ; il ne constitue pas une vérification
-            d’identité ou de propriété et n’accorde aucun accès administratif.
-            Les annonces déjà publiées conservent leur version relue jusqu’à une
-            nouvelle modération.
+            Les annonces déjà en ligne seront mises à jour après vérification de
+            leur prochaine modification.
           </p>
           <label className="field">
             Email de connexion
             <input className="input" value={user.email} disabled type="email" />
           </label>
           <p className="muted">
-            Votre email reste privé. Son changement nécessite une nouvelle
-            vérification et n’est pas proposé dans cette version.
+            Cet email sert à vous connecter et n’est pas affiché sur vos
+            annonces.
           </p>
           <button className="button button-primary" disabled={busy}>
             <Save size={18} />
@@ -156,9 +150,7 @@ function Content({ user }: { user: User }) {
         </Link>
         <p>
           <ShieldCheck size={18} />
-          Email {user.emailVerified ? "confirmé" : "à confirmer"}. Cette
-          confirmation ne constitue pas une vérification de propriété
-          immobilière.
+          Email {user.emailVerified ? "confirmé" : "à confirmer"}.
         </p>
         {!user.emailVerified ? (
           <Link href="/verifier-email" className="button button-secondary">
@@ -215,7 +207,7 @@ function Content({ user }: { user: User }) {
           onClick={exportData}
         >
           <Download size={18} />
-          Télécharger le JSON des métadonnées
+          Télécharger mes données
         </button>
         <div className="account-delete-zone">
           <h3>Fermer mon compte</h3>

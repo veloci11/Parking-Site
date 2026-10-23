@@ -6,7 +6,7 @@ export default function Subscription() {
   return (
     <AccountGate>
       {(user) => (
-        <AccountShell user={user} title="Mon abonnement">
+        <AccountShell user={user} title="Capacité de publication">
           <EntitlementUsage />
           <SubscriptionInfo />
         </AccountShell>

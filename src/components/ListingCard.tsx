@@ -48,6 +48,18 @@ export default function ListingCard({
   const offerCount =
     matched?.spaceIds.length ??
     availableOffers(listing, transactionType).length;
+  const offerTypes = new Set(
+    availableOffers(listing, transactionType).map(
+      ({ offer }) => offer.transactionType,
+    ),
+  );
+  const offerLabel =
+    offerTypes.size > 1
+      ? "Vente et location"
+      : (transactionType ?? [...offerTypes][0] ?? listing.transactionType) ===
+          "rent"
+        ? "Location"
+        : "Vente";
   return (
     <article
       className={`listing-card ${selected ? "is-selected" : ""}${listing.pricingMode === "per_space" ? " has-unit-offers" : ""}`}
@@ -93,9 +105,7 @@ export default function ListingCard({
         {listing.sceneAvailable ? (
           <span className="photo-tag">
             <Layers3 size={14} />
-            {isPublicShowcase(listing.id)
-              ? "Démonstration · Plan 3D"
-              : "Plan 3D"}
+            Plan 3D
           </span>
         ) : null}
       </div>
@@ -105,6 +115,10 @@ export default function ListingCard({
         onNavigate={onNavigate}
         className="listing-summary"
       >
+        <span className="listing-offer-label">
+          {offerLabel}
+          {listing.isDemo ? " · Démonstration" : ""}
+        </span>
         <span className="listing-title">
           {listing.city} · {listing.district}
         </span>

@@ -15,11 +15,11 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_SITE_URL || "http://127.0.0.1:3000",
   ),
   title: {
-    default: "GP park. — Votre prochaine place est ici.",
+    default: "GP park. — Parkings à vendre et à louer",
     template: "%s · GP park.",
   },
   description:
-    "Explorez des parkings et box à vendre ou à louer. Carte de la ville, plans 3D, photos et état détaillé pour choisir votre prochaine place.",
+    "Parkings et box à vendre ou à louer à Paris et en Île-de-France. Consultez les annonces, les photos et les plans disponibles.",
   robots:
     process.env.GP_PUBLIC_LAUNCH === "true"
       ? { index: true, follow: true }

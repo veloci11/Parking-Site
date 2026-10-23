@@ -28,7 +28,7 @@ function Content({ user }: { user: User }) {
       (action === "sold" || action === "withdraw") &&
       !window.confirm(
         action === "sold"
-          ? "Confirmer que ce bien est vendu ? Il ne sera plus proposé aux acheteurs."
+          ? `Confirmer que ce bien est ${item.transactionType === "rent" ? "loué" : "vendu"} ? L’annonce ne sera plus visible dans les résultats.`
           : "Retirer cette annonce de la recherche ?",
       )
     )
@@ -76,9 +76,11 @@ function Content({ user }: { user: User }) {
         </Link>
       }
     >
-      <p className="muted account-lead">
-        De la première photo à la visite, gardez la main sur chaque étape.
-      </p>
+      <nav className="account-listing-tools" aria-label="Outils des annonces">
+        <Link href="/compte/scenes">Plans et vues 3D</Link>
+        <Link href="/compte/parkings">Parkings associés</Link>
+        <Link href="/compte/abonnement">Capacité de publication</Link>
+      </nav>
       <div
         className="account-tabs"
         role="group"
@@ -89,10 +91,13 @@ function Content({ user }: { user: User }) {
           ["draft", "Brouillons"],
           ["pending", "En relecture"],
           ["published", "En ligne"],
+          ["paused", "En pause"],
           ["changes_requested", "À compléter"],
+          ["rejected", "Refusées"],
           ["sold", "Vendues ou louées"],
           ["suspended", "Suspendues"],
           ["expired", "Expirées"],
+          ["withdrawn", "Retirées"],
         ].map(([v, l]) => (
           <button
             className={filter === v ? "active" : ""}
@@ -182,7 +187,7 @@ function Content({ user }: { user: User }) {
                     className="button button-secondary"
                   >
                     {l.status === "published"
-                      ? "Préparer une modification"
+                      ? "Modifier"
                       : "Reprendre l’annonce"}
                   </Link>
                   {l.status === "published" ? (
@@ -262,14 +267,23 @@ function Content({ user }: { user: User }) {
       ) : (
         <div className="empty-state account-empty">
           <ClipboardList size={32} />
-          <h2>Aucune annonce ici pour le moment.</h2>
-          <p>
-            Vos annonces et leurs prochaines étapes apparaîtront dans cet
-            espace.
-          </p>
-          <Link href="/deposer" className="button button-primary">
-            Déposer une annonce
-          </Link>
+          <h2>
+            {filter === "all"
+              ? "Aucune annonce"
+              : "Aucune annonce dans cette catégorie"}
+          </h2>
+          {filter === "all" ? (
+            <Link href="/deposer" className="button button-primary">
+              Déposer une annonce
+            </Link>
+          ) : (
+            <button
+              className="button button-secondary"
+              onClick={() => setFilter("all")}
+            >
+              Toutes mes annonces
+            </button>
+          )}
         </div>
       )}
     </AccountShell>

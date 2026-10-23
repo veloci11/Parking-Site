@@ -48,12 +48,7 @@ import {
   type WizardIssue,
 } from "@/lib/listing-wizard-validation";
 import { useSession } from "@/lib/client";
-import PreparationForm from "./preparation";
-import {
-  decodePreparation,
-  preparationKey,
-  preparationPayload,
-} from "./preparatory-draft";
+import DepositSignIn from "./preparation";
 import {
   areaLabel,
   money,
@@ -162,7 +157,10 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
     [step, setStep] = useState(0),
     [loading, setLoading] = useState(!!id),
     [creating, setCreating] = useState(false),
-    [hasPreparation, setHasPreparation] = useState(false),
+    [sellerType, setSellerType] = useState<User["sellerType"]>(
+      user.sellerType ?? null,
+    ),
+    [savingSellerType, setSavingSellerType] = useState(false),
     [partialSale, setPartialSale] = useState(false),
     [saveState, setSaveState] = useState<
       "saved" | "dirty" | "saving" | "error"
@@ -228,21 +226,12 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
     };
   }, []);
   useEffect(() => {
-    if (id) {
-      if (new URLSearchParams(window.location.search).get("partial") === "1") {
-        setPartialSale(true);
-        setStep(0);
-      }
-      return;
-    }
-    try {
-      setHasPreparation(
-        !!decodePreparation(sessionStorage.getItem(preparationKey)),
-      );
-    } catch {
-      setError(
-        "Votre préparation locale est inaccessible. Vous pouvez créer un nouveau brouillon.",
-      );
+    if (
+      id &&
+      new URLSearchParams(window.location.search).get("partial") === "1"
+    ) {
+      setPartialSale(true);
+      setStep(0);
     }
   }, [id]);
   useEffect(() => {
@@ -281,40 +270,20 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
     setCreating(true);
     setError("");
     try {
-      let preparation = null;
-      try {
-        preparation = decodePreparation(sessionStorage.getItem(preparationKey));
-      } catch {
-        /* An inaccessible local preparation does not authenticate or alter an existing draft. */
-      }
-      const prepared = preparation
-        ? preparationPayload(preparation, () => crypto.randomUUID())
-        : null;
       const r = await api<{ data: Listing }>("/api/listings", {
         method: "POST",
         body: JSON.stringify({
-          ...prepared,
           pricingMode: "per_space",
-          spaces: (prepared?.spaces || [newSpace()]).map((space) => ({
+          spaces: [newSpace()].map((space) => ({
             ...space,
             offer: space.offer || {
-              transactionType: prepared?.transactionType || "sale",
+              transactionType: "sale",
               priceCents: 0,
               status: "available",
             },
           })),
         }),
       });
-      if (preparation) {
-        try {
-          sessionStorage.removeItem(preparationKey);
-          setHasPreparation(false);
-        } catch {
-          setError(
-            "Brouillon créé sur le serveur. La copie locale n’a pas pu être supprimée de cet onglet.",
-          );
-        }
-      }
       setListing(r.data);
       latest.current = r.data;
       window.history.replaceState(
@@ -683,7 +652,14 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
   }
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (!latest.current || !attest) return;
+    if (!latest.current || !attest || busy || savingSellerType) return;
+    if (!sellerType) {
+      setError(
+        "Précisez si vous publiez en tant que particulier ou professionnel.",
+      );
+      setFeedbackFocus({ target: "error" });
+      return;
+    }
     if (wizardIssues(latest.current, locationSelectionPending).length) {
       setIssuesForStep(2);
       setError("");
@@ -720,6 +696,25 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
       setBusy(false);
     }
   }
+  async function saveSellerType(value: "private" | "professional") {
+    if (savingSellerType || busy || value === sellerType) return;
+    setSavingSellerType(true);
+    setError("");
+    try {
+      await api("/api/me/profile", {
+        method: "PATCH",
+        body: JSON.stringify({ sellerType: value }),
+      });
+      setSellerType(value);
+      setPreviewAttempt((attempt) => attempt + 1);
+      window.dispatchEvent(new Event("gp:session"));
+    } catch (e) {
+      setError((e as Error).message);
+      setFeedbackFocus({ target: "error" });
+    } finally {
+      setSavingSellerType(false);
+    }
+  }
   if (loading)
     return (
       <main id="main" className="page-shell account-loading" role="status">
@@ -730,15 +725,12 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
     return (
       <main id="main" className="page-shell account-submitted">
         <CheckCircle2 size={48} />
-        <p className="account-eyebrow">BIEN REÇU</p>
         <h1 ref={submittedHeading} tabIndex={-1}>
-          Votre annonce est
-          <br />
-          entre de bonnes mains.
+          Annonce envoyée
         </h1>
         <p>
-          Elle a été transmise à la modération. Vous retrouverez son statut et
-          les éventuelles demandes de correction dans votre espace.
+          Votre annonce sera vérifiée avant sa publication. Son statut est
+          disponible dans Mes annonces.
         </p>
         <Link href="/compte/annonces" className="button button-primary">
           Suivre mon annonce
@@ -748,30 +740,11 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
   if (!listing)
     return (
       <main id="main" className="page-shell account-wizard-start">
-        <span className="badge">DÉPÔT GRATUIT · V1</span>
-        <h1>
-          Votre parking mérite
-          <br />
-          la bonne présentation.
-        </h1>
+        <h1>Déposer une annonce</h1>
         <p>
-          Quelques étapes pour montrer ce qui compte : l’emplacement, les
-          dimensions, les photos et l’état réel.
+          Ajoutez l’adresse, vos places et leurs prix, puis les photos. Vous
+          pourrez reprendre votre brouillon à tout moment.
         </p>
-        <div className="account-start-steps">
-          <div>
-            <Check size={20} />
-            <span>Un brouillon sauvegardé à chaque étape</span>
-          </div>
-          <div>
-            <Check size={20} />
-            <span>Une annonce relue avant sa publication</span>
-          </div>
-          <div>
-            <Check size={20} />
-            <span>Vos plans et documents sources restent privés</span>
-          </div>
-        </div>
         {error ? (
           <p className="error" role="alert">
             {error}
@@ -782,11 +755,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
           disabled={creating}
           onClick={create}
         >
-          {creating
-            ? "Création du brouillon…"
-            : hasPreparation
-              ? "Reprendre ma préparation dans un brouillon privé"
-              : "Commencer mon annonce"}
+          {creating ? "Création du brouillon…" : "Créer l’annonce"}
         </button>
       </main>
     );
@@ -847,12 +816,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
       </div>
       <div className="account-wizard-layout">
         <aside className="account-wizard-steps">
-          <p className="account-eyebrow">VOTRE ANNONCE</p>
-          <h2>
-            Chaque détail
-            <br />
-            fait la différence.
-          </h2>
+          <h2>Étapes de l’annonce</h2>
           <ol>
             {steps.map((label, index) => (
               <li
@@ -896,10 +860,6 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
               </li>
             ))}
           </ol>
-          <p className="muted">
-            Vous pouvez revenir sur chaque étape. Les informations inconnues
-            restent indiquées comme telles.
-          </p>
         </aside>
         <section
           className="account-wizard-content"
@@ -990,39 +950,33 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
           ) : null}
           {partialSale ? (
             <p className="notice">
-              Mise à jour des places : indiquez les places vendues ou louées
-              dans leur disponibilité et vérifiez les offres restantes. Pour une
-              offre en lot, contrôlez son prix total. Aucun prorata n’est
-              calculé. La nouvelle version devra être approuvée ; si l’ancienne
-              offre n’est plus valable pendant la correction, mettez-la en pause
-              depuis Mes annonces.
+              Mettez à jour le statut des places et le prix du lot. Si l’offre
+              en ligne n’est plus valable, mettez l’annonce en pause pendant sa
+              vérification.
             </p>
           ) : null}
           {listing.status === "suspended" ? (
             <p className="notice">
-              Annonce suspendue : corrigez les informations puis soumettez une
-              nouvelle version. La modération doit l’approuver avant toute
-              remise en ligne.
+              Annonce suspendue. Corrigez les informations puis renvoyez-la pour
+              vérification.
             </p>
           ) : null}
           {listing.status === "pending" ? (
             <div className="notice">
-              Cette version est en cours de relecture. Une modification peut
-              nécessiter une nouvelle soumission.
+              Annonce en cours de vérification. Après modification, envoyez-la à
+              nouveau.
             </div>
           ) : null}
           {listing.status === "published" ? (
             <div className="notice">
-              Vos modifications préparent une nouvelle révision. La version déjà
-              approuvée reste visible jusqu’à la prochaine décision.
+              L’annonce actuelle reste en ligne jusqu’à la validation de vos
+              modifications.
             </div>
           ) : null}
           {step === 0 ? (
             <>
               <p className="muted">
-                Un seul parking, une ou plusieurs places. Recherchez son adresse
-                ou sa commune, puis choisissez ce que vous proposez pour chaque
-                place.
+                Recherchez l’adresse ou la commune du parking.
               </p>
               <div id="listing-location" tabIndex={-1}>
                 <LocationPicker
@@ -1389,9 +1343,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                     </fieldset>
                   ))}
                   <p className="notice">
-                    Les dimensions saisies sont déclaratives. Un modèle mesuré
-                    exige des sources et des distances de contrôle
-                    supplémentaires.
+                    Indiquez les dimensions que vous connaissez.
                   </p>
                   <CommercialEditor
                     listing={listing}
@@ -1428,10 +1380,8 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                     />
                   </div>
                   <p className="notice">
-                    Déclarations du vendeur. Chaque place conserve ses propres
-                    informations ; un champ vide reste non renseigné, sans
-                    reprendre l’état commun. Les photos associées ne constituent
-                    pas une validation automatique.
+                    Décrivez le parking ou la place sélectionnée. Laissez vides
+                    les informations que vous ne connaissez pas.
                   </p>
                   <ConditionEvidenceEditor
                     listing={listing}
@@ -1492,9 +1442,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                       />
                     </div>
                     <p className="muted">
-                      Montrez le parking tel qu’il est. Décrivez les limites et
-                      les défauts visibles : ils aident à préparer une visite
-                      utile.
+                      Précisez les défauts et les contraintes d’accès.
                     </p>
                     <div className="form-grid">
                       {(
@@ -1667,9 +1615,8 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                 </label>
                 <div className="notice">
                   <p>
-                    Votre nom public : <strong>{user.name}</strong>. Les
-                    acheteurs vous contacteront par messagerie. Votre adresse
-                    email n’apparaîtra pas dans l’annonce.
+                    Annonce publiée sous le nom <strong>{user.name}</strong>.
+                    Votre email reste masqué.
                   </p>
                 </div>
               </>
@@ -1905,9 +1852,34 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
           ) : null}
           {step === 2 ? (
             <form onSubmit={submit}>
+              <fieldset
+                className="account-fieldset"
+                disabled={savingSellerType || busy}
+              >
+                <legend>Vous publiez en tant que</legend>
+                <div className="account-type-options">
+                  {(
+                    [
+                      ["private", "Particulier"],
+                      ["professional", "Professionnel"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <button
+                      type="button"
+                      key={value}
+                      className={sellerType === value ? "active" : ""}
+                      aria-pressed={sellerType === value}
+                      onClick={() => void saveSellerType(value)}
+                    >
+                      {label}
+                      {sellerType === value ? <CheckCircle2 size={20} /> : null}
+                    </button>
+                  ))}
+                </div>
+                {savingSellerType ? <p role="status">Enregistrement…</p> : null}
+              </fieldset>
               <p className="muted">
-                Relisez les informations qui seront proposées aux acheteurs
-                après modération.
+                Vérifiez les informations avant d’envoyer votre annonce.
               </p>
               {preview ? (
                 <article className="account-preview card">
@@ -1959,8 +1931,8 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                             ) : null}
                             <p className="muted">
                               {photos.length
-                                ? `${photos.length} photo(s) rattachée(s) par le vendeur · couverture à vérifier`
-                                : "Aucune photo propre fournie · couverture individuelle non établie"}
+                                ? `${photos.length} photo${photos.length > 1 ? "s" : ""} de cette place`
+                                : "Photos générales du parking"}
                             </p>
                             {photos.length ? (
                               <div className="account-photo-grid">
@@ -1983,49 +1955,53 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                     <p className="account-preview-description">
                       {preview.description || "Description à compléter"}
                     </p>
-                    <p>
-                      Occupation :{" "}
-                      {
+                    <details className="account-fieldset">
+                      <summary>Informations complémentaires</summary>
+                      <p>
+                        Occupation :{" "}
                         {
-                          vacant: "Libre · déclaré",
-                          occupied: "Occupée · déclaré",
-                          unknown: "Non renseignée",
-                        }[preview.occupancy || "unknown"]
-                      }
-                      . Charges :{" "}
-                      {preview.annualChargesCents == null
-                        ? "non renseignées"
-                        : `${money(preview.annualChargesCents)}/an`}
-                      . Taxe foncière :{" "}
-                      {preview.propertyTaxCents == null
-                        ? "non renseignée"
-                        : `${money(preview.propertyTaxCents)}/an`}
-                      .
-                    </p>
-                    <h3>État commun · déclaration vendeur</h3>
-                    <QualitySummary quality={preview.quality} common />
-                    <CommercialSummary listing={preview} />
-                    <ConditionEvidenceSummary
-                      values={preview.conditionObservations}
-                    />
-                    {preview.spaces.map((space) => (
+                          {
+                            vacant: "Libre · déclaré",
+                            occupied: "Occupée · déclaré",
+                            unknown: "Non renseignée",
+                          }[preview.occupancy || "unknown"]
+                        }
+                        . Charges :{" "}
+                        {preview.annualChargesCents == null
+                          ? "non renseignées"
+                          : `${money(preview.annualChargesCents)}/an`}
+                        . Taxe foncière :{" "}
+                        {preview.propertyTaxCents == null
+                          ? "non renseignée"
+                          : `${money(preview.propertyTaxCents)}/an`}
+                        .
+                      </p>
+                      <h3>État déclaré du parking</h3>
+                      <QualitySummary quality={preview.quality} common />
+                      <CommercialSummary listing={preview} />
                       <ConditionEvidenceSummary
-                        key={space.id}
                         values={preview.conditionObservations}
-                        spaceId={space.id}
                       />
-                    ))}
+                      {preview.spaces.map((space) => (
+                        <ConditionEvidenceSummary
+                          key={space.id}
+                          values={preview.conditionObservations}
+                          spaceId={space.id}
+                        />
+                      ))}
+                    </details>
                     <p className="notice">
-                      Localisation publique :{" "}
+                      Localisation affichée :{" "}
                       {preview.locationPrecision === "area"
-                        ? "quartier uniquement, sans scène intérieure"
-                        : "position exacte autorisée"}
-                      . La 3D n’est disponible qu’après une revue spécifique.
-                      <br />
-                      {preview.city} · {preview.district}.{" "}
-                      {preview.address
-                        ? "Adresse exacte autorisée."
-                        : "Adresse complète masquée."}
+                        ? `${preview.city} · secteur uniquement. Adresse masquée.`
+                        : preview.address ||
+                          `${preview.city} · ${preview.district}`}
+                      {preview.sceneAvailable ? (
+                        <>
+                          <br />
+                          Plan 3D disponible.
+                        </>
+                      ) : null}
                     </p>
                   </div>
                 </article>
@@ -2067,6 +2043,8 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                 className="button button-primary"
                 disabled={
                   !attest ||
+                  !sellerType ||
+                  savingSellerType ||
                   !user.emailVerified ||
                   busy ||
                   uploading ||
@@ -2075,10 +2053,10 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                   preview.version !== listing.version
                 }
               >
-                {busy ? "Envoi en cours…" : "Soumettre à la modération"}
+                {busy ? "Envoi en cours…" : "Envoyer l’annonce"}
               </button>
               <p className="muted">
-                Votre annonce ne sera pas publiée automatiquement.
+                Publication après vérification par notre équipe.
               </p>
             </form>
           ) : null}
@@ -2142,6 +2120,6 @@ export default function ListingWizard({ id }: { id?: string }) {
   return session.user ? (
     <WizardContent user={session.user} />
   ) : (
-    <PreparationForm />
+    <DepositSignIn />
   );
 }

@@ -153,7 +153,7 @@ export function NotificationFeed({ compact = false }: { compact?: boolean }) {
         <div className="account-notification-empty">
           <Bell size={24} />
           <div>
-            <strong>Vous êtes à jour.</strong>
+            <strong>Aucune notification</strong>
             <p>
               Les réponses, demandes de visite et décisions de modération
               apparaîtront ici.
@@ -161,12 +161,6 @@ export function NotificationFeed({ compact = false }: { compact?: boolean }) {
           </div>
         </div>
       )}
-      {!compact ? (
-        <p className="muted account-notification-note">
-          Cet espace affiche les notifications enregistrées dans la plateforme.
-          Il ne confirme pas l’envoi d’un email.
-        </p>
-      ) : null}
     </section>
   );
 }
@@ -237,25 +231,17 @@ function NotificationPreferences() {
             onChange={(e) => void change(e.target.checked)}
           />
           <span>
-            Autoriser les emails transactionnels liés à mes annonces et à mes
-            conversations.
+            Notifications par email pour mes annonces et mes conversations.
           </span>
         </label>
       )}
-      <p className="muted account-notification-note">
-        La sauvegarde confirme votre préférence ; elle ne constitue pas une
-        confirmation d’envoi d’un email.
-      </p>
     </section>
   );
 }
 
 function Content({ user }: { user: User }) {
   return (
-    <AccountShell user={user} title="Rien d’important ne vous échappe.">
-      <p className="muted account-lead">
-        Retrouvez les nouvelles étapes de vos annonces et de vos échanges.
-      </p>
+    <AccountShell user={user} title="Notifications">
       <NotificationFeed />
       <NotificationPreferences />
     </AccountShell>

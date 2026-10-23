@@ -64,6 +64,36 @@ const signupSchema = z
 const resetSchema = z
   .object({ password, token: z.string().max(300).optional() })
   .strict();
+const emailRequestSchema = z
+  .object({
+    email: z.string().trim().toLowerCase().email().max(254),
+    next: z.string().max(6000).optional(),
+  })
+  .strict();
+function emailError(error: { code?: string; status?: number }) {
+  if (
+    error.status === 429 ||
+    ["over_email_send_rate_limit", "over_request_rate_limit"].includes(
+      error.code || "",
+    )
+  )
+    return new ApiError(
+      429,
+      "Trop de demandes. Patientez quelques minutes avant de réessayer.",
+      "AUTH_RATE_LIMITED",
+    );
+  if (error.code === "weak_password")
+    return new ApiError(
+      400,
+      "Choisissez un mot de passe plus difficile à deviner, d’au moins 12 caractères.",
+      "WEAK_PASSWORD",
+    );
+  return new ApiError(
+    503,
+    "L’envoi de l’email est momentanément indisponible. Réessayez plus tard.",
+    "AUTH_EMAIL_UNAVAILABLE",
+  );
+}
 function ensureLocalTerms() {
   db().exec(
     "CREATE TABLE IF NOT EXISTS terms_acceptances(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),terms_version TEXT NOT NULL,privacy_version TEXT NOT NULL,accepted_at TEXT NOT NULL,source TEXT NOT NULL,UNIQUE(user_id,terms_version,privacy_version))",
@@ -88,6 +118,8 @@ export async function handleAuthCommands(
   actionOverride?: string,
 ): Promise<Response> {
   let context: ReturnType<typeof sceneContext> | undefined;
+  let callbackReturn = "/compte";
+  let callbackRecovery = false;
   try {
     context = sceneContext(request);
     const { client, remote, user, headers } = context;
@@ -185,26 +217,47 @@ export async function handleAuthCommands(
           emailRedirectTo: callback.toString(),
         },
       });
-      if (result.error)
-        throw new ApiError(
-          400,
-          "Inscription impossible. Vérifiez les informations ou réessayez plus tard.",
-          "AUTH_ERROR",
-        );
+      if (result.error) throw emailError(result.error);
       return respond(null, 201, {
         mode: "supabase",
         message:
-          "Consultez votre boîte email pour confirmer votre inscription. Si un compte existe déjà, utilisez la connexion ou la récupération.",
+          "Consultez vos emails pour confirmer votre inscription. Si vous avez déjà un compte, connectez-vous.",
+      });
+    }
+    if (action === "resend" && request.method === "POST") {
+      const input = emailRequestSchema.parse(
+        await readBoundedJson(request, 16384),
+      );
+      if (!client)
+        throw new ApiError(400, "Ouvrez le lien dans la boîte de test locale.");
+      const callback = new URL("/api/auth/callback", effectiveOrigin(request));
+      callback.searchParams.set(
+        "state",
+        signAuthValue(
+          authFlow(
+            "register",
+            input.next,
+            Date.now(),
+            authAccountDigest(input.email, flowKey(remote)),
+          ),
+          flowKey(remote),
+        ),
+      );
+      const result = await client.auth.resend({
+        type: "signup",
+        email: input.email,
+        options: { emailRedirectTo: callback.toString() },
+      });
+      if (result.error) throw emailError(result.error);
+      return respond(null, 200, {
+        message:
+          "Si cette adresse attend une confirmation, un nouveau lien vous a été envoyé. Ouvrez-le dans ce navigateur.",
       });
     }
     if (action === "forgot" && request.method === "POST") {
-      const input = z
-        .object({
-          email: z.string().trim().toLowerCase().email().max(254),
-          next: z.string().max(6000).optional(),
-        })
-        .strict()
-        .parse(await readBoundedJson(request, 16384));
+      const input = emailRequestSchema.parse(
+        await readBoundedJson(request, 16384),
+      );
       if (!client) {
         const { handleApi } = await import("./api");
         return handleApi(
@@ -231,15 +284,10 @@ export async function handleAuthCommands(
       const result = await client.auth.resetPasswordForEmail(input.email, {
         redirectTo: callback.toString(),
       });
-      if (result.error)
-        throw new ApiError(
-          503,
-          "La demande de récupération est momentanément indisponible.",
-          "AUTH_UNAVAILABLE",
-        );
-      return respond({
+      if (result.error) throw emailError(result.error);
+      return respond(null, 200, {
         message:
-          "Si cette adresse correspond à un compte, consultez votre boîte email pour poursuivre la récupération.",
+          "Si cette adresse correspond à un compte, vous recevrez un lien pour choisir un nouveau mot de passe. Ouvrez-le dans ce navigateur.",
       });
     }
     if (action === "callback" && request.method === "GET") {
@@ -256,6 +304,12 @@ export async function handleAuthCommands(
           "Ce lien est invalide ou a expiré. Demandez un nouveau lien.",
           "AUTH_FLOW_EXPIRED",
         );
+      callbackReturn = safeAuthReturn(
+        state && state.kind !== "password-reset"
+          ? state.next
+          : url.searchParams.get("next"),
+      );
+      callbackRecovery = state?.kind === "recovery";
       const code = url.searchParams.get("code");
       if (!code)
         throw new ApiError(
@@ -278,12 +332,14 @@ export async function handleAuthCommands(
           exchanged.data.user?.email,
           flowKey(remote),
         )
-      )
+      ) {
+        await client.auth.signOut({ scope: "local" });
         throw new ApiError(
           400,
           "Ce lien ne correspond pas à ce parcours. Demandez un nouveau lien.",
           "AUTH_FLOW_MISMATCH",
         );
+      }
       const h = headers();
       h.append("Set-Cookie", cookie(request, "", 0));
       let destination = safeAuthReturn(
@@ -510,12 +566,12 @@ export async function handleAuthCommands(
       request.method === "GET"
     ) {
       h.append("Set-Cookie", cookie(request, "", 0));
-      const destination = new URL("/connexion", effectiveOrigin(request));
-      destination.searchParams.set("authError", "invalid");
-      destination.searchParams.set(
-        "next",
-        safeAuthReturn(new URL(request.url).searchParams.get("next")),
+      const destination = new URL(
+        callbackRecovery ? "/mot-de-passe-oublie" : "/connexion",
+        effectiveOrigin(request),
       );
+      destination.searchParams.set("authError", "invalid");
+      destination.searchParams.set("next", callbackReturn);
       h.set("Location", destination.toString());
       return new Response(null, { status: 303, headers: h });
     }
@@ -527,8 +583,13 @@ export async function handleAuthCommands(
     if (error instanceof z.ZodError)
       return Response.json(
         {
-          error:
-            "Vérifiez les champs et votre acceptation des versions affichées des documents.",
+          error: error.issues.some((issue) => issue.path[0] === "password")
+            ? "Utilisez un mot de passe de 12 à 128 caractères."
+            : error.issues.some((issue) => issue.path[0] === "email")
+              ? "Indiquez une adresse email valide."
+              : error.issues.some((issue) => issue.path[0] === "termsAccepted")
+                ? "Acceptez les conditions d’utilisation pour créer votre compte."
+                : "Vérifiez les informations saisies puis réessayez.",
           code: "VALIDATION_ERROR",
         },
         { status: 400, headers: h },

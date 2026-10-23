@@ -10,7 +10,6 @@ import {
   MapPin,
   Search,
   SlidersHorizontal,
-  Tag,
   X,
 } from "lucide-react";
 import {
@@ -59,7 +58,7 @@ const CityMap = dynamic(() => import("./maps/CityMap"), {
   loading: () => (
     <div className="map-loading">
       <div className="loading-indicator" />
-      <span>La ville prend forme…</span>
+      <span>Chargement de la carte…</span>
     </div>
   ),
 });
@@ -610,10 +609,8 @@ export default function Explorer({
     <main id="main" className={`explorer explorer-view-${visibleView}`}>
       <section className="search-section">
         <div className="search-heading">
-          <h1>
-            {favoritesOnly
-              ? "Vos places préférées."
-              : "Votre prochaine place est ici."}
+          <h1 className="explorer-title">
+            {favoritesOnly ? "Mes favoris" : "Parkings à vendre et à louer"}
           </h1>
           <form
             className="location-search"
@@ -629,15 +626,6 @@ export default function Explorer({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
-            <span className="search-separator" />
-            <Tag size={22} />
-            <span className="search-sale">
-              {allFavoriteOffers
-                ? "Tous mes favoris"
-                : transactionType === "rent"
-                  ? "À louer"
-                  : "À vendre"}
-            </span>
             <button className="search-submit" aria-label="Rechercher">
               <Search size={25} />
             </button>
@@ -1039,7 +1027,7 @@ export default function Explorer({
                   ? "Annonces à cet endroit"
                   : favoritesOnly
                     ? "Mes favoris"
-                    : "Les parkings à découvrir"}
+                    : "Annonces"}
               </h2>
               <div className="results-meta">
                 <span aria-live="polite">
@@ -1049,7 +1037,7 @@ export default function Explorer({
                       ? "Résultats à actualiser"
                       : clusterListingIds.length && visibleView === "map"
                         ? `${sidebarListings.length} annonce${sidebarListings.length > 1 ? "s" : ""} ici · ${total} au total`
-                        : `${total} bien${total > 1 ? "s" : ""}${listings.some((l) => l.isDemo) ? " d’exemple" : ""}`}
+                        : `${total} annonce${total > 1 ? "s" : ""}${listings.some((l) => l.isDemo) ? " de démonstration" : ""}`}
                 </span>
                 <FilterSelect
                   label="Trier les résultats"
@@ -1120,8 +1108,8 @@ export default function Explorer({
                   {favoritesOnly
                     ? favorites.ids.length
                       ? "Aucun favori pour ces critères."
-                      : "Vos favoris commencent ici."
-                    : "Aucune place pour ces critères."}
+                      : "Aucun favori enregistré"
+                    : "Aucune annonce pour ces critères"}
                 </h3>
                 <p>{emptyMessage}</p>
                 {emptyAction}
@@ -1173,7 +1161,7 @@ export default function Explorer({
                 onClick={loadMore}
                 disabled={loadingMore || loading}
               >
-                {loadingMore ? "Chargement…" : "Afficher plus de biens"}
+                {loadingMore ? "Chargement…" : "Afficher plus d’annonces"}
               </button>
             ) : null}
             {favoritesOnly && missingFavorites.length > 0 ? (
@@ -1197,11 +1185,11 @@ export default function Explorer({
                 ))}
               </div>
             ) : null}
-            <p className="demo-note">
-              {listings.some((l) => l.isDemo)
-                ? "Version de démonstration · biens fictifs"
-                : "Annonces proposées par leurs vendeurs"}
-            </p>
+            {listings.some((l) => l.isDemo) ? (
+              <p className="demo-note">
+                Exemples fictifs. Aucun bien proposé à la vente.
+              </p>
+            ) : null}
           </div>
         </section>
         <section

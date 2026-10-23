@@ -1,5 +1,9 @@
 # Matrice de complétude des exigences — V1
 
+## Dernière passe — recherche, dépôt et comptes
+
+Voir [la recette du 22 octobre](qa/UX_PROFESSIONAL_2026-10-22.md) : carte avec prix visibles et aperçu unique, textes et navigation simplifiés, préparation anonyme supprimée, statut vendeur choisi au dépôt, confirmation/récupération renforcées. Les modèles email sont prêts ; le SMTP et la validation de réception sont différés par le propriétaire. Les preuves et limites historiques ci-dessous ne valent pas confirmation d'une activation email réelle.
+
 ## Dernier complément de recette — F09 et accessibilité ciblée
 
 Le [complément de recette](qa/CLOSURE_ACCESS_2026-10-22.md) corrige et contre-vérifie le retour après plusieurs pages : 38 résultats en navigateur et 264 dans le test ciblé, curseurs frais, prix actualisés et annonces retirées exclues. Les filtres rendent le focus et se ferment avec Échap ; le réseau indisponible dispose de messages français et d’une reprise vérifiée. Build et 230 tests réussis sur 233 (3 conditionnels ignorés). Tablettes, clavier et mouvements réduits ont été exercés ; ni zoom navigateur réel 200 %, ni lecteur d’écran humain ne sont déclarés validés. Les limites connectées et prérequis d’ouverture ci-dessous restent applicables.

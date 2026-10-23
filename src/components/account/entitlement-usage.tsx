@@ -69,7 +69,6 @@ export default function EntitlementUsage() {
     <section className="card account-settings-card" style={{ padding: 24 }}>
       <div className="section-row">
         <div>
-          <span className="badge">V1 · GRATUIT</span>
           <h2>Votre utilisation</h2>
         </div>
         <button
@@ -80,10 +79,6 @@ export default function EntitlementUsage() {
           Actualiser
         </button>
       </div>
-      <p className="muted">
-        Les limites protègent la qualité des annonces et des échanges. Aucun
-        paiement n’est nécessaire pour utiliser ce compte.
-      </p>
       {error ? (
         <p className="error" role="alert">
           {error}

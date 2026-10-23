@@ -60,12 +60,11 @@ export default function ContextReportForm({
       <section className="notice" role="status">
         <h3>Signalement enregistré</h3>
         <p>
-          Un même signalement déjà enregistré pour cette cible et cette
-          catégorie n’est pas dupliqué. Vous pourrez consulter sa décision et
-          demander un réexamen dans votre espace.
+          L’équipe examinera votre signalement. Vous pouvez suivre sa réponse
+          depuis votre messagerie.
         </p>
         <Link href="/compte/signalements" className="button button-secondary">
-          Suivre mes signalements
+          Voir le suivi
         </Link>
         <button className="text-button" onClick={onClose}>
           Fermer
@@ -81,8 +80,8 @@ export default function ContextReportForm({
       </h3>
       <p className="notice">
         {targetType === "message"
-          ? "Seul ce message sera figé et transmis à la modération, avec sa référence de conversation. Les autres messages ne seront pas consultables depuis ce dossier."
-          : "Les vingt derniers messages de cette conversation au moment de l’envoi seront figés et transmis à la modération. Les messages plus anciens et les autres conversations ne seront pas consultables depuis ce dossier."}
+          ? "Ce message sera transmis à l’équipe de modération."
+          : "Les vingt derniers messages de cette conversation seront transmis à l’équipe de modération."}
       </p>
       {error ? (
         <p className="error" role="alert">

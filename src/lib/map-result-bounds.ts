@@ -38,7 +38,10 @@ export interface MapMarkerGroup {
  */
 export function groupMapMarkers(
   points: readonly ProjectedMapMarker[],
-  groupSize: (count: number) => { width: number; height: number },
+  groupSize: (
+    count: number,
+    ids: string[],
+  ) => { width: number; height: number },
   gap = 12,
 ): MapMarkerGroup[] {
   const groups: MapMarkerGroup[] = points
@@ -59,11 +62,12 @@ export function groupMapMarkers(
           b.y + gap > a.y - a.height;
         if (!overlaps) continue;
         const count = a.ids.length + b.ids.length;
+        const ids = [...a.ids, ...b.ids];
         groups[i] = {
-          ids: [...a.ids, ...b.ids],
+          ids,
           x: (a.x * a.ids.length + b.x * b.ids.length) / count,
           y: (a.y * a.ids.length + b.y * b.ids.length) / count,
-          ...groupSize(count),
+          ...groupSize(count, ids),
         };
         groups.splice(j, 1);
         j--;

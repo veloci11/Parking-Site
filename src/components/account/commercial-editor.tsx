@@ -49,8 +49,8 @@ function SourcePicker({
         ))
       ) : (
         <p className="muted">
-          Ajoutez vos plans dans Mes plans et vues 3D, puis actualisez cette
-          liste.
+          Ajoutez un plan dans « Plans et vues 3D » depuis Mes annonces, puis
+          actualisez.
         </p>
       )}
     </fieldset>
@@ -175,9 +175,8 @@ export function CommercialEditor({
         <>
           <h2>Références, sources et accès</h2>
           <p className="muted">
-            Les références de lots et les pièces restent privées. Les dimensions
-            sont saisies en mètres, avec une précision maximale d’un millimètre,
-            au point le plus contraignant.
+            Références et documents privés. Indiquez les dimensions en mètres au
+            point le plus étroit.
           </p>
           <fieldset className="account-fieldset">
             <legend>Dispositifs d’accès déclarés</legend>
@@ -459,8 +458,8 @@ export function CommercialEditor({
         <>
           <h2>Légendes et dates connues</h2>
           <p className="muted">
-            Chaque fichier conserve sa légende. Une date absente reste inconnue
-            ; elle n’est pas déduite de la date du dépôt.
+            Ajoutez une légende et la date de prise de vue si vous la
+            connaissez.
           </p>
           {allPhotos.map((url, index) => {
             const id = /^\/api\/media\/([a-f0-9-]{36})$/.exec(url)?.[1];

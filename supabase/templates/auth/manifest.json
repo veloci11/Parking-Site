@@ -1,0 +1,18 @@
+{
+  "confirmation": {
+    "subject": "Confirmez votre adresse email | GP park",
+    "file": "confirmation.html"
+  },
+  "recovery": {
+    "subject": "Réinitialisez votre mot de passe | GP park",
+    "file": "recovery.html"
+  },
+  "email-change": {
+    "subject": "Confirmez votre nouvelle adresse email | GP park",
+    "file": "email-change.html"
+  },
+  "password-changed": {
+    "subject": "Votre mot de passe a été modifié | GP park",
+    "file": "password-changed.html"
+  }
+}

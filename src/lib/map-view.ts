@@ -13,6 +13,35 @@ export interface MapViewport {
   center: [number, number];
   bounds: [number, number, number, number];
 }
+/** Selecting a public pin should reveal its neighbourhood, even after a saved
+ * regional view. Approximate positions remain presented at a district scale.
+ */
+export function selectedMapZoom(
+  currentZoom: number,
+  precision: "area" | "exact_opt_in",
+): number {
+  const safeZoom = Number.isFinite(currentZoom) ? currentZoom : 14;
+  return precision === "area"
+    ? Math.max(14, Math.min(15, safeZoom))
+    : Math.max(16.5, Math.min(19, safeZoom));
+}
+/** Place the whole price marker inside the unobstructed canvas, not its anchor
+ * under the mobile command bar. MapLibre offsets are relative to canvas centre.
+ */
+export function selectedMapOffset(
+  canvasHeight: number,
+  markerHeight: number,
+  controlsTop?: number,
+): [number, number] {
+  if (!Number.isFinite(canvasHeight) || canvasHeight <= 0) return [0, 0];
+  const bottom = Math.max(
+    24,
+    Math.min(canvasHeight, controlsTop ?? canvasHeight) - 16,
+  );
+  const height = Math.min(Math.max(44, markerHeight), bottom - 12);
+  const anchor = (bottom + height + 12) / 2;
+  return [0, anchor - canvasHeight / 2];
+}
 const clamp = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(max, value));
 const finite = (value: unknown): value is number =>

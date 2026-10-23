@@ -22,8 +22,10 @@ export default function ListingInspector({
   const [index, setIndex] = useState(0);
   const backButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    backButton.current?.focus({ preventScroll: true });
+    setIndex(0);
+    backButton.current?.parentElement?.focus({ preventScroll: true });
   }, [listing.id]);
+  const visibleSpaces = searchOfferSpaces(listing, transactionType);
   const photos = listing.photos.length ? listing.photos : ["/demo/covered.png"];
   return (
     <aside
@@ -31,7 +33,11 @@ export default function ListingInspector({
       aria-label="Le bien sélectionné"
       key={listing.id}
     >
-      <div className="inspector-header">
+      <div
+        className="inspector-header"
+        tabIndex={-1}
+        aria-label="Aperçu de l’annonce"
+      >
         <button ref={backButton} className="text-button" onClick={onClose}>
           Retour
         </button>
@@ -76,13 +82,13 @@ export default function ListingInspector({
       </div>
       <div className="inspector-body">
         <p className="inspector-location">
-          {listing.city} · {listing.district}
+          {listing.city} · {listing.district.split(" · ")[0]}
         </p>
         <h2>
-          {listing.spaces.length > 1
-            ? `${listing.spaces.length} places${listing.pricingMode === "per_space" ? " à l’unité" : " en lot"}`
-            : listing.spaces[0]?.number
-              ? `Place ${listing.spaces[0].number}`
+          {visibleSpaces.length > 1
+            ? `${visibleSpaces.length} places${listing.pricingMode === "per_space" ? " à l’unité" : " en lot"}`
+            : visibleSpaces[0]?.number
+              ? `Place ${visibleSpaces[0].number}`
               : "Place de parking"}
         </h2>
         <p className="inspector-price">
@@ -91,6 +97,12 @@ export default function ListingInspector({
         {listing.spaces.length > 1 ? (
           <span className="muted small">{pricingScope(listing)}</span>
         ) : null}
+        <Link
+          className="button button-primary full-width"
+          href={`/annonces/${listing.id}/${listing.slug}${transactionType ? `?transactionType=${transactionType}` : ""}`}
+        >
+          Consulter l’annonce
+        </Link>
         <div className="feature-row">
           <span>
             <Maximize size={19} />
@@ -111,19 +123,15 @@ export default function ListingInspector({
             {accessLabel(listing)}
           </span>
         </div>
-        <p className="inspector-description">
-          {isPublicShowcase(listing.id)
-            ? "Exemple fictif : prix, photos et plan 3D illustratifs. Aucun bien réel n’est proposé à cette adresse."
-            : "Découvrez la place, son état et ses accès. Échangez avec l’annonceur pour organiser une visite."}
-        </p>
-        <Link
-          className="button button-primary full-width"
-          href={`/annonces/${listing.id}/${listing.slug}${transactionType ? `?transactionType=${transactionType}` : ""}`}
-        >
-          Consulter l’annonce
-        </Link>
+        {listing.locationPrecision === "exact_opt_in" && listing.address ? (
+          <p className="inspector-description">{listing.address}</p>
+        ) : null}
         {listing.isDemo ? (
-          <p className="demo-caption">Bien et visuel de démonstration</p>
+          <p className="demo-caption">
+            {isPublicShowcase(listing.id)
+              ? "Démonstration : prix, photos et plan fictifs. Aucun bien proposé à cette adresse."
+              : "Annonce de démonstration"}
+          </p>
         ) : null}
       </div>
     </aside>

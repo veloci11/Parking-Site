@@ -55,7 +55,7 @@ export default function Header() {
             className={path === "/comment-acheter" ? "active" : ""}
             href="/comment-acheter"
           >
-            Comment acheter
+            Acheter ou louer
           </Link>
         </nav>
         <div className="header-actions">

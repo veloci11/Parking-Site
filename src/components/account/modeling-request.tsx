@@ -114,9 +114,8 @@ export function ModelRequest({ listingId }: { listingId: string }) {
       </summary>
       <div>
         <p className="muted small">
-          L’équipe prépare la vue manuellement à partir des plans, dimensions et
-          photos fournis. Vous pouvez publier votre annonce avec ses photos
-          pendant l’examen de cette demande.
+          Demandez une vue 3D à partir de vos plans et photos. Cette demande ne
+          bloque pas la publication de l’annonce.
         </p>
         {loading && open ? (
           <p role="status">Chargement de la demande…</p>
@@ -173,7 +172,7 @@ export function ModelRequest({ listingId }: { listingId: string }) {
               />
             </label>
             <p className="small muted">
-              Cette note reste privée, accessible à vous et aux administrateurs.
+              Note visible uniquement par vous et l’équipe.
             </p>
             <button
               className="button button-secondary"
@@ -187,7 +186,7 @@ export function ModelRequest({ listingId }: { listingId: string }) {
         ) : null}
         <div className="account-review-actions">
           <Link href="/compte/scenes" className="text-button">
-            Ajouter un plan pour la 3D · facultatif
+            Ajouter un plan
           </Link>
           <button
             type="button"

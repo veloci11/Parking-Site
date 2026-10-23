@@ -38,9 +38,7 @@ export default function PasswordChange() {
     <section className="card account-settings-card">
       <h2>Changer mon mot de passe</h2>
       <p className="muted">
-        Confirmez le mot de passe actuel. Un changement réussi ferme votre
-        session courante ; reconnectez-vous ensuite. Cette action ne promet pas
-        la révocation immédiate de tous les autres jetons déjà émis.
+        Après la modification, reconnectez-vous avec votre nouveau mot de passe.
       </p>
       {done ? (
         <p className="notice" role="status">
@@ -95,7 +93,7 @@ export default function PasswordChange() {
             />
           </label>
           <button className="button button-primary" disabled={busy}>
-            {busy ? "Modification…" : "Modifier et fermer ma session courante"}
+            {busy ? "Modification…" : "Enregistrer le mot de passe"}
           </button>
         </form>
       )}

@@ -515,10 +515,10 @@
 }
 .account-wizard-start h1,
 .account-submitted h1 {
-  font-size: 48px;
-  letter-spacing: -0.035em;
-  line-height: 1.08;
-  margin: 24px 0;
+  font-size: clamp(28px, 4vw, 36px);
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin: 0 0 20px;
 }
 .account-wizard-start > p,
 .account-submitted > p {
@@ -535,36 +535,33 @@
   max-width: 440px;
   text-align: left;
 }
-.account-preparation .account-review-actions {
+.account-deposit-entry .account-review-actions {
   justify-content: center;
 }
-.account-preparation > .account-preparation-next {
-  margin: 20px auto 32px;
+.account-listing-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin-bottom: 24px;
   font-size: 14px;
 }
-.account-preparation-details {
-  text-align: left;
-  border-top: 1px solid var(--border);
-  padding-block: 24px;
+.account-listing-tools a {
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
-.account-preparation-details > summary {
-  cursor: pointer;
-  font-size: 16px;
+.account-report-followup {
+  margin-top: 24px;
+  font-size: 14px;
+}
+.account-report-followup a {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.account-nav-label {
+  margin: 24px 12px 8px;
+  color: var(--textSecondary, #596174);
+  font-size: 12px;
   font-weight: 600;
-}
-.account-preparation-details > p {
-  margin-top: 16px;
-  line-height: 1.5;
-}
-.account-preparation-details fieldset {
-  border: 0;
-  margin: 24px 0 0;
-  padding: 0;
-  min-width: 0;
-}
-.account-preparation > .account-preparation-saved {
-  margin-bottom: 0;
-  font-size: 14px;
 }
 .account-start-steps > div {
   display: flex;

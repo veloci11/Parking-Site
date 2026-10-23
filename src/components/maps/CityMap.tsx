@@ -1,24 +1,19 @@
 "use client";
-import { listingPrice } from "@/lib/listing-price";
+import { expandMapPrices, mapMarkerPriceLines } from "@/lib/map-marker-label";
+import { withPoiIconFallback } from "@/lib/map-style";
 import { isPublicShowcase } from "@/lib/public-showcase";
 import { PARIS_CENTER, IDF_BOUNDS, isIdfCoordinate } from "@/lib/paris-region";
 
 import { useEffect, useRef, useState } from "react";
 import type { Map as MapLibreMap, Marker } from "maplibre-gl";
-import {
-  Compass,
-  Layers3,
-  MapPin,
-  Minus,
-  Plus,
-  RefreshCw,
-  X,
-} from "lucide-react";
-import { groupMapMarkers } from "@/lib/map-result-bounds";
+import { Compass, Layers3, MapPin, Minus, Plus, RefreshCw } from "lucide-react";
+import { groupMapMarkers, mapResultBounds } from "@/lib/map-result-bounds";
 import { type Listing, type TransactionType } from "@/lib/types";
 import {
   normalizeMapView,
   normalizeMapSearchArea,
+  selectedMapZoom,
+  selectedMapOffset,
   type MapViewState,
   type MapSearchArea,
   type MapViewport,
@@ -55,28 +50,12 @@ export default function CityMap({
   onClusterSelect,
 }: CityMapProps) {
   const container = useRef<HTMLDivElement>(null);
+  const controls = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markers = useRef<Marker[]>([]);
-  const [clusterIds, setClusterIds] = useState<string[]>([]);
-  const clusterPanel = useRef<HTMLDivElement>(null);
-  const clusterTrigger = useRef<HTMLButtonElement | null>(null);
-  const clusterChoices = listings.filter((listing) =>
-    clusterIds.includes(listing.id),
-  );
-  useEffect(() => {
-    if (clusterIds.length) clusterPanel.current?.focus();
-  }, [clusterIds]);
-  const closeCluster = () => {
-    setClusterIds([]);
-    if (clusterTrigger.current?.isConnected) clusterTrigger.current.focus();
-    else mapRef.current?.getCanvas().focus({ preventScroll: true });
-  };
   const onSelectRef = useRef(onSelect);
   const onClusterSelectRef = useRef(onClusterSelect);
   onClusterSelectRef.current = onClusterSelect;
-  useEffect(() => {
-    if (selectedId) setClusterIds([]);
-  }, [selectedId]);
   const normalizedInitialView = normalizeMapView(initialView);
   const initialViewRef = useRef(
     normalizedInitialView && isIdfCoordinate(normalizedInitialView.center)
@@ -140,9 +119,48 @@ export default function CityMap({
   const [is3D, setIs3D] = useState((initialViewRef.current?.pitch ?? 55) > 0);
   const [mapLoaded, setMapLoaded] = useState(0);
   const [markerView, setMarkerView] = useState(0);
-  const previousSelected = useRef<string | null>(
-    initialViewRef.current ? selectedId : null,
-  );
+  const previousSelected = useRef<string | null>(null);
+  const selectionRef = useRef({ selectedId, listings });
+  selectionRef.current = { selectedId, listings };
+  const focusSelection = (map: MapLibreMap, duration: number) => {
+    const selected = selectionRef.current.listings.find(
+      (item) => item.id === selectionRef.current.selectedId,
+    );
+    const canvas = container.current;
+    if (!selected || !canvas) return;
+    const canvasRect = canvas.getBoundingClientRect();
+    const controlsRect = controls.current?.getBoundingClientRect();
+    const controlsTop =
+      controlsRect && controlsRect.width > controlsRect.height
+        ? controlsRect.top - canvasRect.top
+        : undefined;
+    const selectedMarker = markers.current
+      .map((marker) => marker.getElement())
+      .find(
+        (element) =>
+          element.matches(".is-selected") ||
+          element.querySelector(".is-selected"),
+      );
+    const estimatedCount = Math.min(3, selectionRef.current.listings.length);
+    const markerHeight =
+      selectedMarker?.getBoundingClientRect().height ||
+      (expandMapPrices(
+        estimatedCount,
+        selectedMapZoom(map.getZoom(), selected.locationPrecision),
+      )
+        ? estimatedCount * 52 - 8
+        : 44);
+    transientLocation.current = false;
+    map.easeTo({
+      center: selected.coordinates,
+      zoom: selectedMapZoom(map.getZoom(), selected.locationPrecision),
+      offset: selectedMapOffset(canvasRect.height, markerHeight, controlsTop),
+      duration,
+    });
+    previousSelected.current = selected.id;
+  };
+  const focusSelectionRef = useRef(focusSelection);
+  focusSelectionRef.current = focusSelection;
   const showcaseCentered = useRef(false);
   useEffect(() => {
     const map = mapRef.current;
@@ -172,6 +190,8 @@ export default function CityMap({
     let disposed = false;
     let localMap: MapLibreMap | null = null;
     let timeout: ReturnType<typeof setTimeout> | undefined;
+    previousSelected.current = null;
+    showcaseCentered.current = false;
     setStatus("loading");
     async function mount() {
       try {
@@ -185,9 +205,6 @@ export default function CityMap({
         ).matches;
         localMap = new maplibre.Map({
           container: container.current,
-          style:
-            process.env.NEXT_PUBLIC_MAP_STYLE ||
-            "https://tiles.openfreemap.org/styles/liberty",
           center: initialViewRef.current?.center ?? PARIS_CENTER,
           maxBounds: [
             [IDF_BOUNDS[0], IDF_BOUNDS[1]],
@@ -307,6 +324,11 @@ export default function CityMap({
         timeout = setTimeout(() => {
           if (!disposed && localMap && !localMap.loaded()) setStatus("error");
         }, 15000);
+        localMap.setStyle(
+          process.env.NEXT_PUBLIC_MAP_STYLE ||
+            "https://tiles.openfreemap.org/styles/liberty",
+          { transformStyle: (_previous, next) => withPoiIconFallback(next) },
+        );
       } catch {
         if (!disposed) setStatus("error");
       }
@@ -324,8 +346,24 @@ export default function CityMap({
 
   useEffect(() => {
     if (!visible || status !== "ready") return;
-    const frame = requestAnimationFrame(() => mapRef.current?.resize());
-    const observer = new ResizeObserver(() => mapRef.current?.resize());
+    let width = container.current?.clientWidth;
+    let height = container.current?.clientHeight;
+    const resize = (force = false) => {
+      const map = mapRef.current;
+      const canvas = container.current;
+      if (!map || !canvas) return;
+      const changed =
+        width !== canvas.clientWidth || height !== canvas.clientHeight;
+      width = canvas.clientWidth;
+      height = canvas.clientHeight;
+      if (changed || force) {
+        map.stop();
+        map.resize();
+        focusSelectionRef.current(map, 0);
+      }
+    };
+    const frame = requestAnimationFrame(() => resize(true));
+    const observer = new ResizeObserver(() => resize());
     if (container.current) observer.observe(container.current);
     return () => {
       cancelAnimationFrame(frame);
@@ -349,19 +387,105 @@ export default function CityMap({
             listing.coordinates.every(Number.isFinite) &&
             isIdfCoordinate(listing.coordinates),
         );
-      const measuring = document.createElement("button");
-      measuring.style.cssText =
-        "position:absolute;visibility:hidden;pointer-events:none;";
-      container.current?.appendChild(measuring);
       const sizes = new Map<string, { width: number; height: number }>();
-      const measure = (label: string, cluster = false) => {
-        const key = `${cluster}:${label}`;
+      const canvasRect = container.current?.getBoundingClientRect();
+      const controlsRect = controls.current?.getBoundingClientRect();
+      const priceAreaHeight = canvasRect
+        ? (controlsRect && controlsRect.width > controlsRect.height
+            ? controlsRect.top - canvasRect.top
+            : canvasRect.height) - 16
+        : Infinity;
+      const byId = new Map(available.map((listing) => [listing.id, listing]));
+      const renderPrice = (button: HTMLButtonElement, group: Listing[]) => {
+        const lines = document.createElement("span");
+        lines.className = "gp-map-price-lines";
+        for (const label of mapMarkerPriceLines(group, transactionType)) {
+          const line = document.createElement("span");
+          line.textContent = label;
+          lines.appendChild(line);
+        }
+        button.replaceChildren(lines);
+        if (group.length > 1) {
+          const count = document.createElement("span");
+          count.className = "gp-map-price-count";
+          count.textContent = String(group.length);
+          count.setAttribute("aria-hidden", "true");
+          button.appendChild(count);
+        }
+      };
+      const priceButton = (group: Listing[], interactive: boolean) => {
+        const first = group[0];
+        const selected = group.some((item) => item.id === selectedId);
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `gp-map-price${selected ? " is-selected" : ""}${group.length > 1 ? " is-cluster" : ""}`;
+        renderPrice(button, group);
+        const priceLabel = mapMarkerPriceLines(group, transactionType).join(
+          " · ",
+        );
+        button.setAttribute(
+          "aria-label",
+          group.length > 1
+            ? `${priceLabel} · Voir les ${group.length} annonces à cet endroit`
+            : `${first.city}, ${first.district}, ${priceLabel}${first.locationPrecision === "area" ? ", position de secteur" : ""}`,
+        );
+        if (selected) button.setAttribute("aria-pressed", "true");
+        if (interactive)
+          button.addEventListener("click", () => {
+            if (group.length > 1 && onClusterSelectRef.current) {
+              onClusterSelectRef.current(group.map((item) => item.id));
+              const bounds = mapResultBounds(
+                group.map((item) => item.coordinates),
+              );
+              if (bounds)
+                map.fitBounds(bounds, {
+                  padding: 70,
+                  maxZoom: group.some(
+                    (item) => item.locationPrecision === "area",
+                  )
+                    ? 15
+                    : 16.5,
+                  duration: window.matchMedia(
+                    "(prefers-reduced-motion: reduce)",
+                  ).matches
+                    ? 0
+                    : 450,
+                });
+            } else onSelectRef.current(first.id);
+          });
+        return button;
+      };
+      const markerElement = (
+        group: Listing[],
+        interactive: boolean,
+      ): HTMLElement => {
+        if (!expandMapPrices(group.length, map.getZoom(), priceAreaHeight))
+          return priceButton(group, interactive);
+        const stack = document.createElement("div");
+        stack.className = "gp-map-price-stack";
+        stack.setAttribute("role", "group");
+        stack.setAttribute(
+          "aria-label",
+          `${group.length} annonces à cet endroit`,
+        );
+        for (const listing of group)
+          stack.appendChild(priceButton([listing], interactive));
+        return stack;
+      };
+      const measure = (group: Listing[]) => {
+        const key = group
+          .map((item) => item.id)
+          .sort()
+          .join("|");
         const existing = sizes.get(key);
         if (existing) return existing;
-        measuring.className = `gp-map-price${cluster ? " is-cluster" : ""}`;
-        measuring.textContent = label;
+        const measuring = markerElement(group, false);
+        measuring.style.visibility = "hidden";
+        measuring.style.pointerEvents = "none";
+        container.current?.appendChild(measuring);
         const rect = measuring.getBoundingClientRect();
-        // Includes the selected border and marker tail in collision spacing.
+        measuring.remove();
+        // Includes the marker tail in collision spacing, also for expanded prices.
         const size = {
           width: Math.max(44, rect.width) + 4,
           height: Math.max(44, rect.height) + 8,
@@ -376,46 +500,21 @@ export default function CityMap({
             id: listing.id,
             x: point.x,
             y: point.y,
-            ...measure(listingPrice(listing, transactionType)),
+            ...measure([listing]),
           };
         }),
-        (count) => measure(`${count} annonces`, true),
+        (_count, ids) => measure(ids.map((id) => byId.get(id)!)),
       );
-      measuring.remove();
       markers.current = groups.map((placement) => {
-        const group = placement.ids.map((id) =>
-          available.find((listing) => listing.id === id)!,
-        );
-        const first = group[0];
-        const selected = group.some((item) => item.id === selectedId);
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = `gp-map-price${selected ? " is-selected" : ""}${group.length > 1 ? " is-cluster" : ""}`;
-        button.textContent =
-          group.length > 1
-            ? `${group.length} annonces`
-            : listingPrice(first, transactionType);
-        button.setAttribute(
-          "aria-label",
-          group.length > 1
-            ? `Choisir parmi ${group.length} annonces proches`
-            : `${first.city}, ${first.district}, ${listingPrice(first, transactionType)}${first.locationPrecision === "area" ? ", position de secteur" : ""}`,
-        );
-        if (selected) button.setAttribute("aria-pressed", "true");
-        button.addEventListener("click", () => {
-          if (group.length > 1 && onClusterSelectRef.current) {
-            setClusterIds([]);
-            onClusterSelectRef.current(group.map((item) => item.id));
-          } else if (group.length > 1) {
-            clusterTrigger.current = button;
-            setClusterIds(group.map((item) => item.id));
-          } else onSelectRef.current(first.id);
-        });
+        const group = placement.ids.map((id) => byId.get(id)!);
         const coordinate =
           group.length > 1
             ? map.unproject([placement.x, placement.y])
-            : first.coordinates;
-        return new Marker({ element: button, anchor: "bottom" })
+            : group[0].coordinates;
+        return new Marker({
+          element: markerElement(group, true),
+          anchor: "bottom",
+        })
           .setLngLat(coordinate)
           .addTo(map);
       });
@@ -434,17 +533,11 @@ export default function CityMap({
       previousSelected.current === selectedId
     )
       return;
-    const selected = listings.find((item) => item.id === selectedId);
-    if (selected) {
-      transientLocation.current = false;
-      map.easeTo({
-        center: selected.coordinates,
-        duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-          ? 0
-          : 650,
-      });
-      previousSelected.current = selectedId;
-    }
+    map.resize();
+    focusSelectionRef.current(
+      map,
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 650,
+    );
   }, [selectedId, listings, status]);
 
   const toggleDimension = () => {
@@ -465,47 +558,6 @@ export default function CityMap({
       aria-label="Carte interactive des parkings"
     >
       <div ref={container} className="gp-city-canvas" />
-      {!onClusterSelect && clusterChoices.length > 0 ? (
-        <div
-          className="gp-map-cluster-choices"
-          ref={clusterPanel}
-          tabIndex={-1}
-          role="region"
-          aria-label="Annonces à cet endroit"
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              event.stopPropagation();
-              closeCluster();
-            }
-          }}
-        >
-          <div className="section-row">
-            <strong>{clusterChoices.length} annonces ici</strong>
-            <button
-              type="button"
-              className="icon-button"
-              aria-label="Fermer le choix d’annonces"
-              onClick={closeCluster}
-            >
-              <X size={18} />
-            </button>
-          </div>
-          {clusterChoices.map((listing) => (
-            <button
-              type="button"
-              className="gp-map-cluster-item"
-              key={listing.id}
-              onClick={() => {
-                setClusterIds([]);
-                onSelectRef.current(listing.id);
-              }}
-            >
-              <span>{listing.title}</span>
-              <strong>{listingPrice(listing, transactionType)}</strong>
-            </button>
-          ))}
-        </div>
-      ) : null}
       <div className="gp-map-toolbar">
         <span className="gp-map-location">
           <MapPin size={16} /> {mapLabel} <span>· {is3D ? "3D" : "2D"}</span>
@@ -535,7 +587,11 @@ export default function CityMap({
           </button>
         ) : null}
       </div>
-      <div className="gp-map-controls" aria-label="Commandes de la carte">
+      <div
+        ref={controls}
+        className="gp-map-controls"
+        aria-label="Commandes de la carte"
+      >
         <button
           type="button"
           onClick={() => {
@@ -584,7 +640,7 @@ export default function CityMap({
       {status === "loading" ? (
         <div className="gp-map-loading" role="status">
           <span className="gp-map-spinner" />
-          La ville prend forme…
+          Chargement de la carte…
         </div>
       ) : null}
       {status === "error" ? (

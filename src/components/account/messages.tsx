@@ -301,9 +301,6 @@ function Content({ user, id }: { user: User; id?: string }) {
     isSeller = selected ? ownListings.includes(selected.listingId) : false;
   return (
     <AccountShell user={user} title="Mes messages">
-      <p className="muted account-lead">
-        Des échanges privés, liés au bon parking.
-      </p>
       {error ? (
         <p className="error" role="alert">
           {error}
@@ -482,7 +479,7 @@ function Content({ user, id }: { user: User; id?: string }) {
                 ) : (
                   <div className="account-chat-intro">
                     <Mail size={28} />
-                    <p>La conversation commence ici.</p>
+                    <p>Aucun message dans cette conversation.</p>
                     <span>
                       Posez vos questions sur le parking ou organisez une
                       visite.
@@ -642,15 +639,14 @@ function Content({ user, id }: { user: User; id?: string }) {
           ) : (
             <section className="account-conversation-empty">
               <Mail size={40} />
-              <h2>Choisissez une conversation.</h2>
-              <p>Vos échanges privés s’affichent ici.</p>
+              <h2>Sélectionnez une conversation</h2>
             </section>
           )}
         </div>
       ) : (
         <div className="empty-state account-empty">
           <Mail size={36} />
-          <h2>Votre prochain échange commence avec une place.</h2>
+          <h2>Aucun message</h2>
           <p>
             Contactez un vendeur depuis une annonce pour poser vos questions.
           </p>
@@ -659,6 +655,9 @@ function Content({ user, id }: { user: User; id?: string }) {
           </Link>
         </div>
       )}
+      <p className="account-report-followup">
+        <Link href="/compte/signalements">Suivi des signalements</Link>
+      </p>
     </AccountShell>
   );
 }

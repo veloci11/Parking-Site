@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import ListingCard from "../src/components/ListingCard";
 import ListingInspector from "../src/components/ListingInspector";
-import PreparationForm from "../src/components/account/preparation";
+import DepositSignIn from "../src/components/account/preparation";
 import {
   ListingOffersTable,
   SpaceOfferSummary,
@@ -57,13 +57,14 @@ const listing: Listing = {
   createdAt: "2026-10-21",
   updatedAt: "2026-10-21",
 };
-test("pre-login preparation defers offer and price choices to each unit after sign-in", () => {
-  const copy = text(renderToStaticMarkup(createElement(PreparationForm)));
-  assert.match(copy, /Titre provisoire/);
-  assert.match(copy, /Nombre de places dans cette annonce/);
-  assert.match(copy, /À vendre, à louer, ou les deux/);
-  assert.match(copy, /un prix pour chacune/);
-  assert.doesNotMatch(copy, /Type d’offre/);
+test("deposit entry requires sign-in and preserves the destination without an anonymous form", () => {
+  const html = renderToStaticMarkup(createElement(DepositSignIn));
+  const copy = text(html);
+  assert.match(copy, /Déposer une annonce/);
+  assert.match(html, /href="\/connexion\?next=%2Fdeposer"/);
+  assert.match(html, /href="\/inscription\?next=%2Fdeposer"/);
+  assert.doesNotMatch(html, /<(?:form|input|textarea|select)\b/);
+  assert.doesNotMatch(copy, /gratuit|préparation|Titre provisoire/i);
 });
 function text(html: string) {
   return html.replace(/<[^>]*>/g, " ").replace(/[\s\u202f\u00a0]+/g, " ");

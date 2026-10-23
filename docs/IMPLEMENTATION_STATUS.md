@@ -1,6 +1,8 @@
 # État d’implémentation et preuves
 
-État au 21 octobre 2026. Démonstration locale sur `http://127.0.0.1:3000`, application reliée à Supabase sur `http://127.0.0.1:3001`. **Aucun déploiement public.** Le [plan](plan-construction/README.md) et la [matrice actuelle](COMPLETION_MATRIX.md) distinguent le code réalisé, les preuves et les prérequis opérateur.
+Le site est hébergé sur Ubuntu à **https://parking.gilmathis.com**, derrière Cloudflare. La dernière passe recherche, dépôt et comptes est décrite dans [la recette du 22 octobre](qa/UX_PROFESSIONAL_2026-10-22.md). Le SMTP personnalisé est différé par le propriétaire ; modèles email préparés, non activés. Le [plan](plan-construction/README.md) et la [matrice](COMPLETION_MATRIX.md) distinguent le code réalisé, les preuves et les prérequis opérateur.
+
+Les tableaux ci-dessous constituent la capture historique du 21 octobre ; ils sont complétés par les rapports datés. La préparation anonyme avant connexion a depuis été retirée à la demande du propriétaire.
 
 ## Périmètre réalisé
 
