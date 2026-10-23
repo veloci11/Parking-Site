@@ -15,8 +15,14 @@ import {
   Heart,
   LockKeyhole,
   Maximize,
+  X,
 } from "lucide-react";
-import { areaLabel, type Listing, type TransactionType } from "@/lib/types";
+import {
+  areaLabel,
+  money,
+  type Listing,
+  type TransactionType,
+} from "@/lib/types";
 export default function ListingInspector({
   listing,
   onClose,
@@ -25,6 +31,7 @@ export default function ListingInspector({
   favoriteDisabled = false,
   favoriteError,
   onFavorite,
+  panel = false,
 }: {
   listing: Listing;
   onClose: () => void;
@@ -33,6 +40,7 @@ export default function ListingInspector({
   favoriteDisabled?: boolean;
   favoriteError?: string;
   onFavorite?: () => void;
+  panel?: boolean;
 }) {
   const [index, setIndex] = useState(0);
   const backButton = useRef<HTMLButtonElement>(null);
@@ -47,26 +55,62 @@ export default function ListingInspector({
   const favoriteLabel = favorite
     ? "Retirer des favoris"
     : "Ajouter aux favoris";
+  const announcementHref = `/annonces/${listing.id}/${listing.slug}${transactionType ? `?transactionType=${transactionType}` : ""}`;
+  const panelFavorite = (
+    <button
+      type="button"
+      className="icon-button detail-favorite"
+      aria-label={favoriteLabel}
+      aria-pressed={favorite}
+      disabled={showcase || favoriteDisabled || !onFavorite}
+      onClick={() => onFavorite?.()}
+    >
+      <Heart size={22} fill={favorite ? "currentColor" : "none"} />
+    </button>
+  );
   return (
     <aside
-      className="listing-inspector"
+      className={`listing-inspector${panel ? " inspector-panel" : ""}`}
       aria-label="Le bien sélectionné"
       key={listing.id}
     >
-      <div
-        className="inspector-header"
-        tabIndex={-1}
-        aria-label="Aperçu de l’annonce"
-      >
-        <button
-          ref={backButton}
-          type="button"
-          className="button button-secondary inspector-back-button"
-          onClick={onClose}
+      {panel ? (
+        <div className="inspector-panel-header">
+          <strong>{listingPrice(listing, transactionType)}</strong>
+          {panelFavorite}
+          {!showcase ? (
+            <Link
+              className="button button-primary"
+              href={`${announcementHref}${announcementHref.includes("?") ? "&" : "?"}contact=1`}
+            >
+              Contacter
+            </Link>
+          ) : null}
+          <button
+            type="button"
+            className="icon-button"
+            onClick={onClose}
+            aria-label="Fermer l’annonce"
+          >
+            <X size={20} />
+          </button>
+        </div>
+      ) : (
+        <div
+          className="inspector-header"
+          tabIndex={-1}
+          aria-label="Aperçu de l’annonce"
         >
-          Retour
-        </button>
-      </div>
+          <button
+            ref={backButton}
+            type="button"
+            className="button button-secondary inspector-back-button"
+            onClick={onClose}
+          >
+            Retour
+          </button>
+        </div>
+      )}
       <div className="inspector-image">
         <div className="inspector-photo">
           <PreparedPhotos
@@ -82,28 +126,30 @@ export default function ListingInspector({
             height={420}
             sizes="(max-width:767px) calc(100vw - 32px), 360px"
           />
-          <button
-            type="button"
-            className="inspector-favorite-button"
-            aria-label={favoriteLabel}
-            aria-pressed={favorite}
-            aria-describedby={showcase ? favoriteNoteId : undefined}
-            title={
-              showcase
-                ? "Favoris disponibles sur les annonces réelles"
-                : favoriteLabel
-            }
-            disabled={showcase || favoriteDisabled || !onFavorite}
-            onClick={() => {
-              if (!showcase) onFavorite?.();
-            }}
-          >
-            <Heart
-              size={22}
-              fill={favorite ? "currentColor" : "none"}
-              aria-hidden="true"
-            />
-          </button>
+          {!panel ? (
+            <button
+              type="button"
+              className="inspector-favorite-button"
+              aria-label={favoriteLabel}
+              aria-pressed={favorite}
+              aria-describedby={showcase ? favoriteNoteId : undefined}
+              title={
+                showcase
+                  ? "Favoris disponibles sur les annonces réelles"
+                  : favoriteLabel
+              }
+              disabled={showcase || favoriteDisabled || !onFavorite}
+              onClick={() => {
+                if (!showcase) onFavorite?.();
+              }}
+            >
+              <Heart
+                size={22}
+                fill={favorite ? "currentColor" : "none"}
+                aria-hidden="true"
+              />
+            </button>
+          ) : null}
           {photos.length > 1 ? (
             <div className="gallery-controls">
               <button
@@ -141,13 +187,16 @@ export default function ListingInspector({
           {listing.city} · {listing.district.split(" · ")[0]}
         </p>
         <h2>
-          {visibleSpaces.length > 1
-            ? `${visibleSpaces.length} places${listing.pricingMode === "per_space" ? " à l’unité" : " en lot"}`
-            : visibleSpaces[0]?.number
-              ? `Place ${visibleSpaces[0].number}`
-              : "Place de parking"}
+          {panel
+            ? listing.title
+            : visibleSpaces.length > 1
+              ? `${visibleSpaces.length} places${listing.pricingMode === "per_space" ? " à l’unité" : " en lot"}`
+              : visibleSpaces[0]?.number
+                ? `Place ${visibleSpaces[0].number}`
+                : "Place de parking"}
         </h2>
-        {visibleSpaces.length > 1 ? (
+        {visibleSpaces.length > 1 &&
+        (!panel || visibleSpaces.some((space) => space.number.trim())) ? (
           <p className="inspector-spaces">
             {visibleSpaces.slice(0, 3).map((space) => (
               <span key={space.id}>{parkingSpaceLocation(space)}</span>
@@ -157,15 +206,17 @@ export default function ListingInspector({
             ) : null}
           </p>
         ) : null}
-        <p className="inspector-price">
-          {listingPrice(listing, transactionType)}
-        </p>
+        {!panel ? (
+          <p className="inspector-price">
+            {listingPrice(listing, transactionType)}
+          </p>
+        ) : null}
         {listing.spaces.length > 1 ? (
           <span className="muted small">{pricingScope(listing)}</span>
         ) : null}
         <Link
           className="button button-primary full-width"
-          href={`/annonces/${listing.id}/${listing.slug}${transactionType ? `?transactionType=${transactionType}` : ""}`}
+          href={announcementHref}
         >
           Consulter l’annonce
         </Link>
@@ -189,11 +240,34 @@ export default function ListingInspector({
                   ? "Couvert"
                   : "Extérieur"}
           </span>
-          <span>
-            <LockKeyhole size={19} />
-            {accessLabel(listing)}
-          </span>
+          {!panel ||
+          !["À préciser", "Non renseigné"].includes(accessLabel(listing)) ? (
+            <span>
+              <LockKeyhole size={19} />
+              {accessLabel(listing)}
+            </span>
+          ) : null}
         </div>
+        {panel ? (
+          <div className="inspector-key-points">
+            <p>
+              <span>Places proposées</span>
+              <strong>{visibleSpaces.length}</strong>
+            </p>
+            {listing.annualChargesCents != null ? (
+              <p>
+                <span>Charges annuelles</span>
+                <strong>{money(listing.annualChargesCents)}</strong>
+              </p>
+            ) : null}
+            {listing.propertyTaxCents != null ? (
+              <p>
+                <span>Taxe foncière annuelle</span>
+                <strong>{money(listing.propertyTaxCents)}</strong>
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         {listing.locationPrecision === "exact_opt_in" && listing.address ? (
           <p className="inspector-description">{listing.address}</p>
         ) : null}

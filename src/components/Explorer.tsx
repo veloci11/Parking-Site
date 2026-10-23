@@ -59,14 +59,6 @@ import ListingCard from "./ListingCard";
 import ListingInspector from "./ListingInspector";
 import AnnualCostFilters from "./AnnualCostFilters";
 
-const EmbeddedListingDetail = dynamic(() => import("./ListingDetail"), {
-  loading: () => (
-    <div className="announcement-loading" role="status">
-      Chargement de l’annonce…
-    </div>
-  ),
-});
-
 // A map refresh often returns the same nearby offers. Keep their reference so
 // existing marker elements and listing cards remain in place.
 function keepUnchangedListings(current: Listing[], next: Listing[]) {
@@ -1511,28 +1503,19 @@ export default function Explorer({
               }
             }}
           >
-            {desktopDetail ? (
-              <EmbeddedListingDetail
-                key={selected.id}
-                listing={selected}
-                embedded
-                onClose={closeSelection}
-              />
-            ) : (
-              <ListingInspector
-                key={selected.id}
-                listing={selected}
-                favorite={favorites.ids.includes(selected.id)}
-                favoriteDisabled={
-                  favorites.loading ||
-                  favorites.pendingIds.includes(selected.id)
-                }
-                favoriteError={favorites.error}
-                onFavorite={() => void favorites.toggle(selected.id)}
-                transactionType={offerFilter}
-                onClose={closeSelection}
-              />
-            )}
+            <ListingInspector
+              panel={desktopDetail}
+              key={selected.id}
+              listing={selected}
+              favorite={favorites.ids.includes(selected.id)}
+              favoriteDisabled={
+                favorites.loading || favorites.pendingIds.includes(selected.id)
+              }
+              favoriteError={favorites.error}
+              onFavorite={() => void favorites.toggle(selected.id)}
+              transactionType={offerFilter}
+              onClose={closeSelection}
+            />
           </section>
         ) : null}
         <section
