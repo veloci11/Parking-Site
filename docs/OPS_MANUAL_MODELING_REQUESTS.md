@@ -1,0 +1,25 @@
+# Demandes manuelles de modélisation —031
+
+Un annonceur peut demander à Mathis la préparation manuelle du modèle de son parking. Cette demande facultative est enregistrée séparément du brouillon commercial. Elle ne lance aucun traitement automatique, ne facture rien et n’envoie aucun email. Les plans et documents restent dans le circuit existant des sources privées ; une note ne remplace pas leur téléversement ni leur contrôle.
+
+Le propriétaire actif et dont l’email est confirmé peut envoyer une note privée de 2000 caractères au maximum. Il existe une demande durable par annonce. Un nouvel appel rejoue la demande existante : il ne modifie ni la première note, ni le statut, ni la version. Un tiers reçoit une réponse de refus sans accès à la demande. La lecture du suivi appartient au propriétaire actif ; les notes ne figurent jamais dans le catalogue, les fiches publiques ou les plans communs.
+
+Les statuts sont `requested`, `in_progress`, `ready` et `declined`. Seul un administrateur actif autorisé avec une session AAL2 peut consulter la file administrative et changer un statut ; le rôle modérateur ne suffit pas. Chaque décision indique la version attendue. Une version périmée est refusée ; réappliquer le même statut ne crée pas une nouvelle version. L’acteur et les dates viennent du serveur. L’administrateur ne réécrit pas la note du demandeur par cette route.
+
+**`ready` signifie que le suivi manuel est terminé. Il ne publie aucune scène, aucun plan commun et aucune annonce.** La revue des sources, la calibration, les droits, la fidélité, le rattachement physique et la publication du plan restent soumis aux circuits 023/026/027. La décision manuelle laisse inchangés le brouillon, la révision commerciale, la publication et les fichiers existants.
+
+Les types de réponse sont définis dans `src/lib/modeling-requests.ts` :
+
+- `GET /api/listings/:id/modeling-request` retourne `{data: ModelingRequest | null}` ; `POST` accepte seulement `{note?: string}` et retourne `{data: ModelingRequest}`.
+- `GET /api/admin/modeling-requests?status=…&offset=0&limit=25` retourne `{data:{requests,total,offset,hasMore}}`. Le filtre de statut est facultatif, la limite vaut 50 par défaut et reste entre 1 et 100 ; l’offset est borné. Les demandes à traiter passent avant les états terminaux.
+- `PATCH /api/admin/modeling-requests` accepte seulement `{listingId,status,version}` et retourne `{data: AdminModelingRequest}`.
+
+Le DTO propriétaire contient `listingId`, `note`, `status`, `requestedAt`, `updatedAt` et `version`. La file administrative ajoute `ownerId`, `ownerName` et `listingTitle`, sans email ni identifiant de l’administrateur ayant traité la demande. Les réponses privées utilisent `no-store`. Le mode SQLite conserve l’exception locale de démonstration déjà documentée ; il ne produit aucune preuve de MFA réelle.
+
+La table Supabase est protégée par RLS et par des droits de colonnes limités à la lecture des données utiles. Les écritures directes sont interdites aux rôles client. Les RPC contrôlent à nouveau propriétaire, compte actif, email confirmé ou administrateur AAL2 ; aucun `ownerId` ou `actorId` client n’est accepté. Le journal contient les transitions de statut et versions, sans recopier la note.
+
+La note et le suivi font partie de l’export privé du propriétaire, dans `modelingRequests`, sans données de tiers ni attribution interne de l’administrateur. Une demande de suppression de compte réauthentifiée supprime ces notes opérationnelles dans la même transaction. La suppression effective d’une annonce ou du propriétaire supprime aussi la demande ; la suppression d’un administrateur conserve la demande et vide son attribution interne. Les autres catégories conservées par 021 restent en `manual_review` : cet ajout ne constitue pas un effacement total du compte, des archives ou des sauvegardes.
+
+La migration 031 a été appliquée sur le vrai Supabase par le coordinateur. La recette complète `supabase/tests/manual-parking-modeling-requests.sql` y a réussi en transaction annulée, avec `manual_modeling_request_internal_bypasses_closed=1`. [Le relevé 031](qa/manual-parking-modeling-requests.json) distingue ces résultats des tests Node, du banc PostgreSQL local et des 165 contrôles HTTP sur le build de production local. Ce dernier scénario utilise SQLite et des identités fictives ; son retrait final reste à terminer selon [son rapport](qa/listing-journey.md). Aucun déploiement public ni modèle de parking réel n’est déduit de ces recettes.
+
+La recette historique de confidentialité 021 a aussi été rejouée intégralement sur le vrai Supabase après 031, en rollback, avec `export_private_worker_only=1`. Elle vérifie le refus d’export pendant la quarantaine, puis le reçu de traitement et l’aperçu fictif validés par les vrais RPC de service, l’exclusion des fichiers d’un autre téléverseur, l’expiration et le nettoyage limité. Les métadonnées Storage sont inertes : cette preuve ne revendique ni octets téléversés, ni rasterisation distante, ni construction réelle de ZIP.

@@ -1,0 +1,125 @@
+{
+  "application": "e20cec4f7dc48d87d58ee739c4193c74569d02bb",
+  "build": "gAfN2rARWcGqou_fI-klO",
+  "collapsed": {
+    "actions": {
+      "bottom": 844,
+      "height": 115,
+      "scrollHeight": 114,
+      "width": 390,
+      "x": 0,
+      "y": 729
+    },
+    "bodyHeight": 844,
+    "bodyWidth": 390,
+    "content": {
+      "bottom": 729,
+      "height": 344.1953125,
+      "scrollHeight": 572,
+      "width": 390,
+      "x": 0,
+      "y": 384.8046875
+    },
+    "gallery": "1 / 2",
+    "height": 844,
+    "photo": {
+      "bottom": 570.484375,
+      "height": 185.6796875,
+      "scrollHeight": 186,
+      "width": 347,
+      "x": 16,
+      "y": 384.8046875
+    },
+    "sheet": {
+      "bottom": 844,
+      "height": 499.1953125,
+      "scrollHeight": 499,
+      "width": 390,
+      "x": 0,
+      "y": 344.8046875
+    },
+    "width": 390
+  },
+  "phoneViewports": [
+    {
+      "bodyHeight": 568,
+      "bodyWidth": 320,
+      "contentHeight": 237,
+      "contentScroll": 846,
+      "contentTop": 314,
+      "cost": "Charges annuelles\n120 €",
+      "descriptionCostOrder": [
+        "inspector-excerpt",
+        "inspector-key-points inspector-costs"
+      ],
+      "footerBottom": 568,
+      "footerWidth": 320,
+      "height": 568,
+      "scrollY": 0,
+      "width": 320
+    },
+    {
+      "bodyHeight": 932,
+      "bodyWidth": 430,
+      "contentHeight": 601,
+      "contentScroll": 804,
+      "contentTop": 202.5,
+      "cost": "Charges annuelles\n120 €",
+      "descriptionCostOrder": [
+        "inspector-excerpt",
+        "inspector-key-points inspector-costs"
+      ],
+      "footerBottom": 932,
+      "footerWidth": 430,
+      "height": 932,
+      "scrollY": 0,
+      "width": 430
+    }
+  ],
+  "desktop": {
+    "bodyWidth": 1425,
+    "cost": "Charges annuelles\n120 €",
+    "heading": "Description",
+    "height": 900,
+    "order": [
+      "inspector-excerpt",
+      "inspector-key-points inspector-costs"
+    ],
+    "results": {
+      "bottom": 900,
+      "height": 832,
+      "width": 380,
+      "x": 0,
+      "y": 68
+    },
+    "rounding": "32px",
+    "search": {
+      "bottom": 140,
+      "height": 72,
+      "width": 1425,
+      "x": 0,
+      "y": 68
+    },
+    "sheet": {
+      "bottom": 900,
+      "height": 764,
+      "width": 427.5,
+      "x": 380,
+      "y": 136
+    },
+    "width": 1440
+  },
+  "interactions": [
+    "expand by button",
+    "collapse by button",
+    "expand by handle drag",
+    "photo 1 to 2",
+    "open full listing"
+  ],
+  "unitTests": {
+    "passed": 273,
+    "skipped": 3,
+    "failed": 0
+  },
+  "ci": "six checks passed"
+}

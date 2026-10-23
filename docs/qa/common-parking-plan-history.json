@@ -1,0 +1,74 @@
+{
+  "scope": "common-parking-plan-history-032",
+  "date": "2026-10-22",
+  "status": "applied-remotely-sql-rollback-validated",
+  "migration": "supabase/migrations/20261022084304_common_parking_plan_history.sql",
+  "migrationCreatedWith": "Supabase CLI 2.121.0 migration new",
+  "typescript": {
+    "tests": 12,
+    "passed": 12,
+    "typecheck": "passed",
+    "format": "passed",
+    "files": [
+      "tests/parking-level-plans.test.ts",
+      "tests/parking-registry.test.ts",
+      "tests/parking-lot-selection.test.ts",
+      "tests/parking-render.test.ts"
+    ]
+  },
+  "sql": {
+    "environment": "isolated PostgreSQL 14 clone of local privacy031 test template",
+    "database": "gp_plan_history032",
+    "fixture": "supabase/tests/common-parking-plan-history.sql",
+    "completed": true,
+    "finalAssertion": "plan_history_contract_closed=1",
+    "transaction": "rolled-back",
+    "checks": [
+      "admin-aal2-only",
+      "immutable-revisions",
+      "optimistic-version",
+      "published-revision-only",
+      "new-rights-attestation",
+      "current-source-sha256-metadata",
+      "current-ready-sources",
+      "current-physical-mapping",
+      "current-exact-consent",
+      "active-source-owner",
+      "no-partial-revision-on-refusal",
+      "restore-as-new-version",
+      "no-withdrawn-listing-resurrection",
+      "no-private-geometry-in-summary",
+      "no-private-identities-in-public-plan",
+      "pagination-25",
+      "withdrawn-history-source-retention",
+      "internal-execute-grants-revoked"
+    ],
+    "limitation": "gp_validate_scene is the inherited local no-op stub. Rectangular geometry checks and history functions are real. Connected recipe with actual validator remains required. Storage rows represent inert fixture metadata, not actual uploads."
+  },
+  "backfill": {
+    "environment": "separate temporary PostgreSQL clone with one pre-032 published plan",
+    "preservedExactly": [
+      "manifest",
+      "reviewedAt",
+      "reason"
+    ],
+    "revisionsCaptured": 1,
+    "backfillAuditEvents": 1,
+    "cloneRemovedAfterCheck": true,
+    "historicalOverwrittenRevisionsReconstructed": false
+  },
+  "browser": "not-run-by-this-agent; coordinator-owned",
+  "remoteDdl": true,
+  "deployment": false,
+  "renderOrLogoModified": false,
+  "connectedSql": {
+    "project": "srrmysturoloovpuuojp",
+    "date": "2026-10-22",
+    "validator": "actual PostGIS scene validator",
+    "fixture": "supabase/tests/common-parking-plan-history.sql",
+    "finalAssertion": "plan_history_contract_closed=1",
+    "transaction": "rolled-back",
+    "completed": true,
+    "persistentFixtureRows": 0
+  }
+}

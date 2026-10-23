@@ -1,0 +1,34 @@
+{
+  "checkedAt": "2026-10-21T17:47:06.155617+00:00",
+  "project": "srrmysturoloovpuuojp",
+  "status": "passed",
+  "migrations": [
+    "008 publication suspension and unit quality",
+    "009 conversation blocking",
+    "010 interlocutor blocking across all threads"
+  ],
+  "tests": [
+    {
+      "file": "supabase/tests/suspension-unit-quality.sql",
+      "transport": "Supabase MCP execute_sql",
+      "transaction": "rollback",
+      "result": "seller_notified=1; all preceding SQL assertions passed"
+    },
+    {
+      "file": "supabase/tests/conversation-blocks.sql",
+      "transport": "Supabase MCP execute_sql",
+      "transaction": "rollback",
+      "result": "internal_functions_denied=1; all preceding SQL assertions passed"
+    },
+    {
+      "file": "supabase/tests/interlocutor-blocks.sql",
+      "transport": "Supabase MCP execute_sql",
+      "transaction": "rollback",
+      "result": "pair_internal_denied=1; all preceding SQL assertions passed"
+    }
+  ],
+  "limitations": [
+    "No external email was sent",
+    "SQL role/claim simulation exercises live PostgreSQL functions and RLS; it does not replace the earlier GoTrue/HTTP authentication recipe."
+  ]
+}

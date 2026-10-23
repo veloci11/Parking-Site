@@ -1,0 +1,154 @@
+{
+  "date": "2026-10-22T14:59:11.153Z",
+  "baseline": {
+    "build": "HOV-my8LrO43UDFk0VAKI",
+    "width": 390,
+    "phase": "mobile-list-before-click",
+    "networkCacheDisabled": true,
+    "externalRequests": [
+      {
+        "url": "https://tiles.openfreemap.org/styles/liberty",
+        "type": "Fetch"
+      },
+      {
+        "url": "https://tiles.openfreemap.org/planet",
+        "type": "Fetch"
+      },
+      {
+        "url": "https://tiles.openfreemap.org/sprites/ofm_f384/ofm.json",
+        "type": "Fetch"
+      },
+      {
+        "url": "https://tiles.openfreemap.org/sprites/ofm_f384/ofm.png",
+        "type": "Fetch"
+      },
+      {
+        "url": "https://tiles.openfreemap.org/fonts/Noto%20Sans%20Italic/0-255.pbf",
+        "type": "Fetch"
+      },
+      {
+        "url": "https://tiles.openfreemap.org/fonts/Noto%20Sans%20Regular/0-255.pbf",
+        "type": "Fetch"
+      },
+      {
+        "url": "https://tiles.openfreemap.org/fonts/Noto%20Sans%20Bold/0-255.pbf",
+        "type": "Fetch"
+      },
+      {
+        "url": "https://tiles.openfreemap.org/fonts/Noto%20Sans%20Italic/8192-8447.pbf",
+        "type": "Fetch"
+      }
+    ],
+    "canvasCount": 1,
+    "truncated": false
+  },
+  "corrected": {
+    "build": "ELm_XNdcSyy-Q0C7NwlP2",
+    "mobileWidth": 390,
+    "listReady": "7 biens d’exemple",
+    "canvasBeforeClick": 0,
+    "styleAndWorkerRequestsBeforeClick": 0,
+    "networkCacheDisabled": true,
+    "requestLogTruncated": false,
+    "styleRequestsAfterCarte": 1,
+    "canvasAfterCarte": 1,
+    "canvasBackendNodePreservedAcrossListMap": true,
+    "styleReloadsAcrossListMap": 0,
+    "returnedCanvasCssSize": {
+      "width": 375,
+      "height": 580
+    },
+    "desktopWidth": 1440,
+    "desktopCanvasWithoutCarteClick": 1,
+    "desktopDocumentWidth": 1440
+  },
+  "scope": "Browser Network and DOM observations, not a Core Web Vitals or traffic-load benchmark.",
+  "cleanup": {
+    "serverStopped": true,
+    "disposableRuntimeRemoved": true,
+    "temporaryTabsClosed": true,
+    "viewportReset": true
+  },
+  "controlLayout": {
+    "build": "pcMqwObi9XdoC2NB2C0vG",
+    "beforeTablet": {
+      "width": 768,
+      "overlapArea": 1877.5859375
+    },
+    "after": [
+      {
+        "documentWidth": 375,
+        "geolocate": {
+          "h": 40,
+          "w": 126.3671875,
+          "x": 24,
+          "y": 345.890625
+        },
+        "overlapArea": 0,
+        "search": {
+          "h": 44,
+          "w": 231.0859375,
+          "x": 71.95703125,
+          "y": 395.890625
+        },
+        "verticalGap": 10,
+        "width": 390
+      },
+      {
+        "documentWidth": 753,
+        "geolocate": {
+          "h": 40,
+          "w": 126.3671875,
+          "x": 344,
+          "y": 348.609375
+        },
+        "overlapArea": 0,
+        "search": {
+          "h": 44,
+          "w": 231.0859375,
+          "x": 420.95703125,
+          "y": 398.609375
+        },
+        "verticalGap": 10,
+        "width": 768
+      },
+      {
+        "documentWidth": 1009,
+        "geolocate": {
+          "h": 40,
+          "w": 126.3671875,
+          "x": 364,
+          "y": 332
+        },
+        "overlapArea": 0,
+        "search": {
+          "h": 44,
+          "w": 231.0859375,
+          "x": 558.95703125,
+          "y": 326
+        },
+        "verticalGap": -46,
+        "width": 1024
+      },
+      {
+        "documentWidth": 1440,
+        "geolocate": {
+          "h": 40,
+          "w": 126.3671875,
+          "x": 384,
+          "y": 343
+        },
+        "overlapArea": 0,
+        "search": {
+          "h": 44,
+          "w": 231.0859375,
+          "x": 784.45703125,
+          "y": 337
+        },
+        "verticalGap": -46,
+        "width": 1440
+      }
+    ],
+    "capture": "resume-captures/11-mobile-map-controls.png"
+  }
+}

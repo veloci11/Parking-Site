@@ -1,0 +1,32 @@
+name: Isolated document worker
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: worker-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  raster:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked test dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build the worker from its allowlisted context and pinned base
+        run: |
+          docker info --format '{{.ServerVersion}}'
+          docker build --file scripts/workers/scene-source.Dockerfile --tag gp-source-raster:ci scripts/workers
+          image_id="$(docker image inspect gp-source-raster:ci --format '{{.Id}}')"
+          test -n "$image_id"
+          echo "GP_SOURCE_RASTER_IMAGE=$image_id" >> "$GITHUB_ENV"
+      - name: Require real isolated raster execution
+        env:
+          GP_REQUIRE_RASTER_ISOLATION_TEST: "true"
+        run: ./node_modules/.bin/tsx --test tests/source-processing.test.ts tests/scene.test.ts

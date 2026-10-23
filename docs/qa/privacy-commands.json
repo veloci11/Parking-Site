@@ -1,0 +1,44 @@
+{
+  "scope": "021 private exports, durable deletion requests and limited cleanup",
+  "localTests": {
+    "passed": 2,
+    "failed": 0
+  },
+  "supabaseSql": {
+    "status": "passed-real-supabase-rollback-after031",
+    "testFile": "supabase/tests/privacy-commands.sql",
+    "historicalStatusBefore019": "waiting for permanent dependency 019; first rollback attempt refused missing parking_contributors and committed nothing",
+    "testSha256": "3565751586854ab1ce1b58ee416c84c44e4c0b4fe4f3f590172defac04869de3",
+    "localEntireRecipePassed": true,
+    "localTransaction": "rolled-back",
+    "remoteExecuted": true,
+    "remotePassed": true,
+    "remoteErrors": 0,
+    "remoteTransaction": "rolled-back",
+    "remoteFinalAssertion": {
+      "export_private_worker_only": 1
+    },
+    "evidenceSource": "Coordinator confirmation of entire revised recipe on real Supabase after031, matching SHA256"
+  },
+  "realEmailSent": false,
+  "realUserDeleted": false,
+  "storageDeleted": false,
+  "completeErasureClaimed": false,
+  "policy": "privacy-limited-cleanup-v1",
+  "workerDefault": "dry_run",
+  "retentionScheduleValidated": false,
+  "localArchiveTests": {
+    "passed": 3,
+    "failed": 0
+  },
+  "durableExport": "Private job, worker, bounded streamed ZIP, owner/password proxy, seven-day expiry and Storage API purge implemented. SQL metadata recipe is distinct from actually building or downloading remote archive bytes.",
+  "archiveStorageActuallyExercised": false,
+  "manualModeling031": {
+    "ownRequestsExported": true,
+    "confirmedDeletionPurgesOwnRequests": true,
+    "real031RecipePassed": true,
+    "realLegacy021Rerun": "passed-entire-recipe-rollback",
+    "proof": "docs/qa/manual-parking-modeling-requests.json"
+  },
+  "sourceReadinessRecipe": "Unready owned sources refuse export and create no job; inert Storage metadata plus actual gp_source_claim/gp_source_complete validate the preview. Export contains exactly own media/source/preview, never the other uploader source. No actual uploaded bytes, raster worker or remote ZIP creation claimed."
+}

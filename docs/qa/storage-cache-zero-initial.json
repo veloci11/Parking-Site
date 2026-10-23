@@ -1,0 +1,127 @@
+{
+  "checkedAt": "2026-10-22T14:12:22.961Z",
+  "status": "failed-pending-exact-cleanup",
+  "failedCheck": "upload_0",
+  "checks": [
+    {
+      "name": "real_supabase_mode",
+      "passed": true
+    },
+    {
+      "name": "seller_real_login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "seller_identity",
+      "passed": true
+    },
+    {
+      "name": "buyer_real_login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "buyer_identity",
+      "passed": true
+    },
+    {
+      "name": "admin_real_login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "admin_identity",
+      "passed": true
+    },
+    {
+      "name": "admin_mfa_role",
+      "passed": true
+    },
+    {
+      "name": "admin_mfa_mfa_available",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "admin_mfa_no_preexisting_verified_factor",
+      "passed": true
+    },
+    {
+      "name": "admin_mfa_aal1_admin_blocked",
+      "passed": true,
+      "status": 403,
+      "code": "MFA_REQUIRED"
+    },
+    {
+      "name": "admin_mfa_registry_rejects_aal1",
+      "passed": true,
+      "status": 403
+    },
+    {
+      "name": "admin_mfa_factor_enrolled",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "admin_mfa_private_factor_contract",
+      "passed": true
+    },
+    {
+      "name": "admin_mfa_challenge_1",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "admin_mfa_code_verified",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "admin_mfa_session_aal2",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "admin_mfa_own_factor_verified",
+      "passed": true
+    },
+    {
+      "name": "create",
+      "passed": true,
+      "status": 201
+    },
+    {
+      "name": "upload_0",
+      "passed": false,
+      "status": 400,
+      "code": "VALIDATION_ERROR"
+    },
+    {
+      "name": "admin_mfa_own_factor_removed",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "admin_mfa_own_factor_absent",
+      "passed": true,
+      "status": 200
+    }
+  ],
+  "reads": [],
+  "signedUrlProbe": {
+    "ttlSeconds": 60,
+    "minted": false,
+    "urlOrTokenRecorded": false
+  },
+  "adminFactorRevoked": true,
+  "withdrawn": true,
+  "cleanup": "pending",
+  "buildId": "LiFv9DktYLtVHLZRc0FU9",
+  "priorFailureProof": "docs/qa/withdrawal-storage-cache.json",
+  "realSupabase": true,
+  "syntheticOnly": true,
+  "externalEmailSent": false,
+  "credentialsIncluded": false,
+  "instantRevocationOfCachedOrAlreadyDownloadedBytesClaimed": false
+}

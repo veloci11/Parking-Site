@@ -1,0 +1,43 @@
+/* Account entry uses a single, focused form rather than a marketing panel. */
+.account-auth.account-auth-compact {
+  display: block;
+  width: 100%;
+  max-width: 520px !important;
+  margin: 0 auto;
+  padding: 48px 24px 72px;
+}
+.account-auth-compact .account-auth-card {
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: white;
+}
+.account-auth-compact .account-auth-card h1 {
+  font-size: 26px;
+  margin-bottom: 12px;
+}
+.account-auth-compact .account-auth-card > .muted {
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+.account-auth-compact .account-form {
+  gap: 18px;
+}
+.account-auth-compact .account-form .account-checkbox {
+  align-items: flex-start;
+  font-size: 13px;
+}
+.account-auth-compact .account-form .account-checkbox input {
+  margin-top: 2px;
+  flex: none;
+}
+@media (max-width: 600px) {
+  .account-auth.account-auth-compact {
+    padding: 28px 20px 48px;
+  }
+  .account-auth-compact .account-auth-card {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+  }
+}

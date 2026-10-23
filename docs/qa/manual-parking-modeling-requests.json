@@ -1,0 +1,227 @@
+{
+  "checkedAt": "2026-10-22T03:44:15.937561+00:00",
+  "module": "031-manual-parking-modeling-requests",
+  "status": "passed-real-supabase-sql-and-local-production-http",
+  "migration": {
+    "file": "supabase/migrations/20261022031542_manual_parking_modeling_requests.sql",
+    "sha256": "1a7013348d7c27be464f59fc40973dd1f7c0b8c3ba6655debcec76b472ef998f",
+    "permanentlyApplied": true,
+    "evidenceSource": "Coordinator confirmation of successful MCP apply_migration with matching SHA256"
+  },
+  "sqlRecipe": {
+    "file": "supabase/tests/manual-parking-modeling-requests.sql",
+    "sha256": "370e3a331f108a9e47a7c58be7ba83280495247ddf73dd95501cc17554e4d5ec",
+    "remoteExecuted": true,
+    "remotePassed": true,
+    "remoteErrors": 0,
+    "remoteTransaction": "rolled-back",
+    "remoteFinalAssertion": {
+      "manual_modeling_request_internal_bypasses_closed": 1
+    },
+    "remoteEvidenceSource": "Coordinator confirmation of entire recipe on real Supabase, matching SHA256",
+    "localPassed": true,
+    "localTransaction": "rolled-back"
+  },
+  "localVerification": {
+    "postgresVersion": "14.21",
+    "schemaLimitations": "Agent-owned001–027 bank with030/031 and historical older core-validator/geospatial stubs. Exact real017 context-report DDL and021 privacy functions loaded; Auth table columns added as local stubs. No real Auth service, PostGIS or Storage bytes exercised.",
+    "rollbackSqlRecipes": {
+      "passed": 17,
+      "failed": 0,
+      "transaction": "each rolled back",
+      "additionalPrivacyRecipe": "Entire privacy-commands.sql passed in privacy031 clone after replacing empty historical export stubs with exact021 export definitions; actual023 source claim/complete functions retained."
+    },
+    "typecheck": "passed",
+    "dedicatedNodeTests": {
+      "file": "tests/modeling-requests.test.ts",
+      "passed": 4,
+      "failed": 0
+    },
+    "privacyNodeTests": {
+      "files": [
+        "tests/privacy-commands.test.ts",
+        "tests/privacy-archive.test.ts"
+      ],
+      "passed": 5,
+      "failed": 0
+    },
+    "fullNodeSuite": {
+      "tests": 136,
+      "passed": 133,
+      "failed": 0,
+      "skipped": 3,
+      "skips": [
+        "Two optional HTTP tests without configured origin",
+        "One real Docker raster test without pinned GP_SOURCE_RASTER_IMAGE"
+      ]
+    },
+    "coordinatorProductionBuild": "passed",
+    "coordinatorFullNodeSuite": {
+      "tests": 136,
+      "passed": 133,
+      "failed": 0,
+      "skipped": 3,
+      "reportedSkips": [
+        "Two optional HTTP tests without configured origin",
+        "Docker daemon absent"
+      ]
+    }
+  },
+  "httpJourney": {
+    "report": "docs/qa/listing-journey-http.json",
+    "passed": 165,
+    "failed": 0,
+    "modelingChecks": 35,
+    "serverMode": "local production build",
+    "backend": "isolated disposable SQLite",
+    "supabaseTouched": false,
+    "localMfaSupported": false,
+    "realAal2Claimed": false,
+    "browserUiClaimedByHttpRun": false,
+    "withdrawalDeferred": true,
+    "publishedFixtureRetained": true,
+    "externalEmailSent": false
+  },
+  "privacyRegression": {
+    "file": "supabase/tests/privacy-commands.sql",
+    "sha256": "3565751586854ab1ce1b58ee416c84c44e4c0b4fe4f3f590172defac04869de3",
+    "localPassed": true,
+    "localTransaction": "rolled-back",
+    "remoteStatus": "passed-real-supabase-rollback",
+    "fixtureUpdate": "Assert EXPORT_SOURCE_NOT_READY before export, then validate an inert preview with service_role gp_source_claim/gp_source_complete. Export includes own media/source/preview only, excludes other uploader, and preserves archive expiry and limited deletion checks. No guard disabled and no uploaded bytes or real worker claimed.",
+    "remoteExecuted": true,
+    "remotePassed": true,
+    "remoteErrors": 0,
+    "remoteTransaction": "rolled-back",
+    "remoteFinalAssertion": {
+      "export_private_worker_only": 1
+    },
+    "remoteEvidenceSource": "Coordinator confirmation of entire revised privacy-commands.sql recipe on real Supabase after031, matching SHA256"
+  },
+  "contracts": [
+    "Optional manual request, independent of commercial drafts",
+    "Owner and administrator private access only; moderator refused",
+    "Verified active owner creates exactly one request; repeated POST preserves original note/status/version",
+    "Administrator AAL2 and optimistic versions required for decisions",
+    "Ready does not create or publish a scene, common plan, listing or payment",
+    "Own note included in reauthenticated export; confirmed deletion purges operational requests",
+    "Listing/owner foreign-key cleanup and staff attribution SET NULL",
+    "No client-assigned owner, staff actor or status on creation"
+  ],
+  "credentialsIncluded": false,
+  "humanAuthCreated": false,
+  "realEmailSent": false,
+  "automaticModelGeneration": false,
+  "paymentEnabled": false,
+  "completeErasureClaimed": false,
+  "publicDeploymentClaimed": false,
+  "localTestBank": {
+    "port": 55429,
+    "activeClientCountBeforeStop": 0,
+    "localRollbackLogs": [
+      {
+        "file": "canonical-parking-registry-031.log",
+        "sha256": "514dc6d029a6e3d965263aa5f6811eb51293020b299ff5ba7cd3457ec9ce1676",
+        "endsInRollback": true
+      },
+      {
+        "file": "catalog-v2-031.log",
+        "sha256": "38d91748129aedea8e2a7ac3d05cfe5c48694fba29274eb6b8430a81de89b83b",
+        "endsInRollback": true
+      },
+      {
+        "file": "commercial-details-preview-031.log",
+        "sha256": "5627031ba274e94bd2107d3b8445187761e044350c39a344c9d9d274c937bd7a",
+        "endsInRollback": true
+      },
+      {
+        "file": "common-parking-level-plans-031.log",
+        "sha256": "bed6e28666b8275311500fa613e8771791989c407b987fa570a07b72315b2b97",
+        "endsInRollback": true
+      },
+      {
+        "file": "condition-observations-031.log",
+        "sha256": "adbbe43fc9b2d01e7a43bd96091d7eda9ffa0325a849d299e1c6f1ff4955ca7e",
+        "endsInRollback": true
+      },
+      {
+        "file": "conversation-blocks-031.log",
+        "sha256": "2043f4e12522dac2a7527927a11c8abe6ab4207c898920d5a2bac189f61133a6",
+        "endsInRollback": true
+      },
+      {
+        "file": "effective-scene-availability-031.log",
+        "sha256": "5dbff59ffdc76d60e3e9e537aa04b007db1d58263905fd2daee225d1e5157afa",
+        "endsInRollback": true
+      },
+      {
+        "file": "entitlements-anti-abuse-031.log",
+        "sha256": "2faef728519b3ff3d73f80f6cf0dae40b3af81e8292806e3d65b433af267994d",
+        "endsInRollback": true
+      },
+      {
+        "file": "interlocutor-blocks-031.log",
+        "sha256": "c9801109c2d565acaea42822efed162267f34afa2111e4729c60ec7603ba6e3d",
+        "endsInRollback": true
+      },
+      {
+        "file": "manual-parking-modeling-requests-031.log",
+        "sha256": "72a0d1da9e84fc6be14237f4e73832b935697a5ac89cafe6b1312d60e56e079d",
+        "endsInRollback": true
+      },
+      {
+        "file": "notifications-031.log",
+        "sha256": "fcc79162a6da1321a428380689205e7aebb47289e364f712d53b240f86bd2518",
+        "endsInRollback": true
+      },
+      {
+        "file": "per-space-offers-031.log",
+        "sha256": "b5dac372635db562b60ee2dd05a9fa21b72d8cb250d8fde7ff22aa7e2ef4b5cf",
+        "endsInRollback": true
+      },
+      {
+        "file": "privacy-commands-031.log",
+        "sha256": "dbcbc537d19aab9c7fcd7147040b5041361b8a019317fa9fedb9851244eac25d",
+        "endsInRollback": true
+      },
+      {
+        "file": "profiles-admin-history-031.log",
+        "sha256": "82307150434c6c073f380ba959757324a4863f3ed8d339f9dbe9f53314c00825",
+        "endsInRollback": true
+      },
+      {
+        "file": "rls-031.log",
+        "sha256": "58487c157a071c2a7443062230a3abb4da7090286f462799455dc6dd6e9f215d",
+        "endsInRollback": true
+      },
+      {
+        "file": "sale-rent-transactions-031.log",
+        "sha256": "ff4297f1601221bb4ed188a3fa01c6147243251f8c8d7ed0929b8ee133b13110",
+        "endsInRollback": true
+      },
+      {
+        "file": "suspension-unit-quality-031.log",
+        "sha256": "214a981c0e78680ae2f00ed2dcd73e80a48327f67e2846ba5343243e7ec9695d",
+        "endsInRollback": true
+      },
+      {
+        "file": "unit-galleries-031.log",
+        "sha256": "42cdbc68054f8191322b9536a70783081561196cf050952f2a83523fa3371126",
+        "endsInRollback": true
+      }
+    ],
+    "nodeLog": {
+      "file": "modeling031-node-tests.log",
+      "sha256": "82709a740ae8745723258304e5c95833331bbb8ec455f811387970a8dd809b66"
+    },
+    "scope": "Only the agent-owned isolated PostgreSQL14 cluster; data and logs preserved. No existing user PostgreSQL service touched.",
+    "formerPostmasterPid": 57367,
+    "pidClosed": true,
+    "tcpListenerAbsent": true,
+    "pgIsReadyExit": 2,
+    "pgCtlStatusExit": 3,
+    "unixSocketAbsent": true,
+    "dataPreserved": true,
+    "stoppedAt": "2026-10-22T03:44:15.937561+00:00"
+  }
+}

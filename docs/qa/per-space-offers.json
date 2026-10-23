@@ -1,0 +1,170 @@
+{
+  "checkedAt": "2026-10-21",
+  "module": "030-per-space-offers",
+  "status": "passed-local-and-real-supabase-sql",
+  "migration": {
+    "file": "supabase/migrations/20261022025137_per_space_offers.sql",
+    "sha256": "2b9f6cbc01847373eb877f65badf02072157c2a862eba9b915719ab85c44644d",
+    "permanentlyApplied": true,
+    "existingListingDml": false,
+    "evidenceSource": "Coordinator confirmation of successful MCP apply_migration with matching SHA256"
+  },
+  "sqlRecipe": {
+    "file": "supabase/tests/per-space-offers.sql",
+    "sha256": "5315790f3a722b00a4d4dd822fe708326fb3bb872c2bbfe7ec7243b5734dd344",
+    "remoteExecuted": true,
+    "localPassed": true,
+    "localTransaction": "rolled-back",
+    "localPostgresVersion": "14.21",
+    "localSchemaLimitations": "Existing older core validators/geospatial stubs in the isolated001–027 bank; not proof of real PostGIS or Auth services",
+    "finalAssertion": {
+      "per_space_offers_internal_bypasses_closed": 1
+    },
+    "remotePassed": true,
+    "remoteTransaction": "rolled-back",
+    "remoteErrors": 0,
+    "remoteEvidenceSource": "Coordinator confirmation of the entire recipe execution on real Supabase, matching SHA256",
+    "remoteFinalAssertion": {
+      "per_space_offers_internal_bypasses_closed": 1
+    }
+  },
+  "localVerification": {
+    "typecheck": "passed",
+    "dedicatedTests": {
+      "file": "tests/per-space-offers.test.ts",
+      "passed": 4,
+      "failed": 0
+    },
+    "fullNodeSuite": {
+      "tests": 130,
+      "passed": 127,
+      "failed": 0,
+      "skipped": 3,
+      "skips": [
+        "Two HTTP tests without configured origin",
+        "One Docker test without pinned raster image"
+      ]
+    },
+    "rollbackSqlRecipes": {
+      "passed": 16,
+      "failed": 0,
+      "schema": "Isolated PG14 clone with030; historical stubs explicitly retained"
+    }
+  },
+  "contracts": [
+    "Legacy lot prices preserved without conversion",
+    "Five places can expose three sales and two monthly rents",
+    "Reserved/sold/rented/withdrawn offers excluded from public search criteria",
+    "Transaction, price, type, area and level share one available unit before count, sort and keyset limit",
+    "Contextual catalogMatch contains public aliases only and is never accepted in drafts",
+    "Offer/status changes remain versioned moderated snapshots",
+    "No sum across sale amounts and monthly rents",
+    "No payment or financial reservation enabled",
+    "Commercial changes reuse physical registry links after moderation; geometric changes still require administered mapping"
+  ],
+  "credentialsIncluded": false,
+  "humanDataDeleted": false,
+  "publicDeploymentClaimed": false,
+  "postApplicationRegression": {
+    "realRecipeCount": 16,
+    "status": "passed-real-supabase-rollback",
+    "report": "docs/qa/per-space-sql-regression.json",
+    "evidenceSource": "Coordinator real MCP execute_sql report after030",
+    "assertionCountClaimed": false
+  },
+  "localTestBank": {
+    "port": 55429,
+    "formerPostmasterPid": 89466,
+    "pidClosed": true,
+    "tcpListenerAbsent": true,
+    "pgIsReadyExit": 2,
+    "pgCtlStatusExit": 3,
+    "unixSocketAbsent": true,
+    "dataPreserved": true,
+    "activeClientCountBeforeStop": 0,
+    "stoppedAt": "2026-10-22T03:09:49.288466+00:00",
+    "scope": "Only the isolated agent-owned PostgreSQL14 test cluster; no other PostgreSQL service stopped",
+    "localRollbackLogs": [
+      {
+        "file": "canonical-parking-registry-030.log",
+        "sha256": "a554a3d4a1e95a174c06a17705eb5be45846d18f11e64e2018d558f072448290",
+        "endsInRollback": true
+      },
+      {
+        "file": "catalog-v2-030.log",
+        "sha256": "794a96b6f86c73560613f3adb5e81bf4dd6dac176263d969482c0eabe606f476",
+        "endsInRollback": true
+      },
+      {
+        "file": "commercial-details-preview-030.log",
+        "sha256": "46e8cd059efaedabfac03fc9b3b871d5ab36fbbe0d27ac7dd1d4045e9e1209ce",
+        "endsInRollback": true
+      },
+      {
+        "file": "common-parking-level-plans-030.log",
+        "sha256": "76da6ced57f347e57107c886f1e0aa9834ff1c1b322a87daafde8f1c5f365d86",
+        "endsInRollback": true
+      },
+      {
+        "file": "condition-observations-030.log",
+        "sha256": "8053ccf5232b787c8ca951ffc550ca11154765dc03ae440b7268855e28ab68cf",
+        "endsInRollback": true
+      },
+      {
+        "file": "conversation-blocks-030.log",
+        "sha256": "f62c1755e381c40c31ae5d7ac8f5b2e44473aeeab346fb9b3c6b4660d2964f44",
+        "endsInRollback": true
+      },
+      {
+        "file": "effective-scene-availability-030.log",
+        "sha256": "ad9ebe8db274cf2fab8e09e905e489be08a8ad95e56eb49e29c449d0bdd8bea5",
+        "endsInRollback": true
+      },
+      {
+        "file": "entitlements-anti-abuse-030.log",
+        "sha256": "4e03a965863cc71548984a1ae9cb8b874449aebdcae503453b5e600a37513cb4",
+        "endsInRollback": true
+      },
+      {
+        "file": "interlocutor-blocks-030.log",
+        "sha256": "bbea002d3f8286f2423d3e489e894a7de17fb58fe109e6dcca31d81bcada2ae2",
+        "endsInRollback": true
+      },
+      {
+        "file": "notifications-030.log",
+        "sha256": "87e09519ff15f24507a4000a088cfe6d8d206e17683aacae28283ae65c49402c",
+        "endsInRollback": true
+      },
+      {
+        "file": "profiles-admin-history-030.log",
+        "sha256": "0fd12ebe4731fa174979c226f1d86dedf86f68061f5a09b53b71e635b7550730",
+        "endsInRollback": true
+      },
+      {
+        "file": "rls-030.log",
+        "sha256": "21066003c9c8b4027a62631a3840c6c0626f3c9ed5a538b3249c080639ea47a4",
+        "endsInRollback": true
+      },
+      {
+        "file": "sale-rent-transactions-030.log",
+        "sha256": "810720cd5194e5767cd7bb51ac6558ee73dd7c1114d4391e6431569065f8a8f0",
+        "endsInRollback": true
+      },
+      {
+        "file": "suspension-unit-quality-030.log",
+        "sha256": "ee22acc719cb2e5135c9e2a2fe02016beeb7824583c481d0012955f7e9f682e6",
+        "endsInRollback": true
+      },
+      {
+        "file": "unit-galleries-030.log",
+        "sha256": "6832a7998ba19774ab1b179535ba50293648d0a83a1bf01f158d58647e3e9275",
+        "endsInRollback": true
+      },
+      {
+        "file": "per-space-offers-030.log",
+        "sha256": "92455ead38097906b8382b313267eb2df5b5013eda6ba8c259e0187ed613e583",
+        "endsInRollback": true
+      }
+    ]
+  }
+}

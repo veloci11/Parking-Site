@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-21",
+  "status": "passed",
+  "migration": "017 context_reports_v1",
+  "localTests": {"file": "tests/context-reports.test.ts", "passed": 3},
+  "contactDraftTests": {"file": "tests/contact-draft.test.ts", "passed": 2},
+  "remoteSql": {
+    "file": "supabase/tests/context-reports.sql",
+    "method": "Migration and assertions executed together in one rollback transaction on the configured Supabase project",
+    "result": "direct_privilege_denied=1; all preceding assertions passed",
+    "rollbackVerified": {"schema_rolled_back": true, "qa_users_remaining": 0}
+  },
+  "scope": ["semantic and request-key deduplication", "participant ownership and outsider refusals", "single reported message snapshot", "last twenty messages only for a reported conversation", "no global moderator message browsing", "private evidence denied by direct table access", "versioned decisions and one reporter appeal", "decision history and sensitive reads audit", "per-listing contact text isolation and retry request identifiers"],
+  "emailsSent": false,
+  "credentialsIncluded": false,
+  "limitations": ["No real email delivery", "No production deployment", "UI browser recipe remains separate", "Permanent migration application belongs to coordinator"]
+}

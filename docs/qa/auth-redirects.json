@@ -1,0 +1,8 @@
+{
+  "project": "srrmysturoloovpuuojp",
+  "checkedAt": "2026-10-21",
+  "method": "Read-only redirect observation using a deliberately invalid confirmation token; no email or account mutation",
+  "siteUrl": {"status": 303, "origin": "http://127.0.0.1:3001", "path": "/"},
+  "allowedCallback": {"status": 303, "origin": "http://127.0.0.1:3001", "path": "/api/auth/callback"},
+  "actualEmailDeliveryTested": false
+}

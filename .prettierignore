@@ -1,0 +1,4 @@
+# Generated geographic reference and renderer input hashes retain their source bytes.
+src/lib/data/ile-de-france-2025.json
+scripts/render-parking/demo-minus-*.json
+scripts/render-parking/assets/

@@ -1,0 +1,35 @@
+{
+  "controls": {
+    "bottom": 404.5,
+    "height": 54,
+    "width": 186,
+    "x": 177,
+    "y": 350.5
+  },
+  "documentWidth": 375,
+  "inspectors": 1,
+  "popups": 0,
+  "prices": [
+    {
+      "bottom": 279.5,
+      "height": 44,
+      "text": "18 500 €",
+      "width": 77.21875,
+      "x": 162.390625,
+      "y": 235.5
+    },
+    {
+      "bottom": 331.5,
+      "height": 44,
+      "text": "32 000 €",
+      "width": 77.21875,
+      "x": 162.390625,
+      "y": 287.5
+    }
+  ],
+  "switchPosition": "static",
+  "viewport": [
+    390,
+    844
+  ]
+}
