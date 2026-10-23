@@ -1,0 +1,46 @@
+{
+  "sourceCommit": "22c0b458405e400cfe923b904d32a6f62eca5d48",
+  "checkedAt": "2026-10-23T15:44:52.438839+00:00",
+  "checks": [
+    {
+      "query": "minSpaces=2",
+      "total": 1,
+      "passed": true
+    },
+    {
+      "query": "minSpaces=3",
+      "total": 0,
+      "passed": true
+    },
+    {
+      "query": "sellerType=private",
+      "total": 0,
+      "passed": true
+    },
+    {
+      "query": "sellerType=professional",
+      "total": 0,
+      "passed": true
+    },
+    {
+      "query": "minSpaces=0",
+      "status": 400,
+      "passed": true
+    },
+    {
+      "query": "minSpaces=501",
+      "status": 400,
+      "passed": true
+    },
+    {
+      "query": "minSpaces=1.5",
+      "status": 400,
+      "passed": true
+    },
+    {
+      "query": "sellerType=agency",
+      "status": 400,
+      "passed": true
+    }
+  ]
+}
