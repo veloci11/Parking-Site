@@ -661,6 +661,14 @@ export default function ListingDetail({
               )}
             </>
           )}
+          {embedded ? (
+            <Link
+              className="button button-primary full-width detail-open-announcement"
+              href={focusedHref}
+            >
+              Consulter l’annonce
+            </Link>
+          ) : null}
           <div className="detail-facts">
             <div>
               <span>Type</span>

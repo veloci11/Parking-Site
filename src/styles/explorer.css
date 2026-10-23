@@ -1228,7 +1228,8 @@
   background: #fff;
   border: 1px solid var(--border);
   border-left: 0;
-  border-radius: 0 20px 20px 0;
+  border-radius: 0 32px 32px 0;
+  clip-path: inset(0 round 0 32px 32px 0);
   box-shadow: 8px 0 24px #22193a10;
 }
 .explorer .announcement-panel:focus {
@@ -1267,6 +1268,7 @@
     border: 1px solid var(--border);
     border-bottom: 0;
     border-radius: 18px 18px 0 0;
+    clip-path: inset(0 round 18px 18px 0 0);
     box-shadow: 0 -8px 32px #22193a18;
     -webkit-overflow-scrolling: touch;
     animation: explorer-sheet-in 0.24s ease-out;
@@ -1336,5 +1338,19 @@
   .explorer .announcement-panel,
   .explorer .announcement-panel.is-closing {
     animation: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .explorer .announcement-panel::-webkit-scrollbar {
+    width: 6px;
+  }
+  .explorer .announcement-panel::-webkit-scrollbar-track {
+    margin-block: 32px;
+    background: transparent;
+  }
+  .explorer .announcement-panel::-webkit-scrollbar-thumb {
+    background: #c8c6ce;
+    border-radius: 999px;
   }
 }

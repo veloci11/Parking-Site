@@ -2217,3 +2217,6 @@ small {
   right: 10px;
   bottom: 10px;
 }
+.detail-embedded .detail-open-announcement {
+  margin: 4px 0 20px;
+}
