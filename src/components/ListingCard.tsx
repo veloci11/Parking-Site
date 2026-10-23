@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { listingPrice, availableOffers } from "@/lib/listing-price";
 import { searchOfferSpaces } from "@/lib/search-offers";
+import { isPublicShowcase } from "@/lib/public-showcase";
 import { pricingScope } from "./ListingOffers";
 import Image from "./SafePhoto";
 import { Heart, Layers3, ScanEye } from "lucide-react";
@@ -76,19 +77,25 @@ export default function ListingCard({
             loading={eager ? "eager" : "lazy"}
           />
         </CardTarget>
-        <button
-          className={`favorite-button ${favorite ? "is-favorite" : ""}`}
-          onClick={onFavorite}
-          disabled={favoriteDisabled}
-          aria-label={favorite ? "Retirer des favoris" : "Ajouter aux favoris"}
-          aria-pressed={favorite}
-        >
-          <Heart size={23} fill={favorite ? "currentColor" : "none"} />
-        </button>
+        {!isPublicShowcase(listing.id) ? (
+          <button
+            className={`favorite-button ${favorite ? "is-favorite" : ""}`}
+            onClick={onFavorite}
+            disabled={favoriteDisabled}
+            aria-label={
+              favorite ? "Retirer des favoris" : "Ajouter aux favoris"
+            }
+            aria-pressed={favorite}
+          >
+            <Heart size={23} fill={favorite ? "currentColor" : "none"} />
+          </button>
+        ) : null}
         {listing.sceneAvailable ? (
           <span className="photo-tag">
             <Layers3 size={14} />
-            Plan 3D
+            {isPublicShowcase(listing.id)
+              ? "Démonstration · Plan 3D"
+              : "Plan 3D"}
           </span>
         ) : null}
       </div>

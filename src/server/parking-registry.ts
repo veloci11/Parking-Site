@@ -664,6 +664,12 @@ export async function handleParkingRegistry(
       const listingId = query.get("listingId");
       if (!publicPath[1] && !listingId)
         throw new ApiError(400, "Choisissez un contexte publié.");
+      const { publicShowcaseParking } = await import("./public-showcase");
+      const showcase = publicShowcaseParking(
+        publicPath[1],
+        listingId ?? undefined,
+      );
+      if (showcase) return respond(showcase);
       const data = ctx.client
         ? await ctx.client.rpc("gp_public_parking", {
             p_alias: publicPath[1] ?? null,

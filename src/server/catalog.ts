@@ -202,6 +202,9 @@ export function getPublicListing(id: string): Listing | null {
 }
 /** SSR entry point: production always reads the curated Supabase projection; no local seed fallback. */
 export async function loadPublicListing(id: string): Promise<Listing | null> {
+  const { getPublicShowcaseListing } = await import("./public-showcase");
+  const showcase = getPublicShowcaseListing(id);
+  if (showcase) return showcase;
   if (
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
     (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||

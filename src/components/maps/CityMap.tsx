@@ -1,5 +1,6 @@
 "use client";
 import { listingPrice } from "@/lib/listing-price";
+import { isPublicShowcase } from "@/lib/public-showcase";
 import { PARIS_CENTER, IDF_BOUNDS, isIdfCoordinate } from "@/lib/paris-region";
 
 import { useEffect, useRef, useState } from "react";
@@ -152,6 +153,22 @@ export default function CityMap({
   const previousSelected = useRef<string | null>(
     initialViewRef.current ? selectedId : null,
   );
+  const showcaseCentered = useRef(false);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (
+      !map ||
+      status !== "ready" ||
+      initialViewRef.current ||
+      selectedId ||
+      showcaseCentered.current ||
+      !listings.length ||
+      !listings.every((item) => isPublicShowcase(item.id))
+    )
+      return;
+    showcaseCentered.current = true;
+    map.jumpTo({ center: listings[0].coordinates, zoom: 16.5 });
+  }, [listings, selectedId, status]);
   const publicCities = [...new Set(listings.map((listing) => listing.city))];
   const mapLabel =
     publicCities.length === 1

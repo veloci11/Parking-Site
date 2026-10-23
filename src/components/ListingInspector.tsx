@@ -7,6 +7,7 @@ import { ParkingKindIcon } from "./ParkingKindIcon";
 import { accessLabel } from "@/lib/access-label";
 import Link from "next/link";
 import { useState } from "react";
+import { isPublicShowcase } from "@/lib/public-showcase";
 import {
   ChevronLeft,
   ChevronRight,
@@ -115,8 +116,9 @@ export default function ListingInspector({
           </span>
         </div>
         <p className="inspector-description">
-          Découvrez la place, son état et ses accès. Échangez avec l’annonceur
-          pour organiser une visite.
+          {isPublicShowcase(listing.id)
+            ? "Exemple fictif : prix, photos et plan 3D illustratifs. Aucun bien réel n’est proposé à cette adresse."
+            : "Découvrez la place, son état et ses accès. Échangez avec l’annonceur pour organiser une visite."}
         </p>
         <Link
           className="button button-primary full-width"

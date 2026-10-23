@@ -11,7 +11,17 @@ import sharp from "sharp";
 import { boundedFormData } from "./uploads";
 import { readApiJson } from "./json-body";
 import { diagnosticBackendHeaders } from "./request-context";
-import { parsePageQuery, encodeCursor } from "./pagination";
+import {
+  parsePageQuery,
+  encodeCursor,
+  paginatePublicListings,
+} from "./pagination";
+import {
+  publicShowcaseEnabled,
+  publicShowcaseListings,
+  getPublicShowcaseListing,
+} from "./public-showcase";
+import { isPublicShowcase } from "@/lib/public-showcase";
 import { listingPhotoUrls, validatePhotoLinks } from "./media-links";
 import { z } from "zod";
 import type { Listing, User, Visit, Message } from "@/lib/types";
@@ -37,6 +47,14 @@ function parse<T>(schema: z.ZodType<T>, input: unknown): T {
   return r.data;
 }
 const json = readApiJson;
+function assertRealListing(id: string) {
+  if (isPublicShowcase(id))
+    throw new ApiError(
+      409,
+      "Cette annonce de démonstration est consultable uniquement.",
+      "SHOWCASE_READ_ONLY",
+    );
+}
 const schemaError = (
   e: { message: string; code?: string; details?: string } | null,
 ) => {
@@ -295,6 +313,27 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
         p_cursor: cursor,
         p_limit: limit,
       });
+      // An empty filtered search must never substitute examples for real offers.
+      // Show the explicit preview only while the entire public inventory is empty.
+      if (publicShowcaseEnabled() && result.total === 0) {
+        const inventory = await client
+          .from("published_listings")
+          .select("id", { count: "exact", head: true });
+        schemaError(inventory.error);
+        if (inventory.count === 0) {
+          const page = paginatePublicListings(
+            publicShowcaseListings(),
+            filters,
+            limit,
+            cursor,
+          );
+          return respond(page.items, 200, {
+            total: page.total,
+            nextCursor: page.nextCursor,
+            showcase: true,
+          });
+        }
+      }
       return respond(result.items, 200, {
         total: result.total,
         nextCursor: encodeCursor(result.nextPosition, filters),
@@ -379,6 +418,15 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
     );
     if (listing) {
       const [, id, action] = listing;
+      if (method !== "GET") assertRealListing(id);
+      if (
+        method === "GET" &&
+        !action &&
+        url.searchParams.get("draft") !== "1"
+      ) {
+        const showcase = getPublicShowcaseListing(id);
+        if (showcase) return respond(showcase);
+      }
       if (method === "GET" && action === "preview") {
         await user(true);
         return respond(await rpc("gp_listing_preview", { p_id: id }));
@@ -466,6 +514,7 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
     }
     const favorite = path.match(/^favorites\/([^/]+)$/);
     if (favorite && ["PUT", "DELETE"].includes(method)) {
+      assertRealListing(favorite[1]);
       const u = (await user(true))!;
       const result =
         method === "PUT"
@@ -688,6 +737,7 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
         z.object({ listingId: z.string().uuid() }),
         await json(request),
       );
+      assertRealListing(input.listingId);
       const id = await rpc("gp_contact", { p_listing_id: input.listingId });
       const all = await rpc("gp_conversations", {});
       return respond(
@@ -1190,6 +1240,7 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
         }),
         await json(request),
       );
+      assertRealListing(input.listingId);
       const { data, error } = await client
         .from("reports")
         .insert({

@@ -271,8 +271,7 @@ export function localCatalogPage(
   cursor: Cursor | null,
 ) {
   initializeLocalParkingRegistry();
-  const sql = db(),
-    asOf = cursor?.asOf || new Date().toISOString();
+  const sql = db();
   const publicationTimes = new Map(
     sql
       .prepare(
@@ -281,10 +280,37 @@ export function localCatalogPage(
       .all()
       .map((r) => [String(r.id), String(r.published_at)]),
   );
-  let items = listPublicListings({
-    q: filters.query || undefined,
-  }).filter(
+  return paginatePublicListings(
+    listPublicListings({
+      q: filters.query || undefined,
+    }),
+    filters,
+    limit,
+    cursor,
+    publicationTimes,
+  );
+}
+
+/** Same filters and cursor ordering for read-only fixtures and local snapshots. */
+export function paginatePublicListings(
+  source: Listing[],
+  filters: PageFilters,
+  limit: number,
+  cursor: PagePosition | null,
+  publicationTimes = new Map(source.map((item) => [item.id, item.createdAt])),
+) {
+  const asOf = cursor?.asOf || new Date().toISOString();
+  const fold = (value: string) =>
+    value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+  let items = source.filter(
     (item) =>
+      (!filters.query ||
+        fold(
+          `${item.city} ${item.district} ${item.title} ${item.address ?? ""}`,
+        ).includes(fold(filters.query))) &&
       (!filters.scene || item.sceneAvailable) &&
       Date.parse(publicationTimes.get(item.id)!) <= Date.parse(asOf) &&
       matchesPageFilters(item, filters),

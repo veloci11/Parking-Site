@@ -1,5 +1,6 @@
 "use client";
 import { listingPrice, offerLabel, spaceOffer } from "@/lib/listing-price";
+import { isPublicShowcase } from "@/lib/public-showcase";
 import {
   pricingScope,
   SpaceOfferSummary,
@@ -57,6 +58,7 @@ export default function ListingDetail({
   listing: Listing;
 }) {
   const [listing, setListing] = useState(initialListing);
+  const showcase = isPublicShowcase(listing.id);
   const [unavailable, setUnavailable] = useState(false);
   const [freshnessError, setFreshnessError] = useState("");
   const [backHref, setBackHref] = useState("/");
@@ -319,6 +321,7 @@ export default function ListingDetail({
     e.preventDefault();
     if (
       sendingLock.current ||
+      showcase ||
       unavailable ||
       selectedUnavailable ||
       relatedSelected
@@ -415,25 +418,29 @@ export default function ListingDetail({
           </p>
           <h1>{listing.title}</h1>
         </div>
-        <button
-          className="icon-button"
-          disabled={favorites.loading}
-          onClick={() => void favorites.toggle(listing.id)}
-          aria-label={
-            favorites.ids.includes(listing.id)
-              ? "Retirer des favoris"
-              : "Ajouter aux favoris"
-          }
-          aria-pressed={favorites.ids.includes(listing.id)}
-        >
-          <Heart
-            size={24}
-            fill={favorites.ids.includes(listing.id) ? "currentColor" : "none"}
-            color={
-              favorites.ids.includes(listing.id) ? "#6D28FF" : "currentColor"
+        {!showcase ? (
+          <button
+            className="icon-button"
+            disabled={favorites.loading}
+            onClick={() => void favorites.toggle(listing.id)}
+            aria-label={
+              favorites.ids.includes(listing.id)
+                ? "Retirer des favoris"
+                : "Ajouter aux favoris"
             }
-          />
-        </button>
+            aria-pressed={favorites.ids.includes(listing.id)}
+          >
+            <Heart
+              size={24}
+              fill={
+                favorites.ids.includes(listing.id) ? "currentColor" : "none"
+              }
+              color={
+                favorites.ids.includes(listing.id) ? "#6D28FF" : "currentColor"
+              }
+            />
+          </button>
+        ) : null}
       </div>
       {favorites.error ? (
         <p className="error" role="alert">
@@ -793,148 +800,172 @@ export default function ListingDetail({
             id="contact"
             style={{ marginTop: 40, scrollMarginTop: 32 }}
           >
-            <h2>Rencontrez votre prochaine place.</h2>
-            <p className="muted">
-              Posez vos questions à {focusedListing.sellerName} et convenez
-              d’une visite. Une demande n’est confirmée qu’après accord sur un
-              horaire.
-            </p>
-            {!relatedSelected ? (
-              <p className="notice">
-                {contactContext} Ce contexte sera joint à votre message.
-              </p>
-            ) : null}
-            {relatedSelected ? (
-              <div className="notice" role="status">
-                La place sélectionnée appartient à « {focusedListing.title} »,
-                proposée par {focusedListing.sellerName}.
-                <p>
-                  <Link className="button button-secondary" href={focusedHref}>
-                    Consulter cette annonce et ses offres
-                  </Link>
+            {showcase ? (
+              <>
+                <h2>Une démonstration pour explorer le site.</h2>
+                <p className="notice">
+                  Ces annonces, prix et plans sont fictifs. Vous pouvez explorer
+                  les places et les niveaux ; les messages et demandes de visite
+                  sont désactivés pour ces exemples.
                 </p>
-              </div>
-            ) : selectedUnavailable && selectedSpace ? (
-              <div className="notice" role="status">
-                La place {selectedSpace.number} est{" "}
-                {spaceOfferStatus(listing, selectedSpace).toLocaleLowerCase(
-                  "fr-FR",
-                )}{" "}
-                et ne peut pas faire l’objet d’une demande de visite.
-                <p>
-                  Choisissez une autre place disponible dans cette annonce pour
-                  contacter l’annonceur.
-                </p>
-                <button
-                  type="button"
-                  className="button button-secondary"
-                  onClick={showOffers}
-                >
-                  Voir toutes les offres
-                </button>
-              </div>
-            ) : loading ? (
-              <p>Vérification de votre compte…</p>
-            ) : !user ? (
-              <div className="card">
-                <MessageCircle size={24} />
-                <h3 style={{ marginTop: 16 }}>
-                  Une conversation, pour commencer.
-                </h3>
-                <p className="muted">
-                  Connectez-vous pour contacter le vendeur en privé.
-                </p>
-                <label htmlFor="visitor-message">
-                  Préparer votre message avant connexion
-                </label>
-                <textarea
-                  id="visitor-message"
-                  className="input"
-                  rows={4}
-                  maxLength={contactTextLimit}
-                  value={message}
-                  onChange={(e) => editContactText(e.target.value)}
-                />
-                <label className="checkbox-field">
-                  <input
-                    type="checkbox"
-                    checked={visit}
-                    onChange={(e) => editVisit(e.target.checked)}
-                  />
-                  Demander aussi une visite après connexion
-                </label>
-                <p className="small muted">
-                  Votre texte reste local à cet onglet. Il sera présenté après
-                  connexion et envoyé uniquement lorsque vous validerez le
-                  formulaire.
-                </p>
-                {draftNotice ? (
-                  <p className="small muted" role="status">
-                    {draftNotice}
-                  </p>
-                ) : null}
-                <Link
-                  className="button button-primary"
-                  href={`/connexion?next=${encodeURIComponent(contactReturnHref)}`}
-                >
-                  Se connecter
+                <Link className="button button-secondary" href={backHref}>
+                  Retour
                 </Link>
-              </div>
-            ) : !user.emailVerified ? (
-              <div className="notice">
-                Confirmez votre email pour envoyer un message.{" "}
-                <Link
-                  href="/verifier-email"
-                  style={{ textDecoration: "underline" }}
-                >
-                  Vérifier mon email
-                </Link>
-              </div>
+              </>
             ) : (
-              <form className="detail-contact" onSubmit={send}>
-                {draftNotice ? (
-                  <p className="small muted" role="status">
-                    {draftNotice}
+              <>
+                <h2>Rencontrez votre prochaine place.</h2>
+                <p className="muted">
+                  Posez vos questions à {focusedListing.sellerName} et convenez
+                  d’une visite. Une demande n’est confirmée qu’après accord sur
+                  un horaire.
+                </p>
+                {!relatedSelected ? (
+                  <p className="notice">
+                    {contactContext} Ce contexte sera joint à votre message.
                   </p>
                 ) : null}
-                <label htmlFor="message">Votre message</label>
-                <textarea
-                  id="message"
-                  minLength={5}
-                  maxLength={contactTextLimit}
-                  required
-                  disabled={sending}
-                  value={message}
-                  onChange={(e) => editContactText(e.target.value)}
-                />
-                <label className="checkbox-field">
-                  <input
-                    type="checkbox"
-                    checked={visit}
-                    disabled={sending}
-                    onChange={(e) => editVisit(e.target.checked)}
-                  />
-                  <Calendar size={18} />
-                  Demander aussi une visite
-                </label>
-                {error ? (
-                  <p className="error" role="alert">
-                    {error}
-                  </p>
-                ) : null}
-                <button className="button button-primary" disabled={sending}>
-                  {sending ? "Envoi en cours…" : "Envoyer au vendeur"}
-                </button>
-              </form>
+                {relatedSelected ? (
+                  <div className="notice" role="status">
+                    La place sélectionnée appartient à « {focusedListing.title}{" "}
+                    », proposée par {focusedListing.sellerName}.
+                    <p>
+                      <Link
+                        className="button button-secondary"
+                        href={focusedHref}
+                      >
+                        Consulter cette annonce et ses offres
+                      </Link>
+                    </p>
+                  </div>
+                ) : selectedUnavailable && selectedSpace ? (
+                  <div className="notice" role="status">
+                    La place {selectedSpace.number} est{" "}
+                    {spaceOfferStatus(listing, selectedSpace).toLocaleLowerCase(
+                      "fr-FR",
+                    )}{" "}
+                    et ne peut pas faire l’objet d’une demande de visite.
+                    <p>
+                      Choisissez une autre place disponible dans cette annonce
+                      pour contacter l’annonceur.
+                    </p>
+                    <button
+                      type="button"
+                      className="button button-secondary"
+                      onClick={showOffers}
+                    >
+                      Voir toutes les offres
+                    </button>
+                  </div>
+                ) : loading ? (
+                  <p>Vérification de votre compte…</p>
+                ) : !user ? (
+                  <div className="card">
+                    <MessageCircle size={24} />
+                    <h3 style={{ marginTop: 16 }}>
+                      Une conversation, pour commencer.
+                    </h3>
+                    <p className="muted">
+                      Connectez-vous pour contacter le vendeur en privé.
+                    </p>
+                    <label htmlFor="visitor-message">
+                      Préparer votre message avant connexion
+                    </label>
+                    <textarea
+                      id="visitor-message"
+                      className="input"
+                      rows={4}
+                      maxLength={contactTextLimit}
+                      value={message}
+                      onChange={(e) => editContactText(e.target.value)}
+                    />
+                    <label className="checkbox-field">
+                      <input
+                        type="checkbox"
+                        checked={visit}
+                        onChange={(e) => editVisit(e.target.checked)}
+                      />
+                      Demander aussi une visite après connexion
+                    </label>
+                    <p className="small muted">
+                      Votre texte reste local à cet onglet. Il sera présenté
+                      après connexion et envoyé uniquement lorsque vous
+                      validerez le formulaire.
+                    </p>
+                    {draftNotice ? (
+                      <p className="small muted" role="status">
+                        {draftNotice}
+                      </p>
+                    ) : null}
+                    <Link
+                      className="button button-primary"
+                      href={`/connexion?next=${encodeURIComponent(contactReturnHref)}`}
+                    >
+                      Se connecter
+                    </Link>
+                  </div>
+                ) : !user.emailVerified ? (
+                  <div className="notice">
+                    Confirmez votre email pour envoyer un message.{" "}
+                    <Link
+                      href="/verifier-email"
+                      style={{ textDecoration: "underline" }}
+                    >
+                      Vérifier mon email
+                    </Link>
+                  </div>
+                ) : (
+                  <form className="detail-contact" onSubmit={send}>
+                    {draftNotice ? (
+                      <p className="small muted" role="status">
+                        {draftNotice}
+                      </p>
+                    ) : null}
+                    <label htmlFor="message">Votre message</label>
+                    <textarea
+                      id="message"
+                      minLength={5}
+                      maxLength={contactTextLimit}
+                      required
+                      disabled={sending}
+                      value={message}
+                      onChange={(e) => editContactText(e.target.value)}
+                    />
+                    <label className="checkbox-field">
+                      <input
+                        type="checkbox"
+                        checked={visit}
+                        disabled={sending}
+                        onChange={(e) => editVisit(e.target.checked)}
+                      />
+                      <Calendar size={18} />
+                      Demander aussi une visite
+                    </label>
+                    {error ? (
+                      <p className="error" role="alert">
+                        {error}
+                      </p>
+                    ) : null}
+                    <button
+                      className="button button-primary"
+                      disabled={sending}
+                    >
+                      {sending ? "Envoi en cours…" : "Envoyer au vendeur"}
+                    </button>
+                  </form>
+                )}
+              </>
             )}
           </section>
-          <button
-            style={{ marginTop: 24 }}
-            className="text-button"
-            onClick={() => setReport(!report)}
-          >
-            Signaler cette annonce
-          </button>
+          {!showcase ? (
+            <button
+              style={{ marginTop: 24 }}
+              className="text-button"
+              onClick={() => setReport(!report)}
+            >
+              Signaler cette annonce
+            </button>
+          ) : null}
           {report ? (
             !user || !user.emailVerified ? (
               <div className="notice">
@@ -1014,7 +1045,13 @@ export default function ListingDetail({
             place
             {focusedListing.spaces.length > 1 ? "s" : ""}
           </p>
-          {selectedUnavailable ? (
+          {showcase ? (
+            <p className="notice">
+              Démonstration · Prix illustratif
+              <br />
+              Aucune vente ni visite pour cet exemple.
+            </p>
+          ) : selectedUnavailable ? (
             <button
               type="button"
               disabled
@@ -1046,11 +1083,13 @@ export default function ListingDetail({
               {focusedListing.sellerName}
             </p>
             <p className="small muted">
-              {focusedListing.pricingMode === "per_space"
-                ? "Les prix et disponibilités sont propres à chaque place. Les paiements ne sont pas encaissés sur la plateforme ; les conditions sont à convenir avec l’annonceur."
-                : focusedListing.transactionType === "rent"
-                  ? "Le loyer n’est pas encaissé sur la plateforme. Les conditions de location sont à convenir avec le bailleur."
-                  : "Le prix d’achat du parking n’est pas encaissé sur la plateforme. La vente est formalisée avec les professionnels compétents."}
+              {showcase
+                ? "Exemple de présentation, sans annonceur ni offre réelle à cette adresse."
+                : focusedListing.pricingMode === "per_space"
+                  ? "Les prix et disponibilités sont propres à chaque place. Les paiements ne sont pas encaissés sur la plateforme ; les conditions sont à convenir avec l’annonceur."
+                  : focusedListing.transactionType === "rent"
+                    ? "Le loyer n’est pas encaissé sur la plateforme. Les conditions de location sont à convenir avec le bailleur."
+                    : "Le prix d’achat du parking n’est pas encaissé sur la plateforme. La vente est formalisée avec les professionnels compétents."}
             </p>
           </div>
         </aside>
