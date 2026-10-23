@@ -6,6 +6,7 @@ import type { MapSearchArea } from "./map-view";
 export function createMapAreaSearch(options: {
   readArea: () => MapSearchArea | null;
   enabled: () => boolean;
+  moving?: () => boolean;
   search: (area: MapSearchArea) => void;
   delay?: number;
 }) {
@@ -13,10 +14,30 @@ export function createMapAreaSearch(options: {
   let manual = false;
   let disposed = false;
   let lastArea = "";
+  let pending = false;
   const cancel = () => {
     if (timer !== undefined) clearTimeout(timer);
     timer = undefined;
     manual = false;
+    pending = false;
+  };
+  const schedule = () => {
+    if (timer !== undefined) clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = undefined;
+      if (disposed || !pending || !options.enabled()) return;
+      if (options.moving?.()) {
+        schedule();
+        return;
+      }
+      pending = false;
+      const area = options.readArea();
+      if (!area) return;
+      const key = area.bbox.map((value) => value.toFixed(6)).join(",");
+      if (key === lastArea) return;
+      lastArea = key;
+      options.search(area);
+    }, options.delay ?? 650);
   };
   return {
     begin(userInitiated: boolean) {
@@ -27,17 +48,11 @@ export function createMapAreaSearch(options: {
       const shouldSearch = manual;
       manual = false;
       if (disposed || !shouldSearch || !options.enabled()) return;
-      const area = options.readArea();
-      if (!area) return;
-      const key = area.bbox.map((value) => value.toFixed(6)).join(",");
-      if (key === lastArea) return;
-      if (timer !== undefined) clearTimeout(timer);
-      timer = setTimeout(() => {
-        timer = undefined;
-        if (disposed || !options.enabled()) return;
-        lastArea = key;
-        options.search(area);
-      }, options.delay ?? 350);
+      pending = true;
+      schedule();
+    },
+    activity() {
+      if (pending && !disposed) schedule();
     },
     cancel,
     reset() {

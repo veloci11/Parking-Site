@@ -992,10 +992,16 @@
     padding: 3px;
   }
   .gp-viewer-tabs button {
-    padding: 0 10px;
+    padding: 0 7px;
     height: 34px;
     font-size: 12px;
-    gap: 5px;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  .gp-viewer-tabs button svg {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
   }
   .gp-level-switch {
     gap: 6px;

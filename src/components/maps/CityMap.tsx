@@ -87,6 +87,7 @@ export default function CityMap({
   };
   const manualMovement = useRef(false);
   const userHasMoved = useRef(false);
+  const manualAfterSelection = useRef(false);
   const visibleRef = useRef(visible);
   visibleRef.current = visible;
   const areaSearch = useRef<ReturnType<typeof createMapAreaSearch> | null>(
@@ -151,6 +152,7 @@ export default function CityMap({
     const canvas = container.current;
     if (!selected || !canvas) return;
     cancelAreaSearch();
+    manualAfterSelection.current = false;
     locationFocus.current.suppress();
     const canvasRect = canvas.getBoundingClientRect();
     const controlsRect = controls.current?.getBoundingClientRect();
@@ -263,6 +265,7 @@ export default function CityMap({
         !disposed &&
         visibleRef.current &&
         !!cameraCallbacks.current.onSearchArea,
+      moving: () => localMap?.isMoving() ?? false,
       search: (area) => cameraCallbacks.current.onSearchArea?.(area),
     });
     areaSearch.current = automaticSearch;
@@ -292,6 +295,9 @@ export default function CityMap({
           maxZoom: 19,
           attributionControl: false,
           cooperativeGestures: true,
+          // One observer owns layout changes; MapLibre's second observer would
+          // resize again during gestures and synthesize another move sequence.
+          trackResize: false,
           locale: {
             "Map.Title": "Carte des annonces de parking",
             "Marker.Title": "Annonce de parking",
@@ -364,6 +370,7 @@ export default function CityMap({
           setMapLoaded((value) => value + 1);
         });
         localMap.on("movestart", (event) => {
+          if ("gpLayoutResize" in event && event.gpLayoutResize) return;
           const manual = !!(
             ("originalEvent" in event && event.originalEvent) ||
             ("gpAreaSearch" in event && event.gpAreaSearch === true)
@@ -371,13 +378,16 @@ export default function CityMap({
           manualMovement.current = manual;
           automaticSearch.begin(manual);
           if (manual) {
+            manualAfterSelection.current = true;
             userHasMoved.current = true;
             locationFocus.current.suppress();
             transientLocation.current = false;
           }
         });
-        localMap.on("moveend", () => {
+        localMap.on("move", () => automaticSearch.activity());
+        localMap.on("moveend", (event) => {
           if (disposed || !localMap) return;
+          if ("gpLayoutResize" in event && event.gpLayoutResize) return;
           publishCamera(localMap);
           setIs3D(localMap.getPitch() > 0);
           setMarkerView((value) => value + 1);
@@ -429,19 +439,24 @@ export default function CityMap({
     if (!visible || status !== "ready") return;
     let width = container.current?.clientWidth;
     let height = container.current?.clientHeight;
+    let pendingResize: ReturnType<typeof setTimeout> | undefined;
     const resize = (force = false) => {
       const map = mapRef.current;
       const canvas = container.current;
       if (!map || !canvas) return;
       const changed =
         width !== canvas.clientWidth || height !== canvas.clientHeight;
-      width = canvas.clientWidth;
-      height = canvas.clientHeight;
       if (changed || force) {
-        cancelAreaSearch();
-        if (changed || selectionRef.current.selectedId) map.stop();
-        map.resize();
-        focusSelectionRef.current(map, 0);
+        if (pendingResize) clearTimeout(pendingResize);
+        if (map.isMoving()) {
+          pendingResize = setTimeout(() => resize(force), 120);
+          return;
+        }
+        width = canvas.clientWidth;
+        height = canvas.clientHeight;
+        map.resize({ gpLayoutResize: true });
+        if (selectionRef.current.selectedId && !manualAfterSelection.current)
+          focusSelectionRef.current(map, 0);
       }
     };
     const frame = requestAnimationFrame(() => resize(true));
@@ -449,6 +464,7 @@ export default function CityMap({
     if (container.current) observer.observe(container.current);
     return () => {
       cancelAnimationFrame(frame);
+      if (pendingResize) clearTimeout(pendingResize);
       observer.disconnect();
     };
   }, [visible, status]);

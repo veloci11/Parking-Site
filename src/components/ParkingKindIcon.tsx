@@ -30,24 +30,22 @@ export function ParkingKindIcon({
     >
       {type === "covered" ? (
         <>
-          <path d="m2 8 10-5 10 5M3 8v13M21 8v13" />
-          <path d="m6 15 1.5-4h9l1.5 4v4H6v-4ZM6 15h12M8 19v2M16 19v2" />
-          <path d="M9 17h.01M15 17h.01" />
+          <path d="M2 5h20M4 5v16M20 5v16" />
+          <path d="M9 19V10h3.5a3 3 0 0 1 0 6H9" />
         </>
       ) : type === "box" ? (
         <>
-          <path d="M3 21V7l9-4 9 4v14M7 21V10h10v11M7 14h10M7 18h10M2 21h20" />
-          <path d="M11 18h2" />
+          <path d="M3 21V5h18v16M7 21V9h10v12M7 13h10M7 17h10" />
         </>
       ) : type === "outdoor" ? (
         <>
-          <path d="m4 12 2-5h12l2 5v7H4v-7ZM4 12h16M6 19v2M18 19v2" />
-          <path d="M7 15h2M15 15h2" />
+          <rect x="3" y="3" width="18" height="18" rx="3" />
+          <path d="M9 17V7h3.5a3.5 3.5 0 0 1 0 7H9" />
         </>
       ) : (
         <>
-          <path d="M3 3h18v18H3zM12 3v18M3 12h18" />
-          <path d="M6.5 9V6h2v1.5h-2M15.5 9V6h2v1.5h-2M6.5 18v-3h2v1.5h-2M15.5 18v-3h2v1.5h-2" />
+          <rect x="6" y="3" width="15" height="15" rx="2" />
+          <path d="M3 7v12a2 2 0 0 0 2 2h12M11 14V7h2.5a2.5 2.5 0 0 1 0 5H11" />
         </>
       )}
     </svg>

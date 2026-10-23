@@ -11,7 +11,7 @@ const area = (longitude = 2.5): MapSearchArea => ({
   center: [longitude + 0.01, 48.85],
 });
 
-test("a completed user gesture searches once after350ms; rendered results do not retrigger it", (t) => {
+test("a completed user gesture searches once after650ms; rendered results do not retrigger it", (t) => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const calls: MapSearchArea[] = [];
   const controller = createMapAreaSearch({
@@ -26,14 +26,14 @@ test("a completed user gesture searches once after350ms; rendered results do not
   });
   controller.begin(true);
   controller.end();
-  t.mock.timers.tick(349);
+  t.mock.timers.tick(649);
   assert.equal(calls.length, 0);
   t.mock.timers.tick(1);
   assert.deepEqual(calls, [area()]);
   t.mock.timers.tick(1000);
   controller.begin(true);
   controller.end();
-  t.mock.timers.tick(350);
+  t.mock.timers.tick(650);
   assert.equal(calls.length, 1, "unchanged bounds are deduplicated");
   controller.dispose();
 });
@@ -59,10 +59,66 @@ test("a second gesture cancels the old timer and searches only its final viewpor
     "no query while the next gesture is in progress",
   );
   controller.end();
-  t.mock.timers.tick(349);
+  t.mock.timers.tick(649);
   assert.equal(calls.length, 0);
   t.mock.timers.tick(1);
   assert.deepEqual(calls, [area(2.6)]);
+  controller.dispose();
+});
+
+test("inertia and continued movement postpone the request until 650ms of rest", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  let moving = true;
+  let current = area();
+  const calls: MapSearchArea[] = [];
+  const controller = createMapAreaSearch({
+    readArea: () => current,
+    enabled: () => true,
+    moving: () => moving,
+    search: (value) => calls.push(value),
+  });
+  controller.begin(true);
+  controller.end();
+  t.mock.timers.tick(650);
+  assert.equal(calls.length, 0, "an early moveend cannot query during inertia");
+  t.mock.timers.tick(300);
+  current = area(2.7);
+  controller.activity();
+  moving = false;
+  t.mock.timers.tick(649);
+  assert.equal(calls.length, 0);
+  t.mock.timers.tick(1);
+  assert.deepEqual(
+    calls,
+    [area(2.7)],
+    "bounds are read at actual idle, not at the early moveend",
+  );
+  controller.activity();
+  t.mock.timers.tick(1000);
+  assert.equal(
+    calls.length,
+    1,
+    "activity alone does not create another search",
+  );
+  controller.dispose();
+});
+
+test("a query waiting for inertia is cancelled by a new programmatic camera move", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  let calls = 0;
+  const controller = createMapAreaSearch({
+    readArea: () => area(),
+    enabled: () => true,
+    moving: () => true,
+    search: () => calls++,
+  });
+  controller.begin(true);
+  controller.end();
+  t.mock.timers.tick(650);
+  controller.begin(false);
+  controller.end();
+  t.mock.timers.tick(10000);
+  assert.equal(calls, 0);
   controller.dispose();
 });
 
@@ -79,7 +135,7 @@ test("programmatic camera movements, hide, reset and disposal cancel pending sea
   for (let i = 0; i < 6; i++) {
     controller.begin(false);
     controller.end();
-    t.mock.timers.tick(350);
+    t.mock.timers.tick(650);
   }
   assert.equal(calls, 0);
   controller.begin(true);
@@ -87,27 +143,27 @@ test("programmatic camera movements, hide, reset and disposal cancel pending sea
   t.mock.timers.tick(200);
   controller.begin(false);
   controller.end();
-  t.mock.timers.tick(350);
+  t.mock.timers.tick(650);
   assert.equal(calls, 0);
   controller.begin(true);
   controller.end();
   visible = false;
   controller.cancel();
-  t.mock.timers.tick(350);
+  t.mock.timers.tick(650);
   assert.equal(calls, 0);
   visible = true;
   controller.begin(true);
   controller.end();
   controller.reset();
-  t.mock.timers.tick(350);
+  t.mock.timers.tick(650);
   assert.equal(calls, 0);
   controller.begin(true);
   controller.end();
   controller.dispose();
-  t.mock.timers.tick(350);
+  t.mock.timers.tick(650);
   controller.begin(true);
   controller.end();
-  t.mock.timers.tick(350);
+  t.mock.timers.tick(650);
   assert.equal(calls, 0);
 });
 

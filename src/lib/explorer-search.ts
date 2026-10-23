@@ -1,5 +1,11 @@
-import { emptySearch, type SearchState } from "./search-client";
+import { emptySearch, searchParams, type SearchState } from "./search-client";
 import type { MapSearchArea } from "./map-view";
+
+/** Keep existing results while only the map/location changes, never across
+ * sale/rent, price or other offer-filter changes. */
+export function explorerOfferFilterKey(state: SearchState): string {
+  return searchParams(searchByLocation(state, ""), true).toString();
+}
 
 /** A new location replaces the old geographic restriction, keeping offer filters. */
 export function searchByLocation(

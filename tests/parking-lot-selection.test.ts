@@ -2,6 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   parkingListingGroups,
+  parkingSpaceLocation,
+  parkingUnitOnLevel,
   preferredParkingLotUnit,
 } from "../src/lib/parking-lots";
 import type { Listing, Space } from "../src/lib/types";
@@ -93,4 +95,59 @@ test("an available listing unit absent from this canonical parking cannot be sel
     "18",
   );
   assert.equal(preferredParkingLotUnit(lot, [], -1), undefined);
+});
+
+test("changing floors follows the active lot rather than the original listing", () => {
+  const { lot, units } = fixture([
+    sale("13", -1, "available"),
+    sale("24", -2, "available"),
+  ]);
+  const original = {
+    ...units[0],
+    id: "original-physical",
+    listingId: "original-listing",
+    listingUnitId: "24",
+    space: sale("24", -2, "available"),
+  };
+  const selected = parkingUnitOnLevel(
+    [original, ...units],
+    -2,
+    lot,
+    original.listingId,
+  );
+  assert.equal(selected?.id, "physical-24");
+  assert.equal(selected?.listingId, "listing-A");
+  assert.equal(selected?.listingUnitId, "24");
+  assert.equal(selected?.space.level, -2);
+  assert.equal(parkingUnitOnLevel(units, -3, lot, "listing-A"), undefined);
+});
+
+test("a floor without the active lot remains browsable without inventing a lot place", () => {
+  const { lot, units } = fixture([sale("13", -1, "available")]);
+  const other = {
+    ...units[0],
+    id: "other-physical",
+    listingId: "other-listing",
+    listingUnitId: "42",
+    space: sale("42", -2, "available"),
+  };
+  assert.equal(
+    parkingUnitOnLevel([...units, other], -2, lot, "listing-A")?.id,
+    "other-physical",
+  );
+});
+
+test("place labels always include the actual floor, including ground level", () => {
+  assert.equal(
+    parkingSpaceLocation({ number: "13", level: -1 }),
+    "Place 13 · niveau −1",
+  );
+  assert.equal(
+    parkingSpaceLocation({ number: "24", level: -2 }),
+    "Place 24 · niveau −2",
+  );
+  assert.equal(
+    parkingSpaceLocation({ number: "A18", level: 0 }),
+    "Place A18 · RDC",
+  );
 });

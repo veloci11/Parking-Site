@@ -45,6 +45,37 @@ export type ParkingListingGroup = ReturnType<
   typeof parkingListingGroups
 >[number];
 
+export function parkingSpaceLocation(space: { number: string; level: number }) {
+  const floor =
+    space.level === 0 ? "RDC" : String(space.level).replace("-", "−");
+  return `Place ${space.number || "non numérotée"} · ${floor === "RDC" ? floor : `niveau ${floor}`}`;
+}
+
+/** Keep the active offer when changing floors; never confuse painted numbers with unit IDs. */
+export function parkingUnitOnLevel<
+  T extends {
+    listingId: string;
+    listingUnitId: string;
+    space: { level: number };
+  },
+>(
+  units: readonly T[],
+  level: number,
+  lot: ParkingListingGroup | undefined,
+  listingId: string,
+): T | undefined {
+  const candidates = units.filter((unit) => unit.space.level === level);
+  return (
+    candidates.find(
+      (unit) =>
+        unit.listingId === lot?.listing.id &&
+        lot.spaces.some((space) => space.id === unit.listingUnitId),
+    ) ??
+    candidates.find((unit) => unit.listingId === listingId) ??
+    candidates[0]
+  );
+}
+
 /** Prefer available offers, then the current floor, among this parking's units. */
 export function preferredParkingLotUnit<
   T extends {

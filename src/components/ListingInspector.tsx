@@ -5,6 +5,7 @@ import { pricingScope } from "./ListingOffers";
 import Image from "./SafePhoto";
 import { ParkingKindIcon } from "./ParkingKindIcon";
 import { accessLabel } from "@/lib/access-label";
+import { parkingSpaceLocation } from "@/lib/parking-lots";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { isPublicShowcase } from "@/lib/public-showcase";
@@ -91,6 +92,16 @@ export default function ListingInspector({
               ? `Place ${visibleSpaces[0].number}`
               : "Place de parking"}
         </h2>
+        {visibleSpaces.length > 1 ? (
+          <p className="inspector-spaces">
+            {visibleSpaces.slice(0, 3).map((space) => (
+              <span key={space.id}>{parkingSpaceLocation(space)}</span>
+            ))}
+            {visibleSpaces.length > 3 ? (
+              <span>+ {visibleSpaces.length - 3} autres places</span>
+            ) : null}
+          </p>
+        ) : null}
         <p className="inspector-price">
           {listingPrice(listing, transactionType)}
         </p>

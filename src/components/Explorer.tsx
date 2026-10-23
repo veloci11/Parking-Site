@@ -23,6 +23,7 @@ import {
   resetExplorerFilters,
   searchByLocation,
   searchVisibleMapArea,
+  explorerOfferFilterKey,
 } from "@/lib/explorer-search";
 import {
   encodeExplorerContinuation,
@@ -55,6 +56,13 @@ import { type Listing } from "@/lib/types";
 import FilterSelect from "./FilterSelect";
 import ListingCard from "./ListingCard";
 import ListingInspector from "./ListingInspector";
+
+// A map refresh often returns the same nearby offers. Keep their reference so
+// existing marker elements and listing cards remain in place.
+function keepUnchangedListings(current: Listing[], next: Listing[]) {
+  return JSON.stringify(current) === JSON.stringify(next) ? current : next;
+}
+
 const CityMap = dynamic(() => import("./maps/CityMap"), {
   ssr: false,
   loading: () => (
@@ -78,6 +86,7 @@ export default function Explorer({
   const [missingFavorites, setMissingFavorites] = useState<string[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
   const [resultsLocationQuery, setResultsLocationQuery] = useState("");
+  const [loadedOfferFilterKey, setLoadedOfferFilterKey] = useState("");
   const locationInput = useRef<HTMLInputElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [clusterListingIds, setClusterListingIds] = useState<string[]>([]);
@@ -169,6 +178,7 @@ export default function Explorer({
   ].filter((v) => v !== "" && v !== false).length;
   const apiQuery = searchParams(searchState, true).toString();
   const resultContext = `${favoritesOnly ? "favorites" : "explore"}:${allFavoriteOffers ? "all" : "single"}:${apiQuery}`;
+  const offerFilterKey = `${favoritesOnly}:${allFavoriteOffers}:${favoriteKey}:${explorerOfferFilterKey(searchState)}`;
   function closeMoreFilters() {
     setMore(false);
     moreFiltersButton.current?.focus({ preventScroll: true });
@@ -190,6 +200,7 @@ export default function Explorer({
 
   const load = useCallback(
     async (quiet = false) => {
+      if (quiet && windowRequestPending.current) return;
       if (favoritesOnly && favorites.loading) {
         setLoading(true);
         return;
@@ -215,6 +226,7 @@ export default function Explorer({
             if (generation === requestGeneration.current) {
               setListings([]);
               setResultsLocationQuery(searchState.city);
+              setLoadedOfferFilterKey(offerFilterKey);
               setMissingFavorites([]);
               setTotal(0);
               setNextCursor(null);
@@ -242,8 +254,9 @@ export default function Explorer({
           if (allFavoriteOffers) {
             const data = await loadAllFavoriteOffers(searchState, ids, request);
             if (generation !== requestGeneration.current) return;
-            setListings(data);
+            setListings((current) => keepUnchangedListings(current, data));
             setResultsLocationQuery(searchState.city);
+            setLoadedOfferFilterKey(offerFilterKey);
             setNextCursor(null);
             setTotal(data.length);
             resultWindow.current = {
@@ -273,8 +286,9 @@ export default function Explorer({
           () => generation === requestGeneration.current,
         );
         if (!result || generation !== requestGeneration.current) return;
-        setListings(result.data);
+        setListings((current) => keepUnchangedListings(current, result.data));
         setResultsLocationQuery(searchState.city);
+        setLoadedOfferFilterKey(offerFilterKey);
         setNextCursor(result.nextCursor);
         setTotal(result.total);
         resultWindow.current = {
@@ -299,6 +313,7 @@ export default function Explorer({
       favorites.loading,
       allFavoriteOffers,
       resultContext,
+      offerFilterKey,
     ],
   );
   const applySearch = useCallback((search: SearchState) => {
@@ -468,7 +483,10 @@ export default function Explorer({
       if (generation === requestGeneration.current) setLoadingMore(false);
     }
   }
-  const filtered = !loading && !error ? listings : [];
+  const retainResults =
+    loadedOfferFilterKey === offerFilterKey && listings.length > 0;
+  const showSkeleton = loading && !retainResults;
+  const filtered = !error && (!loading || retainResults) ? listings : [];
   const hasFilters = hasExplorerFilters(searchState);
   const hasOptionFilters = hasExplorerFilters({
     ...searchState,
@@ -1118,7 +1136,7 @@ export default function Explorer({
                 </button>
               </div>
             ) : null}
-            {loading ? (
+            {showSkeleton ? (
               <div
                 className="list-skeleton"
                 aria-label="Chargement des annonces"

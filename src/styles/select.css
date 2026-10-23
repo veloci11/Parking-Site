@@ -47,6 +47,16 @@
   transform: rotate(180deg);
   color: #6d28ff;
 }
+.gp-select-chip:hover,
+.gp-select-chip.is-open,
+.gp-select-chip.is-applied {
+  background: #f3ecd9;
+  border-color: #ded2b6;
+}
+.gp-select-chip.is-open > svg,
+.gp-select-chip.is-applied > svg {
+  color: #917338;
+}
 .gp-select-trigger:focus-visible {
   outline: 2px solid #716978;
   outline-offset: 2px;

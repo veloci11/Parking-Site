@@ -614,6 +614,19 @@
 .explorer .inspector-header {
   min-height: 48px;
 }
+.explorer .inspector-spaces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 8px 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.explorer .inspector-spaces span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
 .explorer .results-panel .inspector-body > .button {
   margin: 12px 0 18px;
 }

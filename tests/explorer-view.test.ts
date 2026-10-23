@@ -6,6 +6,7 @@ import {
   resetExplorerFilters,
   searchByLocation,
   searchVisibleMapArea,
+  explorerOfferFilterKey,
 } from "../src/lib/explorer-search";
 
 test("searching a new location replaces the previous map restriction without dropping offer filters", () => {
@@ -34,6 +35,23 @@ test("searching a new location replaces the previous map restriction without dro
   assert.equal(moved.transactionType, "rent");
   assert.equal(moved.maxPrice, "150");
   assert.equal(searchParams(moved, true).has("q"), false);
+});
+
+test("map refresh retains compatible offers but never reuses a sale price as a monthly rent", () => {
+  const original = { ...emptySearch, city: "Le Raincy", maxPrice: "50000" };
+  const moved = searchVisibleMapArea(original, {
+    bbox: [2, 48, 3, 49],
+    center: [2.5, 48.5],
+  });
+  assert.equal(explorerOfferFilterKey(original), explorerOfferFilterKey(moved));
+  assert.notEqual(
+    explorerOfferFilterKey(original),
+    explorerOfferFilterKey({ ...moved, transactionType: "rent" }),
+  );
+  assert.notEqual(
+    explorerOfferFilterKey(original),
+    explorerOfferFilterKey({ ...moved, maxPrice: "20000" }),
+  );
 });
 import {
   emptySearch,
