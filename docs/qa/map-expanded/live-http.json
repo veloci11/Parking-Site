@@ -1,0 +1,212 @@
+{
+  "checkedAt": "2026-10-23T06:17:17.031103+00:00",
+  "origin": "https://parking.gilmathis.com",
+  "sourceCommit": "09004f30c417c35c92602e1a1353fd4aebfa3024",
+  "buildId": "t4OWXhbPC5rVJjHdHxC7j",
+  "checks": [
+    {
+      "path": "/api/ready",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/session",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/listings?limit=1",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/listings?limit=1&cursor=eyJ2ZXJzaW9uIjoyLCJhc09mIjoiMjAyNi0xMC0yM1QwNjoxNzoxMS4yMTVaIiwiYWZ0ZXIiOnsiaWQiOiJkZTYwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMTYiLCJjcmVhdGVkQXQiOiIyMDI2LTEwLTIyVDAwOjAwOjAwLjAwMFoiLCJwcmljZUNlbnRzIjoxODUwMDAwLCJhcmVhTTIiOjEyLCJzcGFjZUNvdW50IjoxfSwicXVlcnlIYXNoIjoiY2FhMTU1YThhNDYyOWQyZGYzMjE3MWQxYjBhNjM4OWFkNWUxZDU5MjNkNTZhNjViMjQ0MjQ5OGZhZWNmZTM3YyJ9",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/listings?q=Le+Raincy",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/listings?q=Lyon",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/listings?transactionType=rent",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/listings?priceMax=2000000",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/listings?level=-2",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/listings?type=box",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/listings/de600000-0000-4000-8000-000000000016",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/annonces/de600000-0000-4000-8000-000000000016/le-raincy-victor-hugo-demo-place-12",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/parkings?listingId=de600000-0000-4000-8000-000000000016",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/listings/de600000-0000-4000-8000-000000000016",
+      "method": "PATCH",
+      "status": 409,
+      "passed": true
+    },
+    {
+      "path": "/api/favorites/de600000-0000-4000-8000-000000000016",
+      "method": "PUT",
+      "status": 409,
+      "passed": true
+    },
+    {
+      "path": "/api/listings/de600000-0000-4000-8000-000000000018",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/annonces/de600000-0000-4000-8000-000000000018/le-raincy-victor-hugo-demo-deux-places",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/parkings?listingId=de600000-0000-4000-8000-000000000018",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/listings/de600000-0000-4000-8000-000000000018",
+      "method": "PATCH",
+      "status": 409,
+      "passed": true
+    },
+    {
+      "path": "/api/favorites/de600000-0000-4000-8000-000000000018",
+      "method": "PUT",
+      "status": 409,
+      "passed": true
+    },
+    {
+      "path": "/api/admin/revisions",
+      "method": "GET",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "path": "/api/conversations",
+      "method": "GET",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "path": "/api/auth/demo",
+      "method": "POST",
+      "status": 404,
+      "passed": true
+    },
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/connexion",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/inscription",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/mot-de-passe-oublie",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/deposer",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/aide",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/comment-acheter",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/brand/gp-logo.png",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/parking-renders/demo-level-minus-1.webp",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/parking-renders/demo-level-minus-2.webp",
+      "method": "GET",
+      "status": 200,
+      "passed": true
+    }
+  ],
+  "passed": 33,
+  "showcaseCount": 2,
+  "realListingCount": 0,
+  "createdAccounts": false,
+  "sentMessages": false,
+  "noIndex": true
+}

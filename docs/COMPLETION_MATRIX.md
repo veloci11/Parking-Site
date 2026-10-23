@@ -1,5 +1,9 @@
 # Matrice de complétude des exigences — V1
 
+## Carte agrandie — 23 octobre
+
+Voir [la recette de la carte](qa/MAP_EXPANDED_2026-10-23.md) : bande supérieure supprimée, recherche automatique dans la zone visible, recherche par lieu remplaçant l'ancienne zone et hauteur mobile adaptée. Les limites email et opérateur ci-dessous restent inchangées.
+
 ## Dernière passe — recherche, dépôt et comptes
 
 Voir [la recette du 22 octobre](qa/UX_PROFESSIONAL_2026-10-22.md) : carte avec prix visibles et aperçu unique, textes et navigation simplifiés, préparation anonyme supprimée, statut vendeur choisi au dépôt, confirmation/récupération renforcées. Les modèles email sont prêts ; le SMTP et la validation de réception sont différés par le propriétaire. Les preuves et limites historiques ci-dessous ne valent pas confirmation d'une activation email réelle.
