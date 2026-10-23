@@ -101,6 +101,24 @@ export default function Explorer({
   const [loadedOfferFilterKey, setLoadedOfferFilterKey] = useState("");
   const locationInput = useRef<HTMLInputElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [closingSelection, setClosingSelection] = useState(false);
+  const selectionCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  useEffect(() => {
+    if (selectionCloseTimer.current) clearTimeout(selectionCloseTimer.current);
+    selectionCloseTimer.current = null;
+    setClosingSelection(false);
+    return () => {
+      if (selectionCloseTimer.current)
+        clearTimeout(selectionCloseTimer.current);
+    };
+  }, [selectedId]);
+  function cancelSelectionClose() {
+    if (selectionCloseTimer.current) clearTimeout(selectionCloseTimer.current);
+    selectionCloseTimer.current = null;
+    setClosingSelection(false);
+  }
   const [clusterListingIds, setClusterListingIds] = useState<string[]>([]);
   const resultsPanel = useRef<HTMLElement>(null);
   const announcementPanel = useRef<HTMLElement>(null);
@@ -551,18 +569,31 @@ export default function Explorer({
     setClusterListingIds([]);
   }, [resultContext]);
   function closeSelection() {
-    setSelectedId(null);
-    requestAnimationFrame(() => {
-      if (resultsPanel.current) {
-        if (window.matchMedia(MOBILE_MAP_MEDIA_QUERY).matches)
-          resultsPanel.current.scrollTop = resultScrollBeforeSelection.current;
-        if (window.matchMedia(MOBILE_MAP_MEDIA_QUERY).matches)
-          mapViewButton.current?.focus({ preventScroll: true });
-        else resultsPanel.current.focus({ preventScroll: true });
-      }
-    });
+    if (selectionCloseTimer.current) return;
+    const finish = () => {
+      selectionCloseTimer.current = null;
+      setClosingSelection(false);
+      setSelectedId(null);
+      requestAnimationFrame(() => {
+        if (resultsPanel.current) {
+          if (window.matchMedia(MOBILE_MAP_MEDIA_QUERY).matches)
+            resultsPanel.current.scrollTop =
+              resultScrollBeforeSelection.current;
+          if (window.matchMedia(MOBILE_MAP_MEDIA_QUERY).matches)
+            mapViewButton.current?.focus({ preventScroll: true });
+          else resultsPanel.current.focus({ preventScroll: true });
+        }
+      });
+    };
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      finish();
+      return;
+    }
+    setClosingSelection(true);
+    selectionCloseTimer.current = setTimeout(finish, 200);
   }
   function chooseCluster(ids: string[]) {
+    cancelSelectionClose();
     setSelectedId(null);
     setMore(false);
     setClusterListingIds(ids);
@@ -629,6 +660,7 @@ export default function Explorer({
     setViewPreference(view);
   }
   function choose(id: string) {
+    cancelSelectionClose();
     if (!selected)
       resultScrollBeforeSelection.current =
         resultsPanel.current?.scrollTop ?? 0;
@@ -1467,8 +1499,9 @@ export default function Explorer({
         {inspecting && selected ? (
           <section
             ref={announcementPanel}
-            className="announcement-panel"
-            data-map-overlay="listing"
+            className={`announcement-panel${closingSelection ? " is-closing" : ""}`}
+            data-map-overlay={desktopDetail ? undefined : "listing"}
+            data-map-announcement={desktopDetail ? "listing" : undefined}
             tabIndex={-1}
             aria-label="Annonce sélectionnée"
             onKeyDown={(event) => {

@@ -200,15 +200,28 @@ export default function CityMap({
         ? estimatedCount * 52 - 8
         : 44);
     transientLocation.current = false;
+    const offset = selectedMapOffset(
+      canvasRect.height,
+      markerHeight,
+      controlsTop,
+      visibleMapTop(canvas),
+    );
+    const announcement = canvas
+      .closest(".explore-workspace")
+      ?.querySelector<HTMLElement>('[data-map-announcement="listing"]');
+    if (announcement) {
+      const pane = announcement.getBoundingClientRect();
+      if (pane.left <= canvasRect.left + 1 && pane.right > canvasRect.left)
+        offset[0] =
+          Math.max(
+            0,
+            Math.min(canvasRect.width - 120, pane.right - canvasRect.left),
+          ) / 2;
+    }
     map.easeTo({
       center: selected.coordinates,
       zoom: selectedMapZoom(map.getZoom(), selected.locationPrecision),
-      offset: selectedMapOffset(
-        canvasRect.height,
-        markerHeight,
-        controlsTop,
-        visibleMapTop(canvas),
-      ),
+      offset,
       duration,
     });
     previousSelected.current = selected.id;

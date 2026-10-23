@@ -1205,23 +1205,31 @@
   }
 }
 
-/* Desktop: results stay at the left, the announcement opens beside them, then the map. */
+/* The map keeps its full canvas while the announcement opens below the fixed filters. */
 .explorer {
   --explorer-announcement-width: clamp(380px, 30vw, 460px);
 }
-.explorer .announcement-panel {
+.explorer .explore-workspace {
   position: relative;
+}
+.explorer .announcement-panel {
+  position: absolute;
   z-index: 5;
-  flex: 0 0 var(--explorer-announcement-width);
+  top: var(--explorer-search-height);
+  bottom: 0;
+  left: var(--explorer-sidebar-width);
   width: var(--explorer-announcement-width);
   min-width: 0;
-  height: 100%;
+  height: auto;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
   background: #fff;
-  border-right: 1px solid var(--border);
+  border: 1px solid var(--border);
+  border-left: 0;
+  border-radius: 0 20px 20px 0;
+  box-shadow: 8px 0 24px #22193a10;
 }
 .explorer .announcement-panel:focus {
   outline: none;
@@ -1231,20 +1239,16 @@
   color: var(--muted);
   font-size: 14px;
 }
-@media (min-width: 1280px) {
-  .explorer.explorer-has-selection .filters {
-    padding-left: calc(var(--explorer-announcement-width) + 12px);
-  }
-}
 @media (min-width: 768px) and (max-width: 1279px) {
   .explorer {
     --explorer-announcement-width: var(--explorer-sidebar-width);
   }
   .explorer .has-selected-listing .results-panel {
-    display: none;
+    visibility: hidden;
+    pointer-events: none;
   }
   .explorer .announcement-panel {
-    padding-top: var(--explorer-search-height);
+    left: 0;
   }
 }
 @media (max-width: 767px) {
@@ -1280,5 +1284,57 @@
     grid-column: 1 / -1;
     min-height: 44px;
     margin-bottom: 8px;
+  }
+}
+
+/* Only transform the announcement; search controls and the map keep their geometry. */
+@keyframes announcement-open {
+  from {
+    transform: translateX(-28px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+@keyframes announcement-close {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-28px);
+    opacity: 0;
+  }
+}
+@keyframes announcement-sheet-close {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+@media (min-width: 768px) {
+  .explorer .announcement-panel {
+    animation: announcement-open 200ms ease-out both;
+  }
+}
+.explorer .announcement-panel.is-closing {
+  animation: announcement-close 200ms ease-in both;
+  pointer-events: none;
+}
+@media (max-width: 767px) {
+  .explorer .announcement-panel.is-closing {
+    animation-name: announcement-sheet-close;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .explorer .announcement-panel,
+  .explorer .announcement-panel.is-closing {
+    animation: none;
   }
 }
