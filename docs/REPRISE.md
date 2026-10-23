@@ -1,5 +1,11 @@
 # Point de reprise — 22 octobre 2026
 
+## Dernière demande — exemples au Raincy et carte simplifiée
+
+**Déployé : https://parking.gilmathis.com/?display=map.** Source `9a498e3`, build Linux `E1OzrGT41kcvBM8Nte0oM`, release `20261022-9a498e3-showcase`. Deux exemples en lecture seule au 16–18 allée Victor Hugo, Le Raincy ; aucune fausse annonce ni identité ajoutée dans Supabase. Backend local/personnages toujours désactivés. Lire `PUBLIC_SHOWCASE.md` et `qa/PUBLIC_SHOWCASE_2026-10-22.md`.
+
+Me localiser et Voir les annonces retirés. Recherche de zone dans une barre fixe, groupes d’annonces et sélection dans le panneau de gauche, Retour à la liste. Mobile : aperçu sous la carte, en flux normal. Aucun inspector, choix de groupe, message d’aide ou bouton Comparer flottant sur la carte. Recette desktop/mobile sans chevauchement ni débordement horizontal ; 27 contrôles HTTPS, 687 fichiers source identiques, six CI de la source réussies. 237 tests : 234 réussis, 0 échec, 3 conditionnels ignorés. Aucun email/message envoyé, aucun compte créé. État historique ci-dessous à lire selon sa date.
+
 ## Déploiement demandé — Ubuntu et domaine définitif
 
 **Site désormais hébergé : https://parking.gilmathis.com.** Lire `qa/UBUNTU_DEPLOYMENT_2026-10-22.md` et `../deploy/ubuntu/README.md` avant les états historiques locaux ci-dessous. Source app1fdf563, build final Linux `kEIJcoXo8PKR1eZavY5Sr`, service utilisateur `gp-park` actif/activé, port loopback3010, route Cloudflare dédiée. L’ancien nom parkin a été retiré du DNS, tunnel, HTTPS et Auth ; ne pas le recréer.

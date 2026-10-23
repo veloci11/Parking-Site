@@ -6,14 +6,14 @@ Application : https://parking.gilmathis.com — service utilisateur `gp-park.ser
 
 - Hôte SSH : `ubuntu`, utilisateur `mathis`, gestionnaire systemd utilisateur avec linger actif.
 - Racine : `/home/mathis/gp-park/`.
-- Source applicative : commit `1fdf563b17d4b954435d500f211a0a2169a02bd7`.
-- Release courante : `releases/20261022-1fdf563-parking`, lien `current`.
-- Build Linux : `kEIJcoXo8PKR1eZavY5Sr` ; Node 24.22.1 Linux x64 vérifié par SHA-256 officiel sous `runtime/node`.
+- Source applicative : commit `9a498e307e19e08a11b8267c757fe41be0f8d864`.
+- Release courante : `releases/20261022-9a498e3-showcase`, lien `current`.
+- Build Linux : `E1OzrGT41kcvBM8Nte0oM` ; Node 24.22.1 Linux x64 vérifié par SHA-256 officiel sous `runtime/node`.
 - Configuration privée : `shared/production.env`, droits 0600. Ne jamais copier son contenu dans Git ou les logs.
 - Next écoute uniquement `127.0.0.1:3010`. Cloudflare Tunnel `encar-dashboard` route uniquement ce nom vers ce port ; la route du dashboard existant reste intacte.
 - Cloudflare CNAME proxifié `parking.gilmathis.com`, redirection HTTP → HTTPS limitée à cet hôte avec chemin et paramètres conservés.
 - Supabase Auth : Site URL `https://parking.gilmathis.com`, redirection `https://parking.gilmathis.com/api/auth/callback**`. La redirection locale préexistante reste conservée.
-- Démo et personnages désactivés. Données et comptes dans Supabase, sans service-role dans l’application.
+- Backend local et personnages désactivés. Comptes et annonces réelles dans Supabase, sans service-role dans l’application. `GP_PUBLIC_SHOWCASE=true` ajoute les [deux exemples publics au Raincy](../../docs/PUBLIC_SHOWCASE.md), consultables uniquement, sans données ni faux utilisateurs en base. Ils s’effacent du catalogue dès la première publication réelle.
 - `GP_PUBLIC_LAUNCH=false` : pas d’indexation tant que les prérequis métier et humains ne sont pas validés. Cela ne restreint pas l’accès au site HTTPS.
 
 ## Commandes opérateur

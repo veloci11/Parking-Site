@@ -1,0 +1,44 @@
+{
+  "canvas": {
+    "bottom": 339.890625,
+    "height": 262,
+    "right": 375,
+    "width": 375,
+    "x": 0,
+    "y": 77.890625
+  },
+  "horizontalOverflow": false,
+  "inspector": {
+    "bottom": 653.9765625,
+    "height": 313.0859375,
+    "right": 375,
+    "width": 375,
+    "x": 0,
+    "y": 340.890625
+  },
+  "map": {
+    "bottom": 339.890625,
+    "height": 320,
+    "right": 375,
+    "width": 375,
+    "x": 0,
+    "y": 19.890625
+  },
+  "popupCount": 0,
+  "search": {
+    "bottom": 68.390625,
+    "height": 40,
+    "right": 359,
+    "width": 120.140625,
+    "x": 238.859375,
+    "y": 28.390625
+  },
+  "toolbar": {
+    "bottom": 77.890625,
+    "height": 58,
+    "right": 375,
+    "width": 375,
+    "x": 0,
+    "y": 19.890625
+  }
+}
