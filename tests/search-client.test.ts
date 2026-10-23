@@ -15,6 +15,8 @@ test("URL partageable conserve tous filtres et transforme euros seulement pour A
     minPrice: "18000.25",
     maxPrice: "40000",
     minArea: "12",
+    minSpaces: "2",
+    sellerType: "professional",
     only3D: true,
     sort: "spaces_desc",
     covered: "1",
@@ -48,6 +50,8 @@ test("URL partageable conserve tous filtres et transforme euros seulement pour A
     "center",
     "radiusKm",
     "sort",
+    "minSpaces",
+    "sellerType",
   ] as const)
     assert.equal(api.get(key), state[key]);
 });
@@ -94,6 +98,19 @@ test("liens invalides ne créent ni rayon sans centre ni géométrie invalide", 
     searchProblem({ ...emptySearch, minPrice: "20000", maxPrice: "10000" }),
   );
   assert.ok(searchProblem({ ...emptySearch, level: "-21" }));
+  for (const minSpaces of ["0", "501", "2.5", "no"])
+    assert.ok(searchProblem({ ...emptySearch, minSpaces }));
+  assert.ok(searchProblem({ ...emptySearch, sellerType: "agency" }));
+  assert.equal(
+    readSearch(new URLSearchParams("minSpaces=2.5&sellerType=agency"))
+      .minSpaces,
+    "",
+  );
+  assert.equal(
+    readSearch(new URLSearchParams("minSpaces=2.5&sellerType=agency"))
+      .sellerType,
+    "",
+  );
   assert.ok(
     searchProblem({ ...emptySearch, radiusKm: "0.01", center: "4,45" }),
   );

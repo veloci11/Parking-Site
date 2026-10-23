@@ -15,6 +15,8 @@ export interface PageFilters {
   sort: "recent" | "price_asc" | "price_desc" | "area_asc" | "spaces_desc";
   scene: boolean;
   minPrice?: number | null;
+  minSpaces?: number | null;
+  sellerType?: "private" | "professional" | null;
   covered?: boolean | null;
   closed?: boolean | null;
   occupancy?: "vacant" | "occupied" | "unknown" | null;
@@ -66,6 +68,8 @@ export function canonicalFilters(f: PageFilters): Required<PageFilters> {
     sort: f.sort,
     scene: f.scene,
     minPrice: f.minPrice ?? null,
+    minSpaces: f.minSpaces ?? null,
+    sellerType: f.sellerType ?? null,
     covered: f.covered ?? null,
     closed: f.closed ?? null,
     occupancy: f.occupancy ?? null,
@@ -149,6 +153,14 @@ export function parsePageQuery(url: URL) {
   )
     invalid();
   const occupancy = p.get("occupancy");
+  const sellerType = p.get("sellerType");
+  if (
+    (sellerType !== null &&
+      !["private", "professional"].includes(sellerType)) ||
+    p.getAll("sellerType").length > 1 ||
+    p.getAll("minSpaces").length > 1
+  )
+    invalid();
   if (
     occupancy !== null &&
     !["vacant", "occupied", "unknown"].includes(occupancy)
@@ -186,6 +198,8 @@ export function parsePageQuery(url: URL) {
     sort: sort as PageFilters["sort"],
     scene: bool("scene") ?? false,
     minPrice,
+    minSpaces: numeric("minSpaces", 1, 500, true),
+    sellerType: sellerType as PageFilters["sellerType"],
     covered: bool("covered"),
     closed: bool("closed"),
     occupancy: occupancy as PageFilters["occupancy"],
@@ -251,9 +265,12 @@ export function publicDistanceKm(a: [number, number], b: [number, number]) {
 }
 export function matchesPageFilters(item: Listing, filters: PageFilters) {
   const f = canonicalFilters(filters),
-    [lon, lat] = item.coordinates;
+    [lon, lat] = item.coordinates,
+    offerMatch = catalogOfferMatch(item, f);
   return (
-    catalogOfferMatch(item, f) !== null &&
+    offerMatch !== null &&
+    (f.minSpaces === null || offerMatch.spaceCount >= f.minSpaces) &&
+    (f.sellerType === null || item.sellerTypeSnapshot === f.sellerType) &&
     (f.occupancy === null || (item.occupancy ?? "unknown") === f.occupancy) &&
     (!f.ids || f.ids.includes(item.id)) &&
     (!f.bbox ||

@@ -50,6 +50,8 @@ export function hasExplorerFilters(state: SearchState): boolean {
       state.minPrice,
       state.maxPrice,
       state.minArea,
+      state.minSpaces,
+      state.sellerType,
       state.covered,
       state.closed,
       state.occupancy,

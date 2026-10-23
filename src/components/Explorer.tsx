@@ -111,8 +111,8 @@ export default function Explorer({
   const offerFilter = allFavoriteOffers ? undefined : transactionType;
   const [maxPrice, setMaxPrice] = useState("");
   const [minPrice, setMinPrice] = useState("");
-  const [covered, setCovered] = useState("");
-  const [closed, setClosed] = useState("");
+  const [minSpaces, setMinSpaces] = useState("");
+  const [sellerType, setSellerType] = useState("");
   const [occupancy, setOccupancy] = useState("");
   const [level, setLevel] = useState("");
   const [bbox, setBbox] = useState("");
@@ -123,7 +123,6 @@ export default function Explorer({
   const [minArea, setMinArea] = useState("");
   const [sort, setSort] = useState("recent");
   const [more, setMore] = useState(false);
-  const [only3D, setOnly3D] = useState(false);
   const [viewPreference, setViewPreference] =
     useState<ExplorerViewPreference>("auto");
   const [visibleView, setVisibleView] = useState<ExplorerView>("map");
@@ -142,10 +141,12 @@ export default function Explorer({
       minPrice,
       maxPrice,
       minArea,
-      only3D,
+      only3D: false,
       sort,
-      covered,
-      closed,
+      covered: "",
+      closed: "",
+      minSpaces,
+      sellerType,
       occupancy,
       level,
       bbox,
@@ -159,10 +160,9 @@ export default function Explorer({
       minPrice,
       maxPrice,
       minArea,
-      only3D,
       sort,
-      covered,
-      closed,
+      minSpaces,
+      sellerType,
       occupancy,
       level,
       bbox,
@@ -172,13 +172,12 @@ export default function Explorer({
   );
   const advancedCount = [
     minPrice,
-    covered,
-    closed,
+    minSpaces,
+    sellerType,
     occupancy,
     level,
     radiusKm,
-    only3D,
-  ].filter((v) => v !== "" && v !== false).length;
+  ].filter(Boolean).length;
   const mobileFilterCount =
     advancedCount + [type, maxPrice, minArea].filter(Boolean).length;
   useEffect(() => {
@@ -332,10 +331,9 @@ export default function Explorer({
     setMinPrice(search.minPrice);
     setMaxPrice(search.maxPrice);
     setMinArea(search.minArea);
-    setOnly3D(search.only3D);
     setSort(search.sort);
-    setCovered(search.covered);
-    setClosed(search.closed);
+    setMinSpaces(search.minSpaces);
+    setSellerType(search.sellerType);
     setOccupancy(search.occupancy);
     setLevel(search.level);
     setBbox(search.bbox);
@@ -1066,13 +1064,9 @@ export default function Explorer({
                         Ouvrez la carte pour choisir son centre.
                       </p>
                     ) : null}
-                    {bbox || radiusKm ? (
+                    {radiusKm ? (
                       <div className="explorer-active-area" role="status">
-                        <span>
-                          {bbox
-                            ? "Zone visible de la carte"
-                            : `Rayon actif : ${radiusKm} km`}
-                        </span>
+                        <span>Rayon actif : {radiusKm} km</span>
                         <button
                           type="button"
                           className="text-button"
@@ -1088,88 +1082,89 @@ export default function Explorer({
                       </div>
                     ) : null}
                   </fieldset>
-                  <details
-                    className="explorer-filter-characteristics is-wide"
-                    open={Boolean(covered || closed || occupancy || level)}
-                  >
-                    <summary>
-                      Caractéristiques{" "}
-                      <span>
-                        {[covered, closed, occupancy, level].filter(Boolean)
-                          .length || "Facultatif"}
-                      </span>
-                    </summary>
-                    <div className="explorer-filter-pair">
-                      <div className="field">
-                        <span>Couverture</span>
-                        <FilterSelect
-                          label="Couverture"
-                          variant="field"
-                          value={covered}
-                          onChange={setCovered}
-                          applied={Boolean(covered)}
-                          options={[
-                            { value: "", label: "Indifférente" },
-                            { value: "1", label: "Couvert" },
-                            { value: "0", label: "Extérieur" },
-                          ]}
-                        />
-                      </div>
-                      <div className="field">
-                        <span>Fermeture</span>
-                        <FilterSelect
-                          label="Fermeture"
-                          variant="field"
-                          value={closed}
-                          onChange={setClosed}
-                          applied={Boolean(closed)}
-                          options={[
-                            { value: "", label: "Indifférente" },
-                            { value: "1", label: "Box fermé" },
-                            { value: "0", label: "Place ouverte" },
-                          ]}
-                        />
-                      </div>
-                      <div className="field">
-                        <span>Occupation</span>
-                        <FilterSelect
-                          label="Occupation déclarée"
-                          variant="field"
-                          value={occupancy}
-                          onChange={setOccupancy}
-                          applied={Boolean(occupancy)}
-                          options={[
-                            { value: "", label: "Indifférente" },
-                            { value: "vacant", label: "Libre" },
-                            { value: "occupied", label: "Occupée" },
-                            { value: "unknown", label: "Non renseignée" },
-                          ]}
-                        />
-                      </div>
-                      <label className="field">
-                        <span>Niveau</span>
-                        <input
-                          className="input"
-                          type="number"
-                          min="-20"
-                          max="50"
-                          step="1"
-                          value={level}
-                          onChange={(e) => setLevel(e.target.value)}
-                          placeholder="Tous"
-                        />
-                      </label>
-                    </div>
-                  </details>
-                  <label className="checkbox-field explorer-filter-model is-wide">
-                    <input
-                      type="checkbox"
-                      checked={only3D}
-                      onChange={(e) => setOnly3D(e.target.checked)}
+                  <fieldset className="explorer-filter-group">
+                    <legend>Nombre de places</legend>
+                    <FilterSelect
+                      label="Nombre minimum de places"
+                      variant="field"
+                      value={minSpaces}
+                      onChange={setMinSpaces}
+                      applied={Boolean(minSpaces)}
+                      options={[
+                        { value: "", label: "Indifférent" },
+                        { value: "2", label: "2 places ou plus" },
+                        { value: "3", label: "3 places ou plus" },
+                        { value: "5", label: "5 places ou plus" },
+                        { value: "10", label: "10 places ou plus" },
+                        ...(minSpaces &&
+                        !["2", "3", "5", "10"].includes(minSpaces)
+                          ? [
+                              {
+                                value: minSpaces,
+                                label: `${minSpaces} places ou plus`,
+                              },
+                            ]
+                          : []),
+                      ]}
                     />
-                    <Layers3 size={18} />
-                    <span>Plan 3D disponible</span>
-                  </label>
+                  </fieldset>
+                  <fieldset className="explorer-filter-group">
+                    <legend>Annonceur</legend>
+                    <FilterSelect
+                      label="Type d’annonceur"
+                      variant="field"
+                      value={sellerType}
+                      onChange={setSellerType}
+                      applied={Boolean(sellerType)}
+                      options={[
+                        { value: "", label: "Tous les annonceurs" },
+                        { value: "private", label: "Particulier" },
+                        { value: "professional", label: "Professionnel" },
+                      ]}
+                    />
+                  </fieldset>
+                  <fieldset className="explorer-filter-group">
+                    <legend>Occupation</legend>
+                    <FilterSelect
+                      label="Occupation de la place"
+                      variant="field"
+                      value={occupancy}
+                      onChange={setOccupancy}
+                      applied={Boolean(occupancy)}
+                      options={[
+                        { value: "", label: "Indifférente" },
+                        { value: "vacant", label: "Libre" },
+                        { value: "occupied", label: "Occupée" },
+                      ]}
+                    />
+                  </fieldset>
+                  <fieldset className="explorer-filter-group">
+                    <legend>Niveau</legend>
+                    <FilterSelect
+                      label="Niveau du parking"
+                      variant="field"
+                      value={level}
+                      onChange={setLevel}
+                      applied={Boolean(level)}
+                      options={[
+                        { value: "", label: "Tous les niveaux" },
+                        { value: "0", label: "Rez-de-chaussée" },
+                        ...["-1", "-2", "-3", "-4", "1", "2"].map((value) => ({
+                          value,
+                          label: `Niveau ${value.replace("-", "−")}`,
+                        })),
+                        ...(level &&
+                        !["0", "-1", "-2", "-3", "-4", "1", "2"].includes(level)
+                          ? [
+                              {
+                                value: level,
+                                label: `Niveau ${level.replace("-", "−")}`,
+                              },
+                            ]
+                          : []),
+                      ]}
+                    />
+                  </fieldset>
                 </div>
               </div>
               <footer className="explorer-filter-actions">
@@ -1259,6 +1254,12 @@ export default function Explorer({
             <ListingInspector
               key={selected.id}
               listing={selected}
+              favorite={favorites.ids.includes(selected.id)}
+              favoriteDisabled={
+                favorites.loading || favorites.pendingIds.includes(selected.id)
+              }
+              favoriteError={favorites.error}
+              onFavorite={() => void favorites.toggle(selected.id)}
               transactionType={offerFilter}
               onClose={closeSelection}
             />

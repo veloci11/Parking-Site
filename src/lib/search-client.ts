@@ -5,6 +5,8 @@ export interface SearchState {
   minPrice: string;
   maxPrice: string;
   minArea: string;
+  minSpaces: string;
+  sellerType: string;
   only3D: boolean;
   sort: string;
   covered: string;
@@ -22,6 +24,8 @@ export const emptySearch: SearchState = {
   minPrice: "",
   maxPrice: "",
   minArea: "",
+  minSpaces: "",
+  sellerType: "",
   only3D: false,
   sort: "recent",
   covered: "",
@@ -67,6 +71,17 @@ export function readSearch(p: URLSearchParams): SearchState {
     if (v && Number.isFinite(Number(v)) && Number(v) >= 0) s[key] = v;
   }
   s.only3D = p.get("scene") === "1";
+  const minSpaces = p.get("minSpaces");
+  if (
+    minSpaces &&
+    Number.isInteger(Number(minSpaces)) &&
+    Number(minSpaces) >= 1 &&
+    Number(minSpaces) <= 500
+  )
+    s.minSpaces = minSpaces;
+  s.sellerType = ["private", "professional"].includes(p.get("sellerType") || "")
+    ? p.get("sellerType")!
+    : "";
   s.sort = sorts.includes(p.get("sort") || "") ? p.get("sort")! : "recent";
   for (const key of ["covered", "closed"] as const)
     s[key] = ["0", "1"].includes(p.get(key) || "") ? p.get(key)! : "";
@@ -99,6 +114,18 @@ export function readSearch(p: URLSearchParams): SearchState {
   return s;
 }
 export function searchProblem(s: SearchState): string {
+  if (
+    s.minSpaces !== "" &&
+    (!Number.isInteger(Number(s.minSpaces)) ||
+      Number(s.minSpaces) < 1 ||
+      Number(s.minSpaces) > 500)
+  )
+    return "Indiquez un nombre de places entier entre 1 et 500.";
+  if (
+    s.sellerType !== "" &&
+    !["private", "professional"].includes(s.sellerType)
+  )
+    return "Choisissez un particulier ou un professionnel.";
   if (s.minPrice && s.maxPrice && Number(s.minPrice) > Number(s.maxPrice))
     return "Le budget minimum doit être inférieur ou égal au maximum.";
   if (
@@ -143,6 +170,8 @@ export function searchParams(s: SearchState, api = false): URLSearchParams {
     "bbox",
     "center",
     "radiusKm",
+    "minSpaces",
+    "sellerType",
   ] as const)
     if (s[key] !== "") p.set(key, s[key]);
   return p;

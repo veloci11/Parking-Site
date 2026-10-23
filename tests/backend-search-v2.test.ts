@@ -96,6 +96,14 @@ test("bbox and radius use public rounded coordinates; antimeridian and invalid t
     "level=1.5",
     "priceMin=100&priceMax=99",
     "ids=bad",
+    "minSpaces=0",
+    "minSpaces=501",
+    "minSpaces=2.5",
+    "minSpaces=two",
+    "minSpaces=2&minSpaces=3",
+    "sellerType=agency",
+    "sellerType=",
+    "sellerType=private&sellerType=professional",
   ])
     assert.throws(() => query(s));
 });
@@ -146,6 +154,8 @@ test("area and count keysets cover ties and nulls without duplicates, all filter
     "occupancy=vacant",
     "level=-1",
     "priceMin=100",
+    "minSpaces=2",
+    "sellerType=private",
     "bbox=0,0,1,1",
     "center=0,0&radiusKm=1",
     "ids=" + first.items[0].id,
@@ -153,4 +163,37 @@ test("area and count keysets cover ties and nulls without duplicates, all filter
     assert.throws(() =>
       query("sort=area_asc&" + suffix + "&cursor=" + first.nextCursor),
     );
+});
+test("local catalogue filters public seller snapshots and minimum matching spaces before paging", () => {
+  const sql = db();
+  const rows = sql
+    .prepare("SELECT id, public_json FROM listings ORDER BY id")
+    .all();
+  rows.forEach((row, index) => {
+    const value = JSON.parse(String(row.public_json));
+    value.sellerTypeSnapshot = index % 2 === 0 ? "private" : "professional";
+    sql
+      .prepare("UPDATE listings SET public_json=? WHERE id=?")
+      .run(JSON.stringify(value), row.id);
+  });
+  const source = search("").items;
+  const expected = source.filter(
+    (item) => item.sellerTypeSnapshot === "private" && item.spaces.length >= 2,
+  );
+  assert.ok(expected.length > 1);
+  const seen: string[] = [];
+  let cursor: string | null = null;
+  do {
+    const result = search(
+      "sellerType=private&minSpaces=2&limit=1" +
+        (cursor ? "&cursor=" + cursor : ""),
+    );
+    assert.equal(result.total, expected.length);
+    seen.push(...result.items.map((item) => item.id));
+    cursor = result.nextCursor;
+  } while (cursor);
+  assert.deepEqual(
+    seen,
+    expected.map((item) => item.id),
+  );
 });

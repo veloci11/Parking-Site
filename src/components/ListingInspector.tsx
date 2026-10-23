@@ -7,27 +7,46 @@ import { ParkingKindIcon } from "./ParkingKindIcon";
 import { accessLabel } from "@/lib/access-label";
 import { parkingSpaceLocation } from "@/lib/parking-lots";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { isPublicShowcase } from "@/lib/public-showcase";
-import { ChevronLeft, ChevronRight, LockKeyhole, Maximize } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Heart,
+  LockKeyhole,
+  Maximize,
+} from "lucide-react";
 import { areaLabel, type Listing, type TransactionType } from "@/lib/types";
 export default function ListingInspector({
   listing,
   onClose,
   transactionType,
+  favorite = false,
+  favoriteDisabled = false,
+  favoriteError,
+  onFavorite,
 }: {
   listing: Listing;
   onClose: () => void;
   transactionType?: TransactionType;
+  favorite?: boolean;
+  favoriteDisabled?: boolean;
+  favoriteError?: string;
+  onFavorite?: () => void;
 }) {
   const [index, setIndex] = useState(0);
   const backButton = useRef<HTMLButtonElement>(null);
+  const favoriteNoteId = useId();
   useEffect(() => {
     setIndex(0);
     backButton.current?.parentElement?.focus({ preventScroll: true });
   }, [listing.id]);
   const visibleSpaces = searchOfferSpaces(listing, transactionType);
   const photos = listing.photos.length ? listing.photos : ["/demo/covered.png"];
+  const showcase = isPublicShowcase(listing.id);
+  const favoriteLabel = favorite
+    ? "Retirer des favoris"
+    : "Ajouter aux favoris";
   return (
     <aside
       className="listing-inspector"
@@ -41,49 +60,79 @@ export default function ListingInspector({
       >
         <button
           ref={backButton}
-          className="button button-secondary"
+          type="button"
+          className="button button-secondary inspector-back-button"
           onClick={onClose}
         >
           Retour
         </button>
       </div>
       <div className="inspector-image">
-        <Image
-          src={photos[index % photos.length]}
-          alt={
-            listing.isDemo
-              ? "Illustration de démonstration du parking"
-              : listing.title
-          }
-          width={640}
-          height={420}
-          sizes="360px"
-        />
-        {photos.length > 1 ? (
-          <div className="gallery-controls">
-            <button
-              className="gallery-arrow"
-              onClick={() =>
-                setIndex((index - 1 + photos.length) % photos.length)
-              }
-              aria-label="Photo précédente"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <span>
-              {index + 1} / {photos.length}
-            </span>
-            <button
-              className="gallery-arrow"
-              onClick={() => setIndex((index + 1) % photos.length)}
-              aria-label="Photo suivante"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </div>
-        ) : (
-          <span className="photo-counter">1 / 1</span>
-        )}
+        <div className="inspector-photo">
+          <Image
+            src={photos[index % photos.length]}
+            alt={
+              listing.isDemo
+                ? "Illustration de démonstration du parking"
+                : listing.title
+            }
+            width={640}
+            height={420}
+            sizes="360px"
+          />
+          <button
+            type="button"
+            className="inspector-favorite-button"
+            aria-label={favoriteLabel}
+            aria-pressed={favorite}
+            aria-describedby={showcase ? favoriteNoteId : undefined}
+            title={
+              showcase
+                ? "Favoris disponibles sur les annonces réelles"
+                : favoriteLabel
+            }
+            disabled={showcase || favoriteDisabled || !onFavorite}
+            onClick={() => {
+              if (!showcase) onFavorite?.();
+            }}
+          >
+            <Heart
+              size={22}
+              fill={favorite ? "currentColor" : "none"}
+              aria-hidden="true"
+            />
+          </button>
+          {photos.length > 1 ? (
+            <div className="gallery-controls">
+              <button
+                className="gallery-arrow"
+                onClick={() =>
+                  setIndex((index - 1 + photos.length) % photos.length)
+                }
+                aria-label="Photo précédente"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <span>
+                {index + 1} / {photos.length}
+              </span>
+              <button
+                className="gallery-arrow"
+                onClick={() => setIndex((index + 1) % photos.length)}
+                aria-label="Photo suivante"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          ) : (
+            <span className="photo-counter">1 / 1</span>
+          )}
+        </div>
+        {showcase ? (
+          <p id={favoriteNoteId} className="inspector-favorite-note">
+            Favoris disponibles sur les annonces réelles.
+          </p>
+        ) : null}
       </div>
       <div className="inspector-body">
         <p className="inspector-location">
@@ -118,6 +167,11 @@ export default function ListingInspector({
         >
           Consulter l’annonce
         </Link>
+        {favoriteError && !showcase ? (
+          <p className="inspector-favorite-error" role="alert">
+            {favoriteError}
+          </p>
+        ) : null}
         <div className="feature-row">
           <span>
             <Maximize size={19} />
