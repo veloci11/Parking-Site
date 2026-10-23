@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import dynamic from "next/dynamic";
+import PreparedPhotos from "../PreparedPhotos";
 import {
   Box,
   ChevronLeft,
@@ -151,9 +152,14 @@ function Photos({
   return (
     <div className="gp-viewer-photo">
       {current ? (
-        <img
-          src={current}
+        <PreparedPhotos
+          key={`${listing.id}:${selectedId || "general"}`}
+          photos={photos}
+          index={Math.min(index, photos.length - 1)}
           alt={`Parking à ${listing.city}, ${listing.district} · photo ${Math.min(index, photos.length - 1) + 1}`}
+          width={1200}
+          height={800}
+          sizes="(max-width:767px) calc(100vw - 48px), (max-width:1200px) 80vw, 960px"
         />
       ) : (
         <div className="gp-viewer-empty">

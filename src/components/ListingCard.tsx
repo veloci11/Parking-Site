@@ -84,7 +84,7 @@ export default function ListingCard({
             sizes={
               href
                 ? "(max-width:600px) 100vw, (max-width:1023px) 50vw, (max-width:1440px) 33vw, 420px"
-                : "(max-width:767px) 50vw, 360px"
+                : "(max-width:767px) 140px, (max-width:1023px) 130px, 146px"
             }
             loading={eager ? "eager" : "lazy"}
           />

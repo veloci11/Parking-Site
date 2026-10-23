@@ -1075,3 +1075,29 @@
     padding: 12px;
   }
 }
+
+/* Adjacent photos stay decoded while the gallery is open. */
+.prepared-photos {
+  display: grid;
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+.prepared-photos > img {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  object-fit: cover;
+}
+.gp-viewer-photo > .prepared-photos {
+  height: 100%;
+}
+.prepared-photos > .prepared-photo-error {
+  position: absolute;
+  inset: auto 12px 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--muted);
+  font-size: 12px;
+}

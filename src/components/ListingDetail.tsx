@@ -122,6 +122,22 @@ export default function ListingDetail({
     focusedListing.pricingMode === "per_space" &&
     selectedSpace !== undefined &&
     spaceOffer(focusedListing, selectedSpace).status !== "available";
+  const isFavorite = favorites.ids.includes(focusedListing.id);
+  const favoriteButton = !showcase ? (
+    <button
+      type="button"
+      className="icon-button detail-favorite"
+      disabled={favorites.loading}
+      onClick={() => void favorites.toggle(focusedListing.id)}
+      aria-label={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+      aria-pressed={isFavorite}
+    >
+      <Heart size={22} fill={isFavorite ? "currentColor" : "none"} />
+    </button>
+  ) : null;
+  const displayedPrice = selectedSpace
+    ? spacePrice(focusedListing, selectedSpace)
+    : listingPrice(focusedListing);
   const selectedViewerSpaceId =
     parkingGroup?.levels
       .flatMap((level) => level.spaces)
@@ -403,7 +419,7 @@ export default function ListingDetail({
       </main>
     );
   return (
-    <main id="main" className="page-shell">
+    <main id="main" className="page-shell detail-page">
       {freshnessError ? (
         <p role="status" className="notice">
           {freshnessError} Les données affichées peuvent avoir changé.
@@ -419,35 +435,7 @@ export default function ListingDetail({
           </p>
           <h1>{listing.title}</h1>
         </div>
-        {!showcase ? (
-          <button
-            className="icon-button"
-            disabled={favorites.loading}
-            onClick={() => void favorites.toggle(listing.id)}
-            aria-label={
-              favorites.ids.includes(listing.id)
-                ? "Retirer des favoris"
-                : "Ajouter aux favoris"
-            }
-            aria-pressed={favorites.ids.includes(listing.id)}
-          >
-            <Heart
-              size={24}
-              fill={
-                favorites.ids.includes(listing.id) ? "currentColor" : "none"
-              }
-              color={
-                favorites.ids.includes(listing.id) ? "#6D28FF" : "currentColor"
-              }
-            />
-          </button>
-        ) : null}
       </div>
-      {favorites.error ? (
-        <p className="error" role="alert">
-          {favorites.error}
-        </p>
-      ) : null}
       {listing.isDemo ? (
         <p className="notice">
           Bien fictif de démonstration. Les photos sont des illustrations et le
@@ -629,11 +617,11 @@ export default function ListingDetail({
           <p style={{ whiteSpace: "pre-line" }}>{listing.description}</p>
           <h2 style={{ marginTop: 32 }}>État du parking</h2>
           <p className="muted small">
-            Informations déclarées par le vendeur
+            Informations du propriétaire
             {listing.observedAt
               ? ` · observations du ${new Date(listing.observedAt).toLocaleDateString("fr-FR", { timeZone: "UTC" })}`
               : ""}
-            . Une information manquante reste à vérifier lors de la visite.
+            .
           </p>
           <div className="quality-grid">
             {Object.entries(qualityLabels).map(([key, label]) => (
@@ -647,7 +635,7 @@ export default function ListingDetail({
             ))}
           </div>
           {listing.quality.observations ? (
-            <p className="notice" style={{ marginTop: 16 }}>
+            <p className="detail-condition-description">
               {listing.quality.observations}
             </p>
           ) : null}
@@ -695,7 +683,9 @@ export default function ListingDetail({
                       </div>
                     ))}
                     {quality.observations ? (
-                      <p className="notice">{quality.observations}</p>
+                      <p className="detail-condition-description">
+                        {quality.observations}
+                      </p>
                     ) : null}
                   </div>
                 ) : (
@@ -819,11 +809,6 @@ export default function ListingDetail({
                   d’une visite. Une demande n’est confirmée qu’après accord sur
                   un horaire.
                 </p>
-                {!relatedSelected ? (
-                  <p className="notice">
-                    {contactContext} Ce contexte sera joint à votre message.
-                  </p>
-                ) : null}
                 {relatedSelected ? (
                   <div className="notice" role="status">
                     La place sélectionnée appartient à « {focusedListing.title}{" "}
@@ -1020,11 +1005,17 @@ export default function ListingDetail({
               ? `Place ${selectedSpace.number} · ${spaceOfferLabel(focusedListing, selectedSpace)}`
               : offerLabel(focusedListing)}
           </span>
-          <p className="price" style={{ margin: "16px 0" }} aria-live="polite">
-            {selectedSpace
-              ? spacePrice(focusedListing, selectedSpace)
-              : listingPrice(focusedListing)}
-          </p>
+          <div className="detail-price-row">
+            <p className="price" aria-live="polite">
+              {displayedPrice}
+            </p>
+            {favoriteButton}
+          </div>
+          {favorites.error ? (
+            <p className="error detail-favorite-error" role="alert">
+              {favorites.error}
+            </p>
+          ) : null}
           <p className="small muted">
             {selectedSpace
               ? spaceOfferStatus(focusedListing, selectedSpace)
@@ -1092,6 +1083,30 @@ export default function ListingDetail({
             </p>
           </div>
         </aside>
+      </div>
+      <div className="detail-mobile-actions" aria-label="Prix et contact">
+        <p className="detail-mobile-price" aria-live="polite">
+          {displayedPrice}
+        </p>
+        {favoriteButton}
+        {showcase ? null : selectedUnavailable ? (
+          <button type="button" className="button button-primary" disabled>
+            Indisponible
+          </button>
+        ) : relatedSelected ? (
+          <Link className="button button-primary" href={focusedHref}>
+            Voir l’annonce
+          </Link>
+        ) : (
+          <a className="button button-primary" href="#contact">
+            Contacter
+          </a>
+        )}
+        {favorites.error ? (
+          <p className="error detail-mobile-favorite-error" role="alert">
+            {favorites.error}
+          </p>
+        ) : null}
       </div>
     </main>
   );

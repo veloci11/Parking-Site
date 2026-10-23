@@ -2,7 +2,7 @@
 import { listingPrice } from "@/lib/listing-price";
 import { searchOfferSpaces } from "@/lib/search-offers";
 import { pricingScope } from "./ListingOffers";
-import Image from "./SafePhoto";
+import PreparedPhotos from "./PreparedPhotos";
 import { ParkingKindIcon } from "./ParkingKindIcon";
 import { accessLabel } from "@/lib/access-label";
 import { parkingSpaceLocation } from "@/lib/parking-lots";
@@ -69,8 +69,10 @@ export default function ListingInspector({
       </div>
       <div className="inspector-image">
         <div className="inspector-photo">
-          <Image
-            src={photos[index % photos.length]}
+          <PreparedPhotos
+            key={listing.id}
+            photos={photos}
+            index={index}
             alt={
               listing.isDemo
                 ? "Illustration de démonstration du parking"
@@ -78,7 +80,7 @@ export default function ListingInspector({
             }
             width={640}
             height={420}
-            sizes="360px"
+            sizes="(max-width:767px) calc(100vw - 32px), 360px"
           />
           <button
             type="button"

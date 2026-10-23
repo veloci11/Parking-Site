@@ -156,7 +156,7 @@
   overflow: hidden;
   border-radius: 10px;
 }
-.explorer .inspector-photo > img {
+.explorer .inspector-photo .prepared-photos > img {
   display: block;
   width: 100%;
   height: 204px;
@@ -253,7 +253,7 @@
   .explorer .results-panel .inspector-body {
     padding: 0;
   }
-  .explorer .results-panel .inspector-photo > img {
+  .explorer .results-panel .inspector-photo .prepared-photos > img {
     height: 140px;
   }
   .explorer .results-panel .inspector-body > h2 {
@@ -540,7 +540,7 @@
     min-height: 24px;
     font-size: 11px;
   }
-  .explorer .results-panel .inspector-photo > img {
+  .explorer .results-panel .inspector-photo .prepared-photos > img {
     width: 100%;
     height: auto;
     aspect-ratio: 4 / 3;
@@ -608,7 +608,7 @@
   margin: 12px 0 18px;
 }
 @media (min-width: 768px) {
-  .explorer .results-panel .inspector-photo > img {
+  .explorer .results-panel .inspector-photo .prepared-photos > img {
     max-height: 230px;
   }
 }
@@ -857,7 +857,7 @@
     align-self: start;
     overflow: visible;
   }
-  .explorer .mobile-map .inspector-photo > img {
+  .explorer .mobile-map .inspector-photo .prepared-photos > img {
     display: block;
     width: 106px;
     height: 120px;

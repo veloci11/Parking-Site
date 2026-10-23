@@ -31,6 +31,8 @@ export default function SafePhoto(props: ImageProps) {
           : {}),
       }}
       loading={props.loading || (priority ? "eager" : "lazy")}
+      decoding={props.decoding || "async"}
+      fetchPriority={props.fetchPriority || (priority ? "high" : undefined)}
     />
   );
 }
