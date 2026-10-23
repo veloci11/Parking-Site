@@ -1,5 +1,7 @@
 # Matrice de complétude des exigences — V1
 
+**Mise à jour du 23 octobre :** [filtres flottants, navigation mobile et parking](qa/PARKING_NAVIGATION_2026-10-23.md), déployés sur Ubuntu. Cette recette prévaut pour ces éléments sur les captures historiques ci-dessous.
+
 ## Carte agrandie — 23 octobre
 
 Voir [la recette de la carte](qa/MAP_EXPANDED_2026-10-23.md) : bande supérieure supprimée, recherche automatique dans la zone visible, recherche par lieu remplaçant l'ancienne zone et hauteur mobile adaptée. Les limites email et opérateur ci-dessous restent inchangées.

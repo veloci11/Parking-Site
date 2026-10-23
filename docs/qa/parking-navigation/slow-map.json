@@ -1,0 +1,17 @@
+{
+  "requests": [
+    {
+      "event": "Network.requestWillBeSent",
+      "url": "http://127.0.0.1:3001/api/listings?transactionType=sale&type=covered&sort=recent&bbox=2.5051609549914247%2C48.88769500212345%2C2.5172837521015197%2C48.89577146420072&limit=24"
+    }
+  ],
+  "documents": 0,
+  "dom": {
+    "canvas": 1,
+    "cards": 2,
+    "prices": [
+      "18 500 €32 000 €"
+    ],
+    "skeleton": false
+  }
+}

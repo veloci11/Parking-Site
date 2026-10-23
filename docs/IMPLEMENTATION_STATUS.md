@@ -1,5 +1,7 @@
 # État d’implémentation et preuves
 
+**Mise à jour du 23 octobre :** [filtres flottants, navigation mobile et parking](qa/PARKING_NAVIGATION_2026-10-23.md), déployés sur Ubuntu. Cette recette prévaut pour ces éléments sur les captures historiques ci-dessous.
+
 Le site est hébergé sur Ubuntu à **https://parking.gilmathis.com**, derrière Cloudflare. La carte agrandie et sa recherche automatique sont décrites dans [la recette du 23 octobre](qa/MAP_EXPANDED_2026-10-23.md), en complément de la [passe recherche, dépôt et comptes](qa/UX_PROFESSIONAL_2026-10-22.md). Le SMTP personnalisé est différé par le propriétaire ; modèles email préparés, non activés. Le [plan](plan-construction/README.md) et la [matrice](COMPLETION_MATRIX.md) distinguent le code réalisé, les preuves et les prérequis opérateur.
 
 Les tableaux ci-dessous constituent la capture historique du 21 octobre ; ils sont complétés par les rapports datés. La préparation anonyme avant connexion a depuis été retirée à la demande du propriétaire.
