@@ -6,15 +6,9 @@ import Image from "./SafePhoto";
 import { ParkingKindIcon } from "./ParkingKindIcon";
 import { accessLabel } from "@/lib/access-label";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { isPublicShowcase } from "@/lib/public-showcase";
-import {
-  ChevronLeft,
-  ChevronRight,
-  LockKeyhole,
-  Maximize,
-  X,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, LockKeyhole, Maximize } from "lucide-react";
 import { areaLabel, type Listing, type TransactionType } from "@/lib/types";
 export default function ListingInspector({
   listing,
@@ -26,6 +20,10 @@ export default function ListingInspector({
   transactionType?: TransactionType;
 }) {
   const [index, setIndex] = useState(0);
+  const backButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    backButton.current?.focus({ preventScroll: true });
+  }, [listing.id]);
   const photos = listing.photos.length ? listing.photos : ["/demo/covered.png"];
   return (
     <aside
@@ -33,6 +31,11 @@ export default function ListingInspector({
       aria-label="Le bien sélectionné"
       key={listing.id}
     >
+      <div className="inspector-header">
+        <button ref={backButton} className="text-button" onClick={onClose}>
+          Retour
+        </button>
+      </div>
       <div className="inspector-image">
         <Image
           src={photos[index % photos.length]}
@@ -45,13 +48,6 @@ export default function ListingInspector({
           height={420}
           sizes="360px"
         />
-        <button
-          className="icon-button close-inspector"
-          onClick={onClose}
-          aria-label="Fermer la fiche"
-        >
-          <X size={20} />
-        </button>
         {photos.length > 1 ? (
           <div className="gallery-controls">
             <button

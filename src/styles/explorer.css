@@ -107,11 +107,141 @@
 .explorer .view-list .listing-card-footer .subtle-label {
   display: inline;
 }
-.explorer .view-list .results-panel > .button.full-width {
+.explorer .view-list .results-content > .button.full-width {
   display: flex;
   width: max-content;
   max-width: calc(100% - 40px);
   margin: 24px auto;
+}
+
+/* One sidebar owns the results or the selected listing; the map stays clear. */
+.explorer .results-content[hidden] {
+  display: none;
+}
+.explorer .results-panel .listing-inspector {
+  position: static;
+  inset: auto;
+  width: 100%;
+  max-height: none;
+  overflow: visible;
+  display: block;
+  border: 0;
+  border-radius: 0;
+  padding: 0 20px 20px;
+  box-shadow: none;
+  animation: none;
+}
+.explorer .inspector-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  background: white;
+}
+.explorer .inspector-header button {
+  min-height: 44px;
+}
+.explorer .results-panel .inspector-body {
+  padding: 18px 0;
+}
+.explorer .results-panel .inspector-location {
+  font-size: 16px;
+}
+.explorer .results-panel .inspector-body > h2 {
+  font-size: 22px;
+}
+.explorer .results-panel .feature-row {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 12px;
+}
+.explorer .cluster-summary {
+  padding: 0 24px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.explorer .results-panel:focus {
+  outline: none;
+}
+.explorer .explorer-compare {
+  position: sticky;
+  bottom: 0;
+  left: auto;
+  right: auto;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  border-radius: 0;
+  background: white;
+  border-top: 1px solid var(--border);
+  box-shadow: none;
+}
+@media (max-width: 767px) {
+  .explorer .mobile-map.is-inspecting {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 0;
+    padding-bottom: 110px;
+  }
+  .explorer .mobile-map.is-inspecting .map-panel {
+    order: 0;
+    flex: none;
+    height: 320px;
+    min-height: 320px;
+  }
+  .explorer .mobile-map.is-inspecting .gp-city-map {
+    min-height: 320px;
+  }
+  .explorer .mobile-map.is-inspecting .results-panel {
+    order: 1;
+    display: block;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    overflow: visible;
+    border-right: 0;
+    border-top: 1px solid var(--border);
+  }
+  .explorer .results-panel .listing-inspector {
+    display: grid;
+    grid-template-columns: 104px minmax(0, 1fr);
+    gap: 0 16px;
+    padding: 0 16px 20px;
+  }
+  .explorer .inspector-header {
+    grid-column: 1 / -1;
+  }
+  .explorer .results-panel .inspector-body {
+    padding: 0;
+  }
+  .explorer .results-panel .inspector-image > img {
+    height: 140px;
+  }
+  .explorer .results-panel .inspector-body > h2 {
+    font-size: 18px;
+  }
+  .explorer .results-panel .inspector-price {
+    font-size: 24px;
+  }
+  .explorer .results-panel .feature-row {
+    gap: 8px;
+  }
+  .explorer .gp-map-controls {
+    flex-direction: row;
+    right: 12px;
+    bottom: 40px;
+  }
+  .explorer .gp-map-controls button + button {
+    border-top: 0;
+    border-left: 1px solid var(--border);
+  }
 }
 .explorer .view-list .demo-note {
   padding: 20px 32px;
@@ -144,17 +274,6 @@
 }
 .explorer .map-empty-state .button {
   font-size: 14px;
-}
-@media (min-width: 768px) {
-  .explorer-view-list .explorer-compare {
-    display: flex;
-    position: fixed;
-    z-index: 40;
-    right: 24px;
-    bottom: 24px;
-    box-shadow: var(--shadow);
-    background: white;
-  }
 }
 @media (min-width: 768px) and (max-width: 1023px) {
   .explorer .view-list .results-list {
