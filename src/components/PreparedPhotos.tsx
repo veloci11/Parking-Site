@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import SafePhoto from "./SafePhoto";
+import { photoLoadReducer } from "@/lib/photo-load-state";
 
 /** Keep decoded slides mounted for this gallery only; no persistent media cache. */
 export default function PreparedPhotos({
@@ -18,12 +19,10 @@ export default function PreparedPhotos({
   height: number;
   sizes: string;
 }) {
-  const position = Math.max(0, index) % photos.length;
+  const position = photos.length ? Math.max(0, index) % photos.length : 0;
   const requested = photos[position];
   const [visited, setVisited] = useState<string[]>([]);
-  const [ready, setReady] = useState<string[]>([]);
-  const [displayed, setDisplayed] = useState(photos[0]);
-  const [failed, setFailed] = useState<string[]>([]);
+  const [loads, dispatchLoad] = useReducer(photoLoadReducer, {});
   const nearby = [
     requested,
     photos[(position + 1) % photos.length],
@@ -32,10 +31,7 @@ export default function PreparedPhotos({
   const mounted = [...new Set([...visited, ...nearby])].filter((src) =>
     photos.includes(src),
   );
-  const visible =
-    ready.includes(requested) || !photos.includes(displayed)
-      ? requested
-      : displayed;
+  const status = requested ? loads[requested]?.status || "loading" : "empty";
   useEffect(() => {
     setVisited((previous) => [...new Set([...previous, ...nearby])]);
   }, [
@@ -43,47 +39,67 @@ export default function PreparedPhotos({
     photos[(position + 1) % photos.length],
     photos[(position + photos.length - 1) % photos.length],
   ]);
-  useEffect(() => {
-    if (ready.includes(requested)) setDisplayed(requested);
-  }, [ready, requested]);
   return (
     <div
       className="prepared-photos"
-      aria-busy={!ready.includes(requested) && !failed.includes(requested)}
+      aria-busy={status === "loading"}
+      data-photo-state={status}
     >
-      {mounted.map((src) => (
-        <SafePhoto
-          key={src}
-          src={src}
-          alt={src === visible ? alt : ""}
-          aria-hidden={src !== visible}
-          width={width}
-          height={height}
-          sizes={sizes}
-          loading="eager"
-          fetchPriority={src === requested ? "high" : "low"}
-          style={{
-            gridArea: "1 / 1",
-            visibility: src === visible ? "visible" : "hidden",
-          }}
-          onLoad={(event) => {
-            const img = event.currentTarget;
-            void img
-              .decode()
-              .catch(() => {})
-              .then(() =>
-                setReady((previous) =>
-                  previous.includes(src) ? previous : [...previous, src],
-                ),
-              );
-          }}
-          onError={() => setFailed((previous) => [...previous, src])}
-        />
-      ))}
-      {failed.includes(requested) ? (
-        <span className="prepared-photo-error" role="status">
-          Cette photo est momentanément indisponible.
-        </span>
+      {mounted.map((src) => {
+        const attempt = loads[src]?.attempt || 0;
+        const visible = src === requested && status === "ready";
+        return (
+          <SafePhoto
+            key={`${src}:${attempt}`}
+            src={src}
+            alt={visible ? alt : ""}
+            aria-hidden={!visible}
+            width={width}
+            height={height}
+            sizes={sizes}
+            loading="eager"
+            fetchPriority={src === requested ? "high" : "low"}
+            style={{
+              gridArea: "1 / 1",
+              visibility: visible ? "visible" : "hidden",
+            }}
+            onLoad={(event) => {
+              const img = event.currentTarget;
+              void img
+                .decode()
+                .catch(() => {})
+                .then(() => {
+                  if (!img.isConnected) return;
+                  dispatchLoad({
+                    type: img.naturalWidth > 0 ? "ready" : "failed",
+                    src,
+                    attempt,
+                  });
+                });
+            }}
+            onError={() => dispatchLoad({ type: "failed", src, attempt })}
+          />
+        );
+      })}
+      {status !== "ready" ? (
+        <div className="prepared-photo-status" role="status">
+          <span>
+            {status === "failed"
+              ? "Cette photo est momentanément indisponible."
+              : status === "empty"
+                ? "Photos à venir"
+                : "Chargement de la photo…"}
+          </span>
+          {status === "failed" ? (
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={() => dispatchLoad({ type: "retry", src: requested })}
+            >
+              Réessayer cette photo
+            </button>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

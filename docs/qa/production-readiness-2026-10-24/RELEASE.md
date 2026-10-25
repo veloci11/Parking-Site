@@ -35,6 +35,15 @@ Revue parallèle acheteur/mobile, vendeur et comptes/administration, puis contre
 
 Ces limites empêchent d'affirmer une ouverture commerciale intégralement validée. Elles n'annulent pas les corrections fonctionnelles vérifiées dans cette livraison.
 
+## Dernière passe UX
+
+À la demande du propriétaire, la préparation OAuth est mise de côté. Deux défauts d’utilisation ont été corrigés ensuite :
+
+- Une panne pendant le chargement de la page suivante ne retire plus les annonces déjà chargées, la sélection ni leurs repères. L’erreur et le bouton de relance restent près des résultats.
+- Une photo préchargée en échec ne conserve plus la précédente sous le nouveau compteur. Le bouton « Réessayer cette photo » ne recharge que ce cliché ; les images voisines déjà décodées restent en mémoire, et les callbacks d’une tentative antérieure sont ignorés.
+
+Quatre tests ciblés de panne/reprise réussis, TypeScript et format validés. La recette en ligne est consignée après déploiement.
+
 ## Base de données et contrôle indépendant
 
 La migration additive de pagination a été publiée dans `a7a4a05`. Les six contrôles GitHub (application, PostgreSQL et rendu raster, push et PR) ont réussi. La recette PostgreSQL utilise 135 comptes synthétiques dans une base jetable. Elle a ensuite été appliquée au projet Supabase de production : lecture admin bornée réussie, refus non-admin, exécution anonyme interdite, aucun email/mot de passe exposé et catalogue toujours à quatre annonces. Aucun compte ni annonce réelle n’a été modifié.

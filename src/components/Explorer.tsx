@@ -33,6 +33,7 @@ import {
   loadExplorerWindow,
   restoredResultCount,
 } from "@/lib/explorer-continuation";
+import { loadExplorerNextPage } from "@/lib/explorer-pagination";
 import {
   normalizeMapView,
   type MapViewState,
@@ -130,6 +131,7 @@ export default function Explorer({
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [paginationError, setPaginationError] = useState("");
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [city, setCity] = useState("");
@@ -436,6 +438,7 @@ export default function Explorer({
     windowRequest.current?.abort();
     setLoading(true);
     setLoadingMore(false);
+    setPaginationError("");
     setNextCursor(null);
     const timer = window.setTimeout(() => void load(), 200);
     return () => window.clearTimeout(timer);
@@ -511,24 +514,19 @@ export default function Explorer({
   async function loadMore() {
     if (!nextCursor || loadingMore || windowRequestPending.current) return;
     setLoadingMore(true);
+    setPaginationError("");
     const generation = requestGeneration.current;
     try {
       const p = new URLSearchParams(apiQuery);
-      p.set("cursor", nextCursor);
-      p.set("limit", "24");
       if (favoritesOnly) p.set("ids", favoriteKey);
-      const r = await fetch("/api/listings?" + p);
-      const v = await r.json();
-      if (!r.ok) throw new Error(v.error);
+      const result = await loadExplorerNextPage(
+        { data: listings, nextCursor },
+        p,
+      );
       if (generation !== requestGeneration.current) return;
-      setListings((current) => [
-        ...current,
-        ...v.data.filter((l: Listing) => !current.some((c) => c.id === l.id)),
-      ]);
-      setNextCursor(v.nextCursor || null);
-    } catch (e) {
-      if (generation === requestGeneration.current)
-        setError(explorerRequestError(e));
+      setListings(result.data);
+      setNextCursor(result.nextCursor);
+      setPaginationError(result.error);
     } finally {
       if (generation === requestGeneration.current) setLoadingMore(false);
     }
@@ -1453,13 +1451,22 @@ export default function Explorer({
                 />
               ))}
             </div>
+            {paginationError && nextCursor && !clusterListingIds.length ? (
+              <p className="error" role="alert">
+                {paginationError}
+              </p>
+            ) : null}
             {nextCursor && !clusterListingIds.length ? (
               <button
                 className="button button-secondary full-width"
                 onClick={loadMore}
                 disabled={loadingMore || loading}
               >
-                {loadingMore ? "Chargement…" : "Afficher plus d’annonces"}
+                {loadingMore
+                  ? "Chargement…"
+                  : paginationError
+                    ? "Réessayer de charger la suite"
+                    : "Afficher plus d’annonces"}
               </button>
             ) : null}
             {favoritesOnly && missingFavorites.length > 0 ? (
