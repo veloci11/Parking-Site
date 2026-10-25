@@ -1,6 +1,6 @@
 "use client";
 import FilterSelect from "../FilterSelect";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { AdminUser, User } from "@/lib/types";
 import { AccountGate, AccountShell, api } from "./shared";
 const statusLabels: Record<AdminUser["status"], string> = {
@@ -24,20 +24,46 @@ function Content({ user }: { user: User }) {
     [confirmed, setConfirmed] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [notice, setNotice] = useState("");
-  async function load() {
+    [notice, setNotice] = useState(""),
+    [query, setQuery] = useState(""),
+    [appliedQuery, setAppliedQuery] = useState(""),
+    [nextCursor, setNextCursor] = useState<string | null>(null);
+  const loadVersion = useRef(0);
+  async function load(search = appliedQuery, cursor: string | null = null) {
+    const version = ++loadVersion.current;
     setLoading(true);
+    setError("");
+    setSelected(null);
+    setConfirmed(false);
     try {
-      const r = await api<{ data: AdminUser[] }>("/api/admin/users");
-      setItems(r.data);
+      const params = new URLSearchParams({ q: search, limit: "50" });
+      if (cursor) params.set("cursor", cursor);
+      const r = await api<{ data: AdminUser[]; nextCursor: string | null }>(
+        `/api/admin/users?${params}`,
+      );
+      if (version !== loadVersion.current) return;
+      setItems((current) =>
+        cursor
+          ? [
+              ...new Map(
+                [...current, ...r.data].map((item) => [item.id, item]),
+              ).values(),
+            ]
+          : r.data,
+      );
+      setNextCursor(r.nextCursor);
+      setAppliedQuery(search);
     } catch (e) {
-      setError((e as Error).message);
+      if (version === loadVersion.current) setError((e as Error).message);
     } finally {
-      setLoading(false);
+      if (version === loadVersion.current) setLoading(false);
     }
   }
   useEffect(() => {
     void load();
+    return () => {
+      loadVersion.current++;
+    };
   }, []);
   const changed =
     selected && (selected.role !== role || selected.status !== status);
@@ -90,10 +116,44 @@ function Content({ user }: { user: User }) {
       }
     >
       <p className="muted">
-        Liste limitée à 100 comptes, sans email ni coordonnées privées. Les
-        rôles et suspensions sont des décisions distinctes du statut déclaré
-        particulier/professionnel.
+        Recherchez un compte par son nom public ou son identifiant. Les emails
+        et coordonnées privées ne sont pas affichés.
       </p>
+      <form
+        className="account-visit-actions"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!busy && !loading) void load(query);
+        }}
+      >
+        <label className="field">
+          Nom public ou identifiant
+          <input
+            className="input"
+            type="search"
+            value={query}
+            maxLength={80}
+            disabled={busy}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </label>
+        <button className="button button-primary" disabled={busy || loading}>
+          Rechercher
+        </button>
+        {query || appliedQuery ? (
+          <button
+            type="button"
+            className="button button-secondary"
+            disabled={busy || loading}
+            onClick={() => {
+              setQuery("");
+              void load("");
+            }}
+          >
+            Tous les comptes
+          </button>
+        ) : null}
+      </form>
       {error ? (
         <p className="error" role="alert">
           {error}
@@ -104,7 +164,7 @@ function Content({ user }: { user: User }) {
           {notice}
         </p>
       ) : null}
-      {loading ? (
+      {loading && !items.length ? (
         <p role="status">Chargement des comptes…</p>
       ) : items.length ? (
         <div className="account-list">
@@ -114,6 +174,7 @@ function Content({ user }: { user: User }) {
               key={item.id}
               disabled={
                 busy ||
+                loading ||
                 item.id === user.id ||
                 !["active", "suspended"].includes(item.status)
               }
@@ -146,9 +207,25 @@ function Content({ user }: { user: User }) {
             </button>
           ))}
         </div>
-      ) : (
-        <p className="notice">Aucun compte à afficher.</p>
-      )}
+      ) : !error ? (
+        <p className="notice">Aucun compte ne correspond à cette recherche.</p>
+      ) : null}
+      {items.length ? (
+        <p className="muted" role="status">
+          {items.length} compte{items.length > 1 ? "s" : ""} affiché
+          {items.length > 1 ? "s" : ""}
+          {nextCursor ? " · d’autres résultats sont disponibles" : ""}.
+        </p>
+      ) : null}
+      {nextCursor ? (
+        <button
+          className="button button-secondary"
+          disabled={loading || busy}
+          onClick={() => void load(appliedQuery, nextCursor)}
+        >
+          {loading ? "Chargement…" : "Afficher les comptes suivants"}
+        </button>
+      ) : null}
       {selected ? (
         <form className="card account-review-detail" onSubmit={decide}>
           <h2>Décision sur {selected.name}</h2>

@@ -31,6 +31,34 @@
   margin-top: 2px;
   flex: none;
 }
+.account-social,
+.account-social-consent {
+  display: grid;
+  gap: 12px;
+}
+.account-social .account-checkbox {
+  align-items: flex-start;
+  font-size: 13px;
+}
+.account-social .account-checkbox input {
+  flex: none;
+  margin-top: 3px;
+}
+.account-social-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.account-social-divider::before,
+.account-social-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
 @media (max-width: 600px) {
   .account-auth.account-auth-compact {
     padding: 28px 20px 48px;

@@ -9,7 +9,10 @@ import {
   currentUser,
 } from "../security";
 import type { User } from "@/lib/types";
-export function sceneContext(request: Request) {
+export function sceneContext(
+  request: Request,
+  options: { fetch?: typeof fetch } = {},
+) {
   const remote =
     supabaseConfigured() && process.env.GP_FORCE_LOCAL_DEMO !== "true";
   if (remote) assertSameOrigin(request);
@@ -22,7 +25,10 @@ export function sceneContext(request: Request) {
         (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)!,
         {
-          global: { headers: diagnosticBackendHeaders() },
+          global: {
+            headers: diagnosticBackendHeaders(),
+            ...(options.fetch ? { fetch: options.fetch } : {}),
+          },
           cookies: {
             getAll() {
               return (request.headers.get("cookie") || "")

@@ -1547,6 +1547,26 @@ export default function Explorer({
               Préparation de la carte…
             </div>
           )}
+          {visibleView === "map" && !loading && (error || !filtered.length) ? (
+            <div className="explorer-map-status" role="status">
+              <strong>
+                {error
+                  ? "Recherche interrompue"
+                  : "Aucune annonce pour ces critères"}
+              </strong>
+              <p>{error || emptyMessage}</p>
+              {error ? (
+                <button
+                  className="button button-primary"
+                  onClick={() => void load()}
+                >
+                  Réessayer
+                </button>
+              ) : (
+                emptyAction
+              )}
+            </div>
+          ) : null}
         </section>
       </div>
       {compare.length > 0 && visibleView === "list" ? (
@@ -1570,7 +1590,10 @@ export default function Explorer({
           {compareNotice || favorites.error}
           <button
             className="icon-button"
-            onClick={() => setCompareNotice("")}
+            onClick={() => {
+              setCompareNotice("");
+              favorites.dismissError();
+            }}
             aria-label="Fermer"
           >
             <X size={16} />

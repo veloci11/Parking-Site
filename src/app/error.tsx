@@ -2,10 +2,9 @@
 export default function ErrorPage({ reset }: { reset: () => void }) {
   return (
     <main id="main" className="page-shell">
-      <h1>Une interruption passagère.</h1>
+      <h1>Impossible d’afficher cette page</h1>
       <p>
-        Nous n’avons pas pu afficher cette page. Vos données enregistrées sont
-        conservées.
+        Le service est momentanément indisponible. Réessayez dans un instant.
       </p>
       <button className="button button-primary" onClick={reset}>
         Réessayer

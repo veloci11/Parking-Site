@@ -3,11 +3,13 @@ import FilterSelect from "../FilterSelect";
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type FormEvent,
 } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Check,
   CheckCircle2,
@@ -41,6 +43,13 @@ import {
   lotOfferChange,
 } from "@/lib/listing-price";
 import { CommercialEditor } from "./commercial-editor";
+import {
+  createDraftSpace,
+  parseSpaceCount,
+  resizeDraftSpaces,
+} from "@/lib/draft-spaces";
+import { createDraftSaveQueue } from "@/lib/draft-save-queue";
+import { draftNavigationTarget } from "@/lib/draft-navigation";
 import { CommercialSummary } from "../CommercialSummary";
 import {
   wizardIssues,
@@ -100,18 +109,6 @@ function PaintedNumberField({
     </label>
   );
 }
-function newSpace(): Space {
-  return {
-    id: crypto.randomUUID(),
-    number: "",
-    level: -1,
-    areaM2: null,
-    lengthM: null,
-    widthM: null,
-    clearanceM: null,
-    offer: { transactionType: "sale", priceCents: 0, status: "available" },
-  };
-}
 function NumField({
   label,
   value,
@@ -147,6 +144,7 @@ function NumField({
   );
 }
 function WizardContent({ user, id }: { user: User; id?: string }) {
+  const router = useRouter();
   const [listing, setListing] = useState<Listing | null>(null),
     [preview, setPreview] = useState<Listing | null>(null),
     [previewError, setPreviewError] = useState(""),
@@ -176,6 +174,8 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
     [locationConfirmed, setLocationConfirmed] = useState(false),
     [locationSelectionPending, setLocationSelectionPending] = useState(false),
     [locationReload, setLocationReload] = useState(0),
+    [spaceCountInput, setSpaceCountInput] = useState<string | null>(null),
+    [leaving, setLeaving] = useState(false),
     [busy, setBusy] = useState(false);
   const cachedOffers = useRef(new Map<string, NonNullable<Space["offer"]>>());
   const issueSummary = useRef<HTMLDivElement>(null),
@@ -186,8 +186,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
     previousStep = useRef(step);
   const latest = useRef<Listing | null>(null),
     dirty = useRef(false),
-    saving = useRef(false),
-    queued = useRef(false),
+    navigationPending = useRef(false),
     seq = useRef(0),
     mounted = useRef(true);
   useEffect(() => {
@@ -275,7 +274,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
         method: "POST",
         body: JSON.stringify({
           pricingMode: "per_space",
-          spaces: [newSpace()].map((space) => ({
+          spaces: [createDraftSpace()].map((space) => ({
             ...space,
             offer: space.offer || {
               transactionType: "sale",
@@ -298,13 +297,8 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
       setCreating(false);
     }
   }
-  const save = useCallback(async (): Promise<Listing | null> => {
+  const saveCurrent = useCallback(async (): Promise<Listing | null> => {
     if (!latest.current || !dirty.current) return latest.current;
-    if (saving.current) {
-      queued.current = true;
-      return null;
-    }
-    saving.current = true;
     setSaveState("saving");
     const current = latest.current,
       changeSeq = seq.current;
@@ -363,17 +357,91 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
         setError((e as Error).message);
       }
       return null;
-    } finally {
-      saving.current = false;
-      if (queued.current) {
-        queued.current = false;
-        if (mounted.current)
-          setTimeout(() => {
-            void save();
-          }, 50);
-      }
     }
   }, []);
+  const save = useMemo(
+    () =>
+      createDraftSaveQueue(saveCurrent, () => mounted.current && dirty.current),
+    [saveCurrent],
+  );
+  useEffect(() => {
+    const leave = (event: MouseEvent) => {
+      const countPending =
+        spaceCountInput !== null &&
+        parseSpaceCount(spaceCountInput) !== latest.current?.spaces.length;
+      if (
+        (!dirty.current && !uploading && !countPending) ||
+        event.defaultPrevented
+      )
+        return;
+      const anchor =
+        event.target instanceof Element
+          ? event.target.closest("a[href]")
+          : null;
+      if (
+        !(anchor instanceof HTMLAnchorElement) ||
+        anchor.getAttribute("aria-disabled") === "true"
+      )
+        return;
+      const destination = draftNavigationTarget(
+        anchor.href,
+        window.location.href,
+        {
+          button: event.button,
+          metaKey: event.metaKey,
+          ctrlKey: event.ctrlKey,
+          altKey: event.altKey,
+          shiftKey: event.shiftKey,
+          target: anchor.target,
+          download: anchor.hasAttribute("download"),
+        },
+      );
+      if (!destination) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (navigationPending.current) return;
+      if (countPending) {
+        setStep(0);
+        setIssuesForStep(0);
+        pendingIssue.current = {
+          step: 0,
+          field: "listing-space-count",
+          message:
+            "Validez le nouveau nombre de places ou annulez cette modification.",
+        };
+        setFeedbackFocus({ target: "field" });
+        return;
+      }
+      if (uploading) {
+        setError(
+          "Attendez la fin de l’ajout des photos avant de quitter le brouillon.",
+        );
+        setFeedbackFocus({ target: "error" });
+        return;
+      }
+      navigationPending.current = true;
+      setLeaving(true);
+      void save()
+        .then((saved) => {
+          if (!mounted.current) return;
+          if (!saved) {
+            setFeedbackFocus({ target: "error" });
+            return;
+          }
+          if (destination.origin === window.location.origin)
+            router.push(
+              `${destination.pathname}${destination.search}${destination.hash}`,
+            );
+          else window.location.assign(destination.href);
+        })
+        .finally(() => {
+          navigationPending.current = false;
+          if (mounted.current) setLeaving(false);
+        });
+    };
+    document.addEventListener("click", leave, true);
+    return () => document.removeEventListener("click", leave, true);
+  }, [router, save, spaceCountInput, uploading]);
   useEffect(() => {
     if (saveState !== "dirty") return;
     const timer = setTimeout(() => {
@@ -383,14 +451,18 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
   }, [saveState, listing, save]);
   useEffect(() => {
     const guard = (e: BeforeUnloadEvent) => {
-      if (dirty.current) {
+      if (
+        dirty.current ||
+        (spaceCountInput !== null &&
+          parseSpaceCount(spaceCountInput) !== latest.current?.spaces.length)
+      ) {
         e.preventDefault();
         e.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", guard);
     return () => window.removeEventListener("beforeunload", guard);
-  }, []);
+  }, [spaceCountInput]);
   function change(patch: Partial<Listing>) {
     if (!latest.current) return;
     if (
@@ -625,6 +697,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
       latest.current,
       step,
       locationSelectionPending,
+      spaceCountInput,
     );
     setError("");
     if (!issues.length) return true;
@@ -661,7 +734,10 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
       setFeedbackFocus({ target: "error" });
       return;
     }
-    if (wizardIssues(latest.current, locationSelectionPending).length) {
+    if (
+      wizardIssues(latest.current, locationSelectionPending, spaceCountInput)
+        .length
+    ) {
       setIssuesForStep(2);
       setError("");
       setFeedbackFocus({ target: "summary" });
@@ -764,10 +840,28 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
     photoTarget === "general"
       ? listing.photos
       : listing.spacePhotos?.[photoTarget] || [];
-  const missing = wizardIssues(listing, locationSelectionPending);
+  const missing = wizardIssues(
+    listing,
+    locationSelectionPending,
+    spaceCountInput,
+  );
+  const requestedSpaceCount =
+    spaceCountInput === null
+      ? listing.spaces.length
+      : parseSpaceCount(spaceCountInput);
+  const spaceCountPending = requestedSpaceCount !== listing.spaces.length;
+  const spaceCountDifference =
+    requestedSpaceCount === null
+      ? 0
+      : requestedSpaceCount - listing.spaces.length;
   const visibleIssues =
     step === 2 || issuesForStep === step
-      ? wizardStepIssues(listing, step, locationSelectionPending)
+      ? wizardStepIssues(
+          listing,
+          step,
+          locationSelectionPending,
+          spaceCountInput,
+        )
       : [];
   const imageUnion = new Set([
     ...listing.photos,
@@ -787,7 +881,40 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
   return (
     <main id="main" className="page-shell account-wizard">
       <div className="account-wizard-top">
-        <Link href="/compte/annonces">Mes annonces</Link>
+        <Link
+          href="/compte/annonces"
+          aria-busy={leaving}
+          onNavigate={(event) => {
+            event.preventDefault();
+            if (leaving) return;
+            if (spaceCountPending) {
+              setStep(0);
+              setIssuesForStep(0);
+              pendingIssue.current =
+                missing.find(
+                  (issue) => issue.field === "listing-space-count",
+                ) || null;
+              setFeedbackFocus({ target: "field" });
+              return;
+            }
+            if (uploading) {
+              setError(
+                "Attendez la fin de l’ajout des photos avant de quitter le brouillon.",
+              );
+              setFeedbackFocus({ target: "error" });
+              return;
+            }
+            setLeaving(true);
+            void save()
+              .then((saved) => {
+                if (saved) router.push("/compte/annonces");
+                else setFeedbackFocus({ target: "error" });
+              })
+              .finally(() => setLeaving(false));
+          }}
+        >
+          {leaving ? "Enregistrement…" : "Mes annonces"}
+        </Link>
         <div className="account-save-state" role="status">
           {saveState === "saving" ? (
             <LoaderCircle size={16} className="account-spin" />
@@ -796,14 +923,14 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
           ) : (
             <Save size={16} />
           )}
-          {
-            {
-              saved: "Brouillon enregistré",
-              dirty: "Modifications à enregistrer",
-              saving: "Enregistrement…",
-              error: "Enregistrement à réessayer",
-            }[saveState]
-          }
+          {spaceCountPending
+            ? "Nombre de places à valider"
+            : {
+                saved: "Brouillon enregistré",
+                dirty: "Modifications à enregistrer",
+                saving: "Enregistrement…",
+                error: "Enregistrement à réessayer",
+              }[saveState]}
           <button
             className="button button-secondary"
             onClick={() => {
@@ -938,6 +1065,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
                   setLocationConfirmed(!!r.data.locationConfirmedAt);
                   setLocationReload((reload) => reload + 1);
                   setLocationSelectionPending(false);
+                  setSpaceCountInput(null);
                   dirty.current = false;
                   setSaveState("saved");
                   setError("");
@@ -1009,25 +1137,61 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
               <label className="field">
                 Nombre de places dans cette annonce
                 <input
+                  id="listing-space-count"
                   className="input"
                   type="number"
                   min="1"
                   max="500"
-                  value={listing.spaces.length}
-                  onChange={(event) => {
-                    const quantity = Math.min(
-                      500,
-                      Math.max(1, Math.trunc(Number(event.target.value) || 1)),
-                    );
-                    change({
-                      spaces: Array.from(
-                        { length: quantity },
-                        (_, index) => listing.spaces[index] || newSpace(),
-                      ),
-                    });
-                  }}
+                  value={spaceCountInput ?? listing.spaces.length}
+                  onChange={(event) => setSpaceCountInput(event.target.value)}
                 />
               </label>
+              {spaceCountPending ? (
+                <div className="account-space-count-actions">
+                  <p className="muted" role="status">
+                    {requestedSpaceCount === null
+                      ? "Indiquez un nombre entier de 1 à 500."
+                      : requestedSpaceCount < listing.spaces.length
+                        ? spaceCountDifference === -1
+                          ? "Le dernier emplacement sera retiré de ce brouillon, avec son prix et ses photos associées. Les autres places restent inchangées."
+                          : `Les ${-spaceCountDifference} derniers emplacements seront retirés de ce brouillon, avec leurs prix et leurs photos associées. Les autres places restent inchangées.`
+                        : `${spaceCountDifference} emplacement${spaceCountDifference > 1 ? "s" : ""} à ajouter. Les places déjà renseignées restent inchangées.`}
+                  </p>
+                  <div className="account-wizard-actions">
+                    <button
+                      type="button"
+                      className="button button-secondary"
+                      onClick={() => setSpaceCountInput(null)}
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="button"
+                      className="button button-primary"
+                      disabled={requestedSpaceCount === null || uploading}
+                      onClick={() => {
+                        if (!latest.current || spaceCountInput === null) return;
+                        change({
+                          spaces: resizeDraftSpaces(
+                            latest.current.spaces,
+                            spaceCountInput,
+                          ),
+                        });
+                        setSpaceCountInput(null);
+                      }}
+                    >
+                      {requestedSpaceCount !== null &&
+                      requestedSpaceCount < listing.spaces.length
+                        ? spaceCountDifference === -1
+                          ? "Retirer le dernier emplacement"
+                          : `Retirer les ${-spaceCountDifference} derniers emplacements`
+                        : spaceCountDifference === 1
+                          ? "Ajouter l’emplacement"
+                          : "Ajouter les emplacements"}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
               <p className="muted">
                 Vous pouvez proposer certaines places à vendre et d’autres à
                 louer. Elles restent réunies dans la même annonce.

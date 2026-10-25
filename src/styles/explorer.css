@@ -650,7 +650,35 @@
 .explorer-filter-actions > .text-button {
   flex: none;
 }
+.explorer-map-status {
+  display: none;
+}
 @media (max-width: 767px) {
+  .explorer .explorer-map-status {
+    display: block;
+    position: absolute;
+    z-index: 5;
+    right: 12px;
+    left: 12px;
+    bottom: max(80px, calc(env(safe-area-inset-bottom) + 72px));
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: #fffffff5;
+    box-shadow: 0 4px 24px #22193a16;
+    font-size: 14px;
+  }
+  .explorer-map-status p {
+    margin: 6px 0 12px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .explorer-map-status .button {
+    min-height: 42px;
+    width: 100%;
+    font-size: 13px;
+  }
   html:has(main.explorer),
   body:has(main.explorer) {
     height: 100%;

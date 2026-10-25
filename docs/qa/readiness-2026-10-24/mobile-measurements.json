@@ -1,0 +1,209 @@
+{
+  "source": "local development 127.0.0.1:3002; CSS viewport emulation, not physical iPhone",
+  "measurements": [
+    {
+      "content": {
+        "height": 205,
+        "scrollHeight": 743
+      },
+      "documentHeight": 568,
+      "documentWidth": 320,
+      "footer": {
+        "bottom": 568,
+        "height": 115,
+        "left": 0,
+        "right": 320,
+        "top": 453,
+        "width": 320,
+        "x": 0,
+        "y": 453
+      },
+      "height": 568,
+      "photo": {
+        "bottom": 408,
+        "height": 160,
+        "left": 16,
+        "right": 293,
+        "top": 248,
+        "width": 277,
+        "x": 16,
+        "y": 248
+      },
+      "scrollY": 0,
+      "search": {
+        "bottom": 118,
+        "height": 44,
+        "left": 12,
+        "right": 308,
+        "top": 74,
+        "width": 296,
+        "x": 12,
+        "y": 74
+      },
+      "sheet": {
+        "bottom": 568,
+        "height": 360,
+        "left": 0,
+        "right": 320,
+        "top": 208,
+        "width": 320,
+        "x": 0,
+        "y": 208
+      },
+      "width": 320
+    },
+    {
+      "content": {
+        "height": 231,
+        "scrollHeight": 671
+      },
+      "documentHeight": 667,
+      "documentWidth": 375,
+      "footer": {
+        "bottom": 667,
+        "height": 115,
+        "left": 0,
+        "right": 375,
+        "top": 552,
+        "width": 375,
+        "x": 0,
+        "y": 552
+      },
+      "height": 667,
+      "photo": {
+        "bottom": 481.0859375,
+        "height": 160,
+        "left": 16,
+        "right": 348,
+        "top": 321.0859375,
+        "width": 332,
+        "x": 16,
+        "y": 321.0859375
+      },
+      "scrollY": 0,
+      "search": {
+        "bottom": 118,
+        "height": 44,
+        "left": 12,
+        "right": 363,
+        "top": 74,
+        "width": 351,
+        "x": 12,
+        "y": 74
+      },
+      "sheet": {
+        "bottom": 667,
+        "height": 385.9140625,
+        "left": 0,
+        "right": 375,
+        "top": 281.0859375,
+        "width": 375,
+        "x": 0,
+        "y": 281.0859375
+      },
+      "width": 375
+    },
+    {
+      "content": {
+        "height": 344,
+        "scrollHeight": 674
+      },
+      "documentHeight": 844,
+      "documentWidth": 390,
+      "footer": {
+        "bottom": 844,
+        "height": 115,
+        "left": 0,
+        "right": 390,
+        "top": 729,
+        "width": 390,
+        "x": 0,
+        "y": 729
+      },
+      "height": 844,
+      "photo": {
+        "bottom": 570.484375,
+        "height": 185.6796875,
+        "left": 16,
+        "right": 363,
+        "top": 384.8046875,
+        "width": 347,
+        "x": 16,
+        "y": 384.8046875
+      },
+      "scrollY": 0,
+      "search": {
+        "bottom": 118,
+        "height": 44,
+        "left": 12,
+        "right": 378,
+        "top": 74,
+        "width": 366,
+        "x": 12,
+        "y": 74
+      },
+      "sheet": {
+        "bottom": 844,
+        "height": 499.1953125,
+        "left": 0,
+        "right": 390,
+        "top": 344.8046875,
+        "width": 390,
+        "x": 0,
+        "y": 344.8046875
+      },
+      "width": 390
+    },
+    {
+      "content": {
+        "height": 385,
+        "scrollHeight": 688
+      },
+      "documentHeight": 932,
+      "documentWidth": 430,
+      "footer": {
+        "bottom": 932,
+        "height": 115,
+        "left": 0,
+        "right": 430,
+        "top": 817,
+        "width": 430,
+        "x": 0,
+        "y": 817
+      },
+      "height": 932,
+      "photo": {
+        "bottom": 632,
+        "height": 200,
+        "left": 16,
+        "right": 403,
+        "top": 432,
+        "width": 387,
+        "x": 16,
+        "y": 432
+      },
+      "scrollY": 0,
+      "search": {
+        "bottom": 118,
+        "height": 44,
+        "left": 12,
+        "right": 418,
+        "top": 74,
+        "width": 406,
+        "x": 12,
+        "y": 74
+      },
+      "sheet": {
+        "bottom": 932,
+        "height": 540,
+        "left": 0,
+        "right": 430,
+        "top": 392,
+        "width": 430,
+        "x": 0,
+        "y": 392
+      },
+      "width": 430
+    }
+  ]
+}

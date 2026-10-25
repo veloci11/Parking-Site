@@ -1,46 +1,47 @@
 "use client";
-import { apiErrorMessage } from "./api-error";
-import { useCallback, useEffect, useState } from "react";
+import { requestJson } from "./request-json";
+import { createPendingRequest } from "./pending-request";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { User } from "./types";
+const readSession = createPendingRequest(() =>
+  requestJson<{ data: User | null; mode?: string }>("/api/session", {
+    cache: "no-store",
+  }),
+);
 export async function api<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const headers = new Headers(options.headers);
-  if (options.body && !(options.body instanceof FormData))
-    headers.set("Content-Type", "application/json");
-  const response = await fetch(path, { ...options, headers });
-  const result = await response.json();
-  if (!response.ok || result.error)
-    throw new Error(
-      apiErrorMessage(
-        response,
-        result.error || "Une erreur est survenue. Réessayez.",
-      ),
-    );
-  return result.data as T;
+  const result = await requestJson<{ data: T }>(path, options);
+  return result?.data;
 }
 export function useSession() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [mode, setMode] = useState("demo");
-  const refresh = useCallback(async () => {
+  const [mode, setMode] = useState("");
+  const generation = useRef(0);
+  const refresh = useCallback(async (sessionEvent?: Event) => {
+    const current = ++generation.current;
     try {
-      const r = await fetch("/api/session", { cache: "no-store" });
-      const value = await r.json();
+      // One auth event groups subscribers but never reuses a pre-login request.
+      const value = await readSession(sessionEvent);
+      if (current !== generation.current) return;
       setUser(value.data || null);
-      setMode(value.mode || "demo");
+      setMode(value.mode || "");
     } catch {
-      setUser(null);
+      if (current === generation.current) setUser(null);
     } finally {
-      setLoading(false);
+      if (current === generation.current) setLoading(false);
     }
   }, []);
   useEffect(() => {
     void refresh();
-    const listener = () => void refresh();
+    const listener = (event: Event) => void refresh(event);
     window.addEventListener("gp:session", listener);
-    return () => window.removeEventListener("gp:session", listener);
+    return () => {
+      generation.current++;
+      window.removeEventListener("gp:session", listener);
+    };
   }, [refresh]);
   return { user, loading, mode, refresh };
 }

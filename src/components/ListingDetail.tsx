@@ -295,13 +295,17 @@ export default function ListingDetail({
       });
   }, []);
   useEffect(() => {
-    const saved = sessionStorage.getItem("gp:explore:href");
-    if (
-      saved &&
-      /^\/(?:explorer|favoris)?(?:\?|$)/.test(saved) &&
-      !saved.startsWith("//")
-    )
-      setBackHref(saved);
+    try {
+      const saved = sessionStorage.getItem("gp:explore:href");
+      if (
+        saved &&
+        /^\/(?:explorer|favoris)?(?:\?|$)/.test(saved) &&
+        !saved.startsWith("//")
+      )
+        setBackHref(saved);
+    } catch {
+      // A blocked optional history store must not prevent availability checks.
+    }
     async function refresh() {
       if (document.visibilityState !== "visible") return;
       try {

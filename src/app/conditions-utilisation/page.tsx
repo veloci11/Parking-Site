@@ -12,9 +12,11 @@ export default function Terms() {
         <h2>Publier avec exactitude</h2>
         <p>
           Les annonceurs doivent disposer du droit de proposer le bien et de
-          publier leurs photos et documents. Le prix affiché est le prix total
-          de l’annonce. Les contraintes, défauts et informations inconnues
-          doivent être décrits honnêtement.
+          publier leurs photos et documents. Chaque prix précise s’il concerne
+          une place ou un lot, et s’il s’agit d’une vente ou d’un loyer mensuel.
+          Une annonce peut regrouper plusieurs places avec des offres
+          distinctes. Les contraintes, défauts et informations inconnues doivent
+          être décrits honnêtement.
         </p>
         <h2>Compte et modération</h2>
         <p>

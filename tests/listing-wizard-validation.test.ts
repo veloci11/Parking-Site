@@ -151,3 +151,20 @@ test("typing a new location blocks progression and final submission until a resu
   assert.deepEqual(wizardStepIssues(draft, 0, false), []);
   assert.deepEqual(wizardStepIssues(draft, 2, false), []);
 });
+
+test("an unconfirmed quantity cannot silently submit the old number of places", () => {
+  const draft = listing();
+  assert.deepEqual(wizardStepIssues(draft, 0, false, "2"), []);
+  for (const input of ["", "0", "3", "1", "2.5", "501"]) {
+    assert.equal(
+      wizardStepIssues(draft, 0, false, input)[0].field,
+      "listing-space-count",
+    );
+    assert.equal(
+      wizardStepIssues(draft, 2, false, input)[0].field,
+      "listing-space-count",
+    );
+    assert.equal(draft.spaces.length, 2);
+  }
+  assert.deepEqual(wizardStepIssues(draft, 2, false, null), []);
+});

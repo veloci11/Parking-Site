@@ -456,10 +456,24 @@ async function run(runtime: Runtime) {
         maneuver: "Aucun essai réel",
         observations: "Informations fictives, non expertisées.",
       },
-      photos: photos.slice(0, 2),
+      photos: [],
     });
-    status("complete_idf_details_saved_with_two_photos", saved, 200);
+    status("complete_idf_details_saved_without_photos", saved, 200);
     draft = saved.data;
+    const photoCheckLocation = await seller.api(
+      `listings/${draft.id}`,
+      "PATCH",
+      {
+        version: draft.version,
+        locationConfirmedAt: new Date().toISOString(),
+      },
+    );
+    status(
+      "location_confirmed_before_minimum_photo_check",
+      photoCheckLocation,
+      200,
+    );
+    draft = photoCheckLocation.data;
     const insufficientPhotos = await seller.api(
       `listings/${draft.id}/submit`,
       "POST",
@@ -468,10 +482,11 @@ async function run(runtime: Runtime) {
         ownershipAttested: true,
       },
     );
-    status("minimum_three_photos_enforced", insufficientPhotos, 400);
+    status("zero_photos_submission_refused", insufficientPhotos, 400);
     check(
-      "minimum_photo_refusal_explains_documentary_requirement",
-      /trois photos/i.test(insufficientPhotos.raw?.error || ""),
+      "minimum_photo_refusal_requires_one_photo_not_three",
+      insufficientPhotos.code !== "LOCATION_CONFIRMATION_REQUIRED" &&
+        /au moins une photo/i.test(insufficientPhotos.raw?.error || ""),
     );
     const third = await seller.api(`listings/${draft.id}`, "PATCH", {
       version: draft.version,
@@ -1343,6 +1358,8 @@ async function cleanup(runtime: Runtime) {
   await rm(runtimeFile);
   report.disposableDatabaseRemoved = true;
   report.qaServersStoppedBeforeCleanup = true;
+  report.cleanup =
+    "withdrawal tested; QA servers stopped and disposable database removed";
   await writeFile(reportFile, JSON.stringify(report, null, 2) + "\n");
   console.info(
     JSON.stringify({ status: "local_fixture_removed", report: reportFile }),

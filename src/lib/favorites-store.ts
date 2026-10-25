@@ -97,6 +97,11 @@ export function createFavoritesStore() {
   }
   return {
     getSnapshot: () => state,
+    dismissError() {
+      if (!current || !current.error) return;
+      current.error = "";
+      publish(current);
+    },
     subscribe(listener: () => void) {
       listeners.add(listener);
       return () => {

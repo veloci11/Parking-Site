@@ -3,12 +3,53 @@ import assert from "node:assert/strict";
 import {
   createMapAreaSearch,
   createMapLocationFocus,
+  createInitialMapFocus,
 } from "../src/lib/map-auto-search";
 import type { MapSearchArea } from "../src/lib/map-view";
 
 const area = (longitude = 2.5): MapSearchArea => ({
   bbox: [longitude, 48.8, longitude + 0.02, 48.9],
   center: [longitude + 0.01, 48.85],
+});
+
+test("first map visit fits loaded real offers once, not each catalog refresh", () => {
+  const focus = createInitialMapFocus();
+  const ready = {
+    loading: false,
+    hasResults: true,
+    selected: false,
+    moved: false,
+  };
+  assert.equal(focus.takeReady({ ...ready, loading: true }), false);
+  assert.equal(focus.takeReady({ ...ready, hasResults: false }), false);
+  assert.equal(focus.takeReady(ready), true);
+  assert.equal(focus.takeReady(ready), false);
+});
+
+test("initial fitting never overwrites a restored camera, selected offer, location or gesture", () => {
+  const ready = {
+    loading: false,
+    hasResults: true,
+    selected: false,
+    moved: false,
+  };
+  assert.equal(createInitialMapFocus(true).takeReady(ready), false);
+  for (const intent of [
+    { moved: true },
+    { selected: true },
+    { locationQuery: "Torcy" },
+  ]) {
+    const focus = createInitialMapFocus();
+    assert.equal(
+      focus.takeReady({ ...ready, ...intent, loading: true }),
+      false,
+    );
+    assert.equal(
+      focus.takeReady(ready),
+      false,
+      "late catalog responses must preserve user intent",
+    );
+  }
 });
 
 test("a completed user gesture searches once after650ms; rendered results do not retrigger it", (t) => {

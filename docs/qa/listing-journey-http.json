@@ -1,10 +1,10 @@
 {
-  "checkedAt": "2026-10-23T05:13:58.540Z",
+  "checkedAt": "2026-10-25T05:26:25.791Z",
   "status": "passed",
   "scope": "isolated-loopback-http-five-mixed-unit-offers-address-search-manual-modeling-publication-availability-legacy-lot",
   "origin": "http://127.0.0.1:3002",
-  "serverMode": "coordinator_unspecified",
-  "passed": 168,
+  "serverMode": "next start (production build), disposable local SQLite fixtures",
+  "passed": 169,
   "failedCheck": null,
   "checks": [
     {
@@ -243,18 +243,23 @@
       "passed": true
     },
     {
-      "name": "complete_idf_details_saved_with_two_photos",
+      "name": "complete_idf_details_saved_without_photos",
       "passed": true,
       "status": 200
     },
     {
-      "name": "minimum_three_photos_enforced",
+      "name": "location_confirmed_before_minimum_photo_check",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "zero_photos_submission_refused",
       "passed": true,
       "status": 400,
       "code": "VALIDATION_ERROR"
     },
     {
-      "name": "minimum_photo_refusal_explains_documentary_requirement",
+      "name": "minimum_photo_refusal_requires_one_photo_not_three",
       "passed": true
     },
     {
@@ -825,7 +830,7 @@
   "supabaseTouched": false,
   "externalEmailSent": false,
   "syntheticImages": "Three explicit fictional parking images, generated as SVG and uploaded as genuine PNG inputs through the application",
-  "cleanup": "withdrawal tested; disposable database folder removal awaits coordinator shutdown",
+  "cleanup": "withdrawal tested; QA servers stopped and disposable database removed",
   "limitations": [
     "HTTP route journey is separate from the browser UI recipe",
     "Local MFA explicitly unsupported; real AAL2 is not claimed by this run",

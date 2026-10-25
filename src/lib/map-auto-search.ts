@@ -1,5 +1,29 @@
 import type { MapSearchArea } from "./map-view";
 
+/** A first visit should reveal real offers as well as demos. Restored cameras,
+ * explicit location searches, selections and gestures always take precedence.
+ */
+export function createInitialMapFocus(restoredCamera = false) {
+  let consumed = restoredCamera;
+  return {
+    takeReady(state: {
+      loading: boolean;
+      hasResults: boolean;
+      locationQuery?: string;
+      selected: boolean;
+      moved: boolean;
+    }) {
+      if (state.locationQuery?.trim() || state.selected || state.moved) {
+        consumed = true;
+        return false;
+      }
+      if (consumed || state.loading || !state.hasResults) return false;
+      consumed = true;
+      return true;
+    },
+  };
+}
+
 /** One request after a completed user gesture. Programmatic camera changes
  * cancel pending work, so rendering results cannot trigger a request loop.
  */

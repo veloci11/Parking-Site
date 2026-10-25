@@ -1,5 +1,6 @@
 import { listingIssues } from "./listing-issues";
 import type { Listing } from "./types";
+import { parseSpaceCount } from "./draft-spaces";
 
 export interface WizardIssue {
   step: number;
@@ -12,8 +13,22 @@ export interface WizardIssue {
 export function wizardIssues(
   value: Listing,
   locationSelectionPending = false,
+  spaceCountInput: string | null = null,
 ): WizardIssue[] {
   const issues: WizardIssue[] = [];
+  if (
+    spaceCountInput !== null &&
+    parseSpaceCount(spaceCountInput) !== value.spaces.length
+  ) {
+    issues.push({
+      step: 0,
+      field: "listing-space-count",
+      message:
+        parseSpaceCount(spaceCountInput) === null
+          ? "Indiquez un nombre entier de places de 1 à 500."
+          : "Validez le nouveau nombre de places ou annulez cette modification.",
+    });
+  }
   if (
     locationSelectionPending ||
     !value.city.trim() ||
@@ -67,8 +82,9 @@ export function wizardStepIssues(
   value: Listing,
   step: number,
   locationSelectionPending = false,
+  spaceCountInput: string | null = null,
 ): WizardIssue[] {
-  const issues = wizardIssues(value, locationSelectionPending);
+  const issues = wizardIssues(value, locationSelectionPending, spaceCountInput);
   return step === 2
     ? issues
     : issues.filter((issue) => issue.step === step && !issue.confirmationOnly);

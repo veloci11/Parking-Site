@@ -19,6 +19,7 @@ import {
   assertSceneMapping,
 } from "../src/lib/scene-contract";
 import { localRegistryPrepareApproval } from "../src/server/parking-registry";
+import { handleApi } from "../src/server/api";
 
 const dir = mkdtempSync(join(tmpdir(), "gp-unknown-floor-"));
 process.env.GP_DATABASE_PATH = join(dir, "db.sqlite");
@@ -52,6 +53,32 @@ function listing() {
     priceCents: 1500000,
   } as Listing;
 }
+
+test("creating a draft without seller floor details defaults to unknown, never an advertised basement", async () => {
+  const origin = "http://127.0.0.1:3000";
+  const login = await handleApi(
+    new Request(`${origin}/api/auth/demo`, {
+      method: "POST",
+      headers: { origin, "content-type": "application/json" },
+      body: JSON.stringify({ persona: "seller" }),
+    }),
+  );
+  assert.equal(login.status, 200);
+  const cookie = login.headers.get("set-cookie")!.split(";")[0];
+  const response = await handleApi(
+    new Request(`${origin}/api/listings`, {
+      method: "POST",
+      headers: { origin, cookie, "content-type": "application/json" },
+      body: "{}",
+    }),
+  );
+  assert.equal(response.status, 201);
+  const { data: created } = await response.json();
+  assert.equal(created.spaces[0].levelKnown, false);
+  assert.equal(created.spaces[0].level, 0);
+  assert.equal(spaceLevelLabel(created.spaces[0]), "Non renseigné");
+  assert.equal(draftSchema.safeParse({ spaces: created.spaces }).success, true);
+});
 
 test("unknown floors validate and remain explicit in public projections without advertising a model", () => {
   const source = listing();

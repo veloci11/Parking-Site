@@ -1,4 +1,8 @@
-# Point de reprise — 22 octobre 2026
+# Point de reprise
+
+## Revue du 24 octobre 2026
+
+Lire d'abord [la livraison de finition](qa/production-readiness-2026-10-24/RELEASE.md), [la revue critique](qa/PRODUCTION_REVIEW_2026-10-24.md) et [la recette mobile](qa/readiness-2026-10-24/MOBILE.md). Ces rapports priment sur les états historiques ci-dessous. Le catalogue contient désormais quatre annonces réelles ; les démonstrations publiques sont désactivées. L'entreprise est en création : ses mentions sont différées par le propriétaire, comme le SMTP et le secret opérateur CDN. Ne pas réactiver la MFA administrative supplémentaire retirée à sa demande. Vérifier le SHA et la release indiqués dans le rapport courant avant de reprendre une procédure.
 
 ## Dernière demande — exemples au Raincy et carte simplifiée
 

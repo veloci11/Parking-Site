@@ -1,5 +1,5 @@
 "use client";
-import { apiErrorMessage } from "@/lib/api-error";
+import { requestJson } from "@/lib/request-json";
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -20,18 +20,7 @@ export async function api<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const headers = new Headers(options.headers);
-  if (options.body && !(options.body instanceof FormData))
-    headers.set("Content-Type", "application/json");
-  const r = await fetch(path, { ...options, headers, cache: "no-store" });
-  const body = await r
-    .json()
-    .catch(() => ({ error: "Une réponse inattendue a été reçue." }));
-  if (!r.ok)
-    throw new Error(
-      apiErrorMessage(r, body.error || "La demande n’a pas pu aboutir."),
-    );
-  return body as T;
+  return requestJson<T>(path, { ...options, cache: "no-store" });
 }
 export function useAccount() {
   const [user, setUser] = useState<User | null>(null),

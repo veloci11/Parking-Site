@@ -15,7 +15,8 @@ import {
 } from "./commercial";
 import { attributeLocalConditions, attributeLocalListing } from "./conditions";
 import { parseHistoryQuery, historyCursor } from "./history-pagination";
-import { adminUsers, decideAccount } from "./admin-accounts";
+import { adminUsers, adminUsersPage, decideAccount } from "./admin-accounts";
+import { parseAdminUserQuery, adminUserPage } from "./admin-user-pagination";
 import { mediaVariantWidth, resizeAuthorizedMedia } from "./media-variants";
 import {
   ensureConversationBlocks,
@@ -468,7 +469,8 @@ export async function handleApi(request: Request): Promise<Response> {
             {
               id: randomUUID(),
               number: "",
-              level: -1,
+              level: 0,
+              levelKnown: false,
               areaM2: null,
               lengthM: null,
               widthM: null,
@@ -754,8 +756,12 @@ export async function handleApi(request: Request): Promise<Response> {
           "Accès réservé aux administrateurs.",
           "FORBIDDEN",
         );
-      if (path === "admin/users" && method === "GET")
-        return respond(adminUsers());
+      if (path === "admin/users" && method === "GET") {
+        const page = parseAdminUserQuery(url);
+        if (!page) return respond(adminUsers());
+        const result = adminUserPage(adminUsersPage(page), page);
+        return respond(result.items, 200, { nextCursor: result.nextCursor });
+      }
       const decision = path.match(/^admin\/users\/([^/]+)\/decision$/);
       if (decision && method === "POST") {
         const input = parse(

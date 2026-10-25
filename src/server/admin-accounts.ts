@@ -1,6 +1,7 @@
 import { db, transact } from "./db";
 import { ApiError, audit, queueNotice } from "./security";
 import type { AdminUser, User } from "@/lib/types";
+import type { AdminUserQuery } from "./admin-user-pagination";
 export interface AccountDecision {
   version: number;
   status?: "active" | "suspended";
@@ -23,6 +24,21 @@ export function adminUsers() {
       "SELECT id,name,role,status,account_version,seller_type FROM users ORDER BY id LIMIT 100",
     )
     .all()
+    .map(adminUserDTO);
+}
+export function adminUsersPage(input: AdminUserQuery) {
+  return db()
+    .prepare(
+      "SELECT id,name,role,status,account_version,seller_type FROM users WHERE (? = '' OR instr(lower(name), ?) > 0 OR instr(lower(id), ?) > 0) AND (? IS NULL OR id > ?) ORDER BY id LIMIT ?",
+    )
+    .all(
+      input.query,
+      input.query,
+      input.query,
+      input.after,
+      input.after,
+      input.limit + 1,
+    )
     .map(adminUserDTO);
 }
 export function decideAccount(actor: User, id: string, input: AccountDecision) {

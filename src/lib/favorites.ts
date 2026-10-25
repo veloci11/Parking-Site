@@ -58,5 +58,6 @@ export function useFavorites() {
     ...state,
     loading: sessionLoading || state.loading,
     toggle: store.toggle,
+    dismissError: store.dismissError,
   };
 }

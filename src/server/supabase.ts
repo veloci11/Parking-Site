@@ -4,6 +4,7 @@ import { PARIS_CENTER, REGION_MESSAGE } from "@/lib/paris-region";
 import { handleAuthCommands } from "./auth-commands";
 import { assertRemoteUploadQuota } from "./upload-quota";
 import { parseHistoryQuery, historyCursor } from "./history-pagination";
+import { parseAdminUserQuery, adminUserPage } from "./admin-user-pagination";
 import { mediaVariantWidth, resizeAuthorizedMedia } from "./media-variants";
 import { createServerClient } from "@supabase/ssr";
 import { randomUUID } from "node:crypto";
@@ -373,7 +374,8 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
           {
             id: randomUUID(),
             number: "",
-            level: -1,
+            level: 0,
+            levelKnown: false,
             areaM2: null,
             lengthM: null,
             widthM: null,
@@ -544,8 +546,17 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
           "Accès réservé aux administrateurs.",
           "FORBIDDEN",
         );
-      if (path === "admin/users" && method === "GET")
-        return respond(await rpc("gp_admin_users", {}));
+      if (path === "admin/users" && method === "GET") {
+        const page = parseAdminUserQuery(url);
+        if (!page) return respond(await rpc("gp_admin_users", {}));
+        const rows = await rpc("gp_admin_users_page", {
+          p_query: page.query,
+          p_after: page.after,
+          p_limit: page.limit,
+        });
+        const result = adminUserPage(rows, page);
+        return respond(result.items, 200, { nextCursor: result.nextCursor });
+      }
       const decision = path.match(/^admin\/users\/([^/]+)\/decision$/);
       if (decision && method === "POST") {
         const input = parse(

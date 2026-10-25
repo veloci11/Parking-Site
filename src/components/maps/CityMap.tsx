@@ -4,8 +4,8 @@ import { withPoiIconFallback } from "@/lib/map-style";
 import {
   createMapAreaSearch,
   createMapLocationFocus,
+  createInitialMapFocus,
 } from "@/lib/map-auto-search";
-import { isPublicShowcase } from "@/lib/public-showcase";
 import { PARIS_CENTER, IDF_BOUNDS, isIdfCoordinate } from "@/lib/paris-region";
 
 import { useEffect, useRef, useState } from "react";
@@ -99,6 +99,9 @@ export default function CityMap({
     normalizedInitialView && isIdfCoordinate(normalizedInitialView.center)
       ? normalizedInitialView
       : null,
+  );
+  const initialFocus = useRef(
+    createInitialMapFocus(Boolean(initialViewRef.current)),
   );
   const cameraCallbacks = useRef({
     onCameraChange,
@@ -228,26 +231,39 @@ export default function CityMap({
   };
   const focusSelectionRef = useRef(focusSelection);
   focusSelectionRef.current = focusSelection;
-  const showcaseCentered = useRef(false);
   useEffect(() => {
     const map = mapRef.current;
+    const canvas = container.current;
+    if (!map || !canvas || !visible || status !== "ready") return;
+    const bounds = mapResultBounds(listings.map((item) => item.coordinates));
     if (
-      !map ||
-      status !== "ready" ||
-      selectedId ||
-      locationQuery?.trim() ||
-      resultsLoading ||
-      userHasMoved.current ||
-      manualMovement.current ||
-      showcaseCentered.current ||
-      !listings.length ||
-      !listings.every((item) => isPublicShowcase(item.id))
+      !initialFocus.current.takeReady({
+        loading: resultsLoading,
+        hasResults: Boolean(bounds),
+        locationQuery,
+        selected: Boolean(selectedId),
+        moved: userHasMoved.current || manualMovement.current,
+      }) ||
+      !bounds
     )
       return;
-    showcaseCentered.current = true;
     cancelAreaSearch();
-    map.jumpTo({ center: listings[0].coordinates, zoom: 16.5 });
-  }, [listings, selectedId, status, locationQuery, resultsLoading]);
+    map.fitBounds(bounds, {
+      padding: {
+        top: Math.max(56, visibleMapTop(canvas) + 44),
+        bottom: Math.max(
+          48,
+          canvas.clientHeight - visibleMapBottom(canvas, controls.current) + 20,
+        ),
+        left: Math.min(80, canvas.clientWidth * 0.2),
+        right: Math.min(80, canvas.clientWidth * 0.2),
+      },
+      maxZoom: listings.some((item) => item.locationPrecision === "area")
+        ? 15
+        : 16.5,
+      duration: 0,
+    });
+  }, [listings, selectedId, status, visible, locationQuery, resultsLoading]);
   useEffect(() => {
     areaSearch.current?.reset();
   }, [locationQuery]);
@@ -299,7 +315,6 @@ export default function CityMap({
     let localMap: MapLibreMap | null = null;
     let timeout: ReturnType<typeof setTimeout> | undefined;
     previousSelected.current = null;
-    showcaseCentered.current = false;
     const automaticSearch = createMapAreaSearch({
       readArea: () => (localMap ? readArea(localMap) : null),
       enabled: () =>

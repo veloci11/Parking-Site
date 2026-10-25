@@ -22,6 +22,8 @@ import {
   type VisitRequestDraft,
 } from "./visit-request-draft";
 import ContextReportForm from "./context-report-form";
+import { createConversationRequestScope } from "./conversation-request-scope";
+import { reconcileConversationReads } from "./conversation-list-state";
 import type { Conversation, Listing, Message, User, Visit } from "@/lib/types";
 const visitLabels: Record<Visit["status"], string> = {
   requested: "Visite demandée",
@@ -62,14 +64,20 @@ function Content({ user, id }: { user: User; id?: string }) {
     id: string;
   } | null>(null);
   const pendingMessage = useRef<MessageRequestDraft | null>(null);
+  const listVersion = useRef(0);
+  const readVersions = useRef(new Map<string, number>());
   const [sendScope] = useState(createConversationSendScope);
+  const [requestScope] = useState(createConversationRequestScope);
   useLayoutEffect(() => {
     sendScope.select(id);
-    return () => sendScope.select(undefined);
-  }, [id, sendScope]);
+    requestScope.select(id);
+    return () => {
+      sendScope.select(undefined);
+      requestScope.select(undefined);
+    };
+  }, [id, sendScope, requestScope]);
   const pendingVisit = useRef<VisitRequestDraft | null>(null);
   const feed = useRef<HTMLDivElement>(null),
-    currentId = useRef(id),
     initializedCursor = useRef(false),
     scrollRestore = useRef<{
       height: number;
@@ -77,7 +85,6 @@ function Content({ user, id }: { user: User; id?: string }) {
       bottom: boolean;
       prepend: boolean;
     } | null>(null);
-  currentId.current = id;
   const [historyCursor, setHistoryCursor] = useState<string | null>(null),
     [loadingHistory, setLoadingHistory] = useState(false);
   function rememberScroll(prepend = false) {
@@ -111,10 +118,16 @@ function Content({ user, id }: { user: User; id?: string }) {
     setText("");
     setSending(false);
     pendingVisit.current = null;
+    setShowVisit(false);
+    setProposed("");
+    setConfirmed({});
+    setBusyVisit("");
+    setBlockBusy(false);
+    setError("");
   }, [id]);
   async function loadOlder() {
     if (!id || !historyCursor || loadingHistory) return;
-    const conversationId = id;
+    const completion = requestScope.begin(id, "history");
     setLoadingHistory(true);
     setError("");
     try {
@@ -122,14 +135,15 @@ function Content({ user, id }: { user: User; id?: string }) {
       const r = await api<{ data: Message[]; nextCursor?: string | null }>(
         `/api/conversations/${id}/messages?${p}`,
       );
-      if (currentId.current !== conversationId) return;
-      rememberScroll(true);
-      setMessages((current) => mergeMessageHistory(current, r.data));
-      setHistoryCursor(r.nextCursor || null);
+      completion.apply(() => {
+        rememberScroll(true);
+        setMessages((current) => mergeMessageHistory(current, r.data));
+        setHistoryCursor(r.nextCursor || null);
+      });
     } catch (e) {
-      if (currentId.current === conversationId) setError((e as Error).message);
+      completion.apply(() => setError((e as Error).message));
     } finally {
-      if (currentId.current === conversationId) setLoadingHistory(false);
+      completion.apply(() => setLoadingHistory(false));
     }
   }
 
@@ -142,6 +156,7 @@ function Content({ user, id }: { user: User; id?: string }) {
   }, [id]);
   async function changeBlock() {
     if (!id || !blockState) return;
+    const completion = requestScope.begin(id, "block");
     const removing = blockState.blockedByMe;
     setBlockBusy(true);
     setError("");
@@ -151,64 +166,135 @@ function Content({ user, id }: { user: User; id?: string }) {
       }>(`/api/conversations/${id}/block`, {
         method: removing ? "DELETE" : "PUT",
       });
-      setBlockState(result.data);
-      setBlockConfirm(false);
-      setShowVisit(false);
+      if (
+        !completion.apply(() => {
+          // Discard a refresh that started before the blocking decision was saved.
+          requestScope.begin(id, "feed");
+          setBlockState(result.data);
+          setBlockConfirm(false);
+          setShowVisit(false);
+        })
+      )
+        return;
+      const version = ++listVersion.current;
+      const readsAtRequest = new Map(readVersions.current);
       const list = await api<{ data: Conversation[] }>("/api/conversations");
-      setConversations(list.data);
-      setBlockNotice(
-        removing
-          ? result.data.blocked
-            ? "Votre blocage a été retiré. L’autre participant maintient le sien : les échanges restent désactivés."
-            : "Votre blocage a été retiré. Les échanges peuvent reprendre."
-          : "Interlocuteur bloqué. Les nouveaux messages et visites sont désactivés dans les deux sens.",
-      );
+      completion.apply(() => {
+        if (version === listVersion.current)
+          setConversations(
+            reconcileConversationReads(
+              list.data,
+              readsAtRequest,
+              readVersions.current,
+            ),
+          );
+        setBlockNotice(
+          removing
+            ? result.data.blocked
+              ? "Votre blocage a été retiré. L’autre participant maintient le sien : les échanges restent désactivés."
+              : "Votre blocage a été retiré. Les échanges peuvent reprendre."
+            : "Interlocuteur bloqué. Les nouveaux messages et visites sont désactivés dans les deux sens.",
+        );
+      });
     } catch (e) {
-      setError((e as Error).message);
+      completion.apply(() => setError((e as Error).message));
     } finally {
-      setBlockBusy(false);
+      completion.apply(() => setBlockBusy(false));
     }
   }
   useEffect(() => {
     setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
-    Promise.all([
-      api<{ data: Conversation[] }>("/api/conversations"),
-      api<{ data: Listing[] }>("/api/me/listings"),
-    ])
-      .then(([a, b]) => {
-        setConversations(a.data);
-        setOwnListings(b.data.map((x) => x.id));
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, []);
-  const load = useCallback(async () => {
-    if (!id) return;
-    const conversationId = id;
-    const [m, v, b] = await Promise.all([
-      api<{ data: Message[]; nextCursor?: string | null }>(
-        `/api/conversations/${id}/messages?limit=100`,
-      ),
-      api<{ data: Visit[] }>(`/api/conversations/${id}/visits`),
-      api<{ data: { blocked: boolean; blockedByMe: boolean } }>(
-        `/api/conversations/${id}/block`,
-      ),
-    ]);
-    if (currentId.current !== conversationId) return;
-    rememberScroll();
-    setMessages((current) => mergeMessageHistory(current, m.data));
-    if (!initializedCursor.current) {
-      initializedCursor.current = true;
-      setHistoryCursor(m.nextCursor || null);
+    let active = true,
+      refreshing = false,
+      initialized = false;
+    async function refresh() {
+      if (!active || refreshing || document.hidden) return;
+      refreshing = true;
+      const version = ++listVersion.current;
+      const readsAtRequest = new Map(readVersions.current);
+      try {
+        const [a, b] = await Promise.all([
+          api<{ data: Conversation[] }>("/api/conversations"),
+          initialized
+            ? Promise.resolve(null)
+            : api<{ data: Listing[] }>("/api/me/listings"),
+        ]);
+        if (!active) return;
+        if (version === listVersion.current)
+          setConversations(
+            reconcileConversationReads(
+              a.data,
+              readsAtRequest,
+              readVersions.current,
+            ),
+          );
+        if (b) setOwnListings(b.data.map((x) => x.id));
+        initialized = true;
+      } catch (e) {
+        if (active && !initialized) setError((e as Error).message);
+      } finally {
+        refreshing = false;
+        if (active) setLoading(false);
+      }
     }
-    setVisits(v.data);
-    setBlockState(b.data);
-  }, [id]);
+    void refresh();
+    const onVisible = () => {
+      void refresh();
+    };
+    const timer = setInterval(onVisible, 10_000);
+    window.addEventListener("focus", onVisible);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener("focus", onVisible);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
+  const load = useCallback(
+    async (silent = false) => {
+      if (!id) return;
+      const completion = requestScope.begin(id, "feed");
+      try {
+        const [m, v, b] = await Promise.all([
+          api<{ data: Message[]; nextCursor?: string | null }>(
+            `/api/conversations/${id}/messages?limit=100`,
+          ),
+          api<{ data: Visit[] }>(`/api/conversations/${id}/visits`),
+          api<{ data: { blocked: boolean; blockedByMe: boolean } }>(
+            `/api/conversations/${id}/block`,
+          ),
+        ]);
+        completion.apply(() => {
+          rememberScroll();
+          setMessages((current) => mergeMessageHistory(current, m.data));
+          if (!initializedCursor.current) {
+            initializedCursor.current = true;
+            setHistoryCursor(m.nextCursor || null);
+          }
+          setVisits(v.data);
+          setBlockState(b.data);
+          readVersions.current.set(id, (readVersions.current.get(id) ?? 0) + 1);
+          setConversations((current) =>
+            current.map((conversation) =>
+              conversation.id === id
+                ? { ...conversation, unread: 0 }
+                : conversation,
+            ),
+          );
+        });
+      } catch (e) {
+        // A background refresh may finish after navigation; never report it on another thread.
+        if (!silent) completion.apply(() => setError((e as Error).message));
+      }
+    },
+    [id, requestScope],
+  );
   useEffect(() => {
     if (!id) return;
-    load().catch((e) => setError(e.message));
+    void load();
     const t = setInterval(() => {
-      if (!document.hidden) load().catch(() => {});
+      if (!document.hidden) void load(true);
     }, 10000);
     return () => clearInterval(t);
   }, [id, load]);
@@ -246,7 +332,8 @@ function Content({ user, id }: { user: User; id?: string }) {
   }
   async function requestVisit(e: FormEvent) {
     e.preventDefault();
-    if (!id || blocked || busyVisit === "new") return;
+    if (!id || blocked || busyVisit) return;
+    const completion = requestScope.begin(id, "visit");
     setBusyVisit("new");
     setError("");
     try {
@@ -263,19 +350,24 @@ function Content({ user, id }: { user: User; id?: string }) {
           clientRequestId: draft.clientRequestId,
         }),
       });
-      if (pendingVisit.current === draft) pendingVisit.current = null;
-      if (currentId.current !== id) return;
-      setShowVisit(false);
-      setProposed("");
+      if (
+        !completion.apply(() => {
+          if (pendingVisit.current === draft) pendingVisit.current = null;
+          setShowVisit(false);
+          setProposed("");
+        })
+      )
+        return;
       await load();
     } catch (e) {
-      setError((e as Error).message);
+      completion.apply(() => setError((e as Error).message));
     } finally {
-      setBusyVisit("");
+      completion.apply(() => setBusyVisit(""));
     }
   }
   async function decision(v: Visit, action: string) {
-    if (blocked && action !== "cancel") return;
+    if (!id || busyVisit || (blocked && action !== "cancel")) return;
+    const completion = requestScope.begin(id, "visit");
     setBusyVisit(v.id);
     setError("");
     try {
@@ -290,11 +382,11 @@ function Content({ user, id }: { user: User; id?: string }) {
               : null,
         }),
       });
-      await load();
+      if (completion.apply(() => {})) await load();
     } catch (e) {
-      setError((e as Error).message);
+      completion.apply(() => setError((e as Error).message));
     } finally {
-      setBusyVisit("");
+      completion.apply(() => setBusyVisit(""));
     }
   }
   const selected = conversations.find((c) => c.id === id),
@@ -316,6 +408,7 @@ function Content({ user, id }: { user: User; id?: string }) {
                 key={c.id}
                 href={`/compte/messages/${c.id}`}
                 className={c.id === id ? "active" : ""}
+                aria-current={c.id === id ? "page" : undefined}
               >
                 <span className="account-avatar">
                   {c.otherName.slice(0, 1).toUpperCase()}
@@ -328,6 +421,14 @@ function Content({ user, id }: { user: User; id?: string }) {
                     {c.blocked ? " · échanges bloqués" : ""}
                   </small>
                 </div>
+                {c.unread > 0 ? (
+                  <span
+                    className="account-thread-unread"
+                    aria-label={`${c.unread} message${c.unread > 1 ? "s" : ""} non lu${c.unread > 1 ? "s" : ""}`}
+                  >
+                    {c.unread > 99 ? "99+" : c.unread}
+                  </span>
+                ) : null}
               </Link>
             ))}
           </aside>
@@ -531,7 +632,7 @@ function Content({ user, id }: { user: User; id?: string }) {
                           <div className="account-visit-actions">
                             <button
                               className="button button-primary"
-                              disabled={busyVisit === v.id}
+                              disabled={!!busyVisit}
                               onClick={() => decision(v, "accept")}
                             >
                               <Check size={16} />
@@ -541,7 +642,7 @@ function Content({ user, id }: { user: User; id?: string }) {
                             </button>
                             <button
                               className="button button-secondary"
-                              disabled={busyVisit === v.id}
+                              disabled={!!busyVisit}
                               onClick={() => decision(v, "decline")}
                             >
                               Refuser
@@ -554,7 +655,7 @@ function Content({ user, id }: { user: User; id?: string }) {
                       ) ? (
                         <button
                           className="account-link-button"
-                          disabled={busyVisit === v.id}
+                          disabled={!!busyVisit}
                           onClick={() => decision(v, "cancel")}
                         >
                           Annuler la demande
@@ -584,7 +685,7 @@ function Content({ user, id }: { user: User; id?: string }) {
                       <div className="account-visit-actions">
                         <button
                           className="button button-primary"
-                          disabled={busyVisit === "new"}
+                          disabled={!!busyVisit}
                         >
                           Envoyer la demande
                         </button>

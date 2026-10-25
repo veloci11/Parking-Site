@@ -1,6 +1,6 @@
 "use client";
 import FilterSelect from "../FilterSelect";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import {
   type AdminEntitlements,
@@ -34,7 +34,42 @@ function Content({ user }: { user: User }) {
     [confirm, setConfirm] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [notice, setNotice] = useState("");
+    [notice, setNotice] = useState(""),
+    [userSearch, setUserSearch] = useState(""),
+    [appliedUserSearch, setAppliedUserSearch] = useState(""),
+    [usersLoading, setUsersLoading] = useState(false),
+    [usersCursor, setUsersCursor] = useState<string | null>(null);
+  const usersVersion = useRef(0);
+  async function loadUsers(search = "", cursor: string | null = null) {
+    const version = ++usersVersion.current;
+    setUsersLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({ q: search, limit: "50" });
+      if (cursor) params.set("cursor", cursor);
+      const result = await api<{
+        data: AdminUser[];
+        nextCursor: string | null;
+      }>(`/api/admin/users?${params}`);
+      if (version !== usersVersion.current) return;
+      setUsers((current) => [
+        ...new Map(
+          [
+            ...(cursor
+              ? current
+              : current.filter((item) => item.id === userId)),
+            ...result.data,
+          ].map((item) => [item.id, item]),
+        ).values(),
+      ]);
+      setUsersCursor(result.nextCursor);
+      setAppliedUserSearch(search);
+    } catch (e) {
+      if (version === usersVersion.current) setError((e as Error).message);
+    } finally {
+      if (version === usersVersion.current) setUsersLoading(false);
+    }
+  }
   async function load(id: string) {
     setBusy(true);
     setError("");
@@ -57,9 +92,10 @@ function Content({ user }: { user: User }) {
   }
   useEffect(() => {
     void load("");
-    void api<{ data: AdminUser[] }>("/api/admin/users")
-      .then((r) => setUsers(r.data))
-      .catch((e) => setError((e as Error).message));
+    void loadUsers();
+    return () => {
+      usersVersion.current++;
+    };
   }, []);
   async function save(e: FormEvent, clear = false) {
     e.preventDefault();
@@ -129,13 +165,39 @@ function Content({ user }: { user: User }) {
           {notice}
         </p>
       ) : null}
+      <form
+        className="account-visit-actions"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!busy && !usersLoading) void loadUsers(userSearch);
+        }}
+      >
+        <label className="field">
+          Rechercher un compte
+          <input
+            className="input"
+            type="search"
+            maxLength={80}
+            value={userSearch}
+            disabled={busy || usersLoading}
+            onChange={(event) => setUserSearch(event.target.value)}
+            placeholder="Nom public ou identifiant"
+          />
+        </label>
+        <button
+          className="button button-secondary"
+          disabled={busy || usersLoading}
+        >
+          Rechercher
+        </button>
+      </form>
       <div className="field">
         <span>{"Portée de la modification"}</span>
         <FilterSelect
           label={"Portée de la modification"}
           variant="field"
           value={userId}
-          disabled={busy}
+          disabled={busy || usersLoading}
           onChange={(selectedValue) => {
             const id = selectedValue;
             setUserId(id);
@@ -151,6 +213,29 @@ function Content({ user }: { user: User }) {
           ]}
         />
       </div>
+      {usersCursor ? (
+        <button
+          type="button"
+          className="button button-secondary"
+          disabled={busy || usersLoading}
+          onClick={() => void loadUsers(appliedUserSearch, usersCursor)}
+        >
+          {usersLoading ? "Chargement…" : "Afficher les comptes suivants"}
+        </button>
+      ) : null}
+      {!usersLoading &&
+      appliedUserSearch &&
+      !users.some(
+        (item) =>
+          item.name
+            .toLowerCase()
+            .includes(appliedUserSearch.trim().toLowerCase()) ||
+          item.id.includes(appliedUserSearch.trim().toLowerCase()),
+      ) ? (
+        <p role="status" className="muted">
+          Aucun compte ne correspond à cette recherche.
+        </p>
+      ) : null}
       {busy && !data ? <p role="status">Chargement des limites…</p> : null}
       {data && limits ? (
         <form

@@ -116,3 +116,21 @@ test("a loading error is visible and the next click retries before saving", asyn
   assert.deepEqual(store.getSnapshot().ids, ["existing", "new"]);
   assert.equal(store.getSnapshot().error, "");
 });
+
+test("dismissing a favorite error preserves confirmed choices and allows a later error", async () => {
+  const store = createFavoritesStore();
+  store.connect({
+    load: async () => ["existing"],
+    save: async () => {
+      throw new Error("Réseau indisponible");
+    },
+  });
+  await tick();
+  await store.toggle("new");
+  assert.equal(store.getSnapshot().error, "Réseau indisponible");
+  store.dismissError();
+  assert.equal(store.getSnapshot().error, "");
+  assert.deepEqual(store.getSnapshot().ids, ["existing"]);
+  await store.toggle("new");
+  assert.equal(store.getSnapshot().error, "Réseau indisponible");
+});

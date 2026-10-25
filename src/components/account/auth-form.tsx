@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { api } from "./shared";
 import { safeAuthReturn, type AuthPolicy } from "@/lib/auth-return";
+import SocialSignIn from "./social-sign-in";
 type Mode = "login" | "register" | "verify" | "forgot" | "reset";
 const config: Record<Mode, { title: string; intro: string; button: string }> = {
   login: {
@@ -80,9 +81,13 @@ export default function AuthForm({ mode }: { mode: Mode }) {
     setReturnTo(safeAuthReturn(q.get("next")));
     if (q.get("authError"))
       setError(
-        mode === "forgot"
-          ? "Ce lien n’est plus valide. Demandez un nouveau lien ci-dessous."
-          : "Ce lien n’est plus valide. Connectez-vous ou demandez un nouveau lien.",
+        q.get("authError") === "oauth-terms"
+          ? "Les documents ont changé pendant la connexion. Recommencez pour les confirmer."
+          : q.get("authError") === "oauth"
+            ? "La connexion avec ce service n’a pas été terminée. Réessayez ou utilisez votre email."
+            : mode === "forgot"
+              ? "Ce lien n’est plus valide. Demandez un nouveau lien ci-dessous."
+              : "Ce lien n’est plus valide. Connectez-vous ou demandez un nouveau lien.",
       );
   }, []);
   async function submit(e: FormEvent) {
@@ -236,6 +241,9 @@ export default function AuthForm({ mode }: { mode: Mode }) {
               </Link>
             ) : null}
           </div>
+        ) : null}
+        {mode === "login" || mode === "register" ? (
+          <SocialSignIn next={returnTo} disabled={busy} onPending={setBusy} />
         ) : null}
         {demo && mode === "verify" && !token ? (
           <div className="account-demo">

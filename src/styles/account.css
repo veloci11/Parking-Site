@@ -991,6 +991,22 @@
   background: var(--brandSoft, #f0e9ff);
   box-shadow: inset 3px 0 var(--brand, #6d28ff);
 }
+.account-threads > a > span.account-thread-unread {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--brand, #6d28ff);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 0;
+}
 .account-threads > a > div:nth-child(2) {
   min-width: 0;
   flex: 1;

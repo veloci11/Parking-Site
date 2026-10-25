@@ -15,6 +15,8 @@ function Content({ user }: { user: User }) {
     [busy, setBusy] = useState(""),
     [notice, setNotice] = useState("");
   function load() {
+    setLoading(true);
+    setError("");
     return api<{ data: Listing[] }>("/api/me/listings")
       .then((r) => setItems(r.data))
       .catch((e) => setError(e.message))
@@ -111,9 +113,19 @@ function Content({ user }: { user: User }) {
         ))}
       </div>
       {error ? (
-        <p className="error" role="alert">
-          {error}
-        </p>
+        <div>
+          <p className="error" role="alert">
+            {error}
+          </p>
+          <button
+            type="button"
+            className="button button-secondary"
+            disabled={loading || !!busy}
+            onClick={() => void load()}
+          >
+            Réessayer
+          </button>
+        </div>
       ) : null}
       {notice ? (
         <p className="notice" role="status">
@@ -128,7 +140,12 @@ function Content({ user }: { user: User }) {
             <article className="account-manage-listing card" key={l.id}>
               <div className="account-listing-image">
                 {l.photos[0] ? (
-                  <img src={l.photos[0]} alt={l.title} />
+                  <img
+                    src={l.photos[0]}
+                    alt={l.title}
+                    loading="lazy"
+                    decoding="async"
+                  />
                 ) : (
                   <ClipboardList size={28} />
                 )}
@@ -264,7 +281,7 @@ function Content({ user }: { user: User }) {
             </article>
           ))}
         </div>
-      ) : (
+      ) : error ? null : (
         <div className="empty-state account-empty">
           <ClipboardList size={32} />
           <h2>

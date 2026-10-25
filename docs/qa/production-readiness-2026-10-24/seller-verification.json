@@ -1,0 +1,19 @@
+{
+  "date": "2026-10-24",
+  "environment": "isolated local demo http://127.0.0.1:3002",
+  "listingId": "4cbca571-8d8c-4bc7-875c-25656e586ef2",
+  "checks": {
+    "clearQuantityPreservesTwoPlaces": true,
+    "unappliedQuantityGuardsHeaderNavigation": true,
+    "addThirdPreserves18And19AndPrices": true,
+    "explicitReduceThreeToTwoPreservesRetainedPlaces": true,
+    "unknownFloorsBlankAndShownAsNotProvided": true,
+    "headerNavigationImmediatelyAfterTypingSavesLastEdit": "18-SAUVE",
+    "myListingsReturnImmediatelyAfterTypingSavesTitle": "Recette vendeur — sauvegarde immédiate"
+  },
+  "limits": [
+    "No live data mutation",
+    "No real email sent",
+    "Browser QA on local dev, not production build"
+  ]
+}

@@ -53,6 +53,40 @@ test("retours Auth limités aux pages connues, sans URL externe/API ni séparate
     `/compte/messages/${id}`,
   );
 });
+test("la connexion reprend la messagerie, l'administration et la place choisie sans garder de paramètres privés", () => {
+  for (const page of [
+    "/compte/messages",
+    "/compte/notifications",
+    "/compte/scenes",
+    "/compte/parkings",
+    "/admin",
+    "/admin/comptes",
+  ])
+    assert.equal(safeAuthReturn(`${page}?token=secret`), page);
+  const listing = randomUUID(),
+    unit = randomUUID();
+  const path = `/annonces/${listing}/parking`;
+  assert.equal(
+    safeAuthReturn(`${path}?contact=1&unit=${unit}&floor=-2&token=secret`),
+    `${path}?contact=1&unit=${unit}&floor=-2`,
+  );
+  assert.equal(safeAuthReturn(`${path}?unit=arbitrary&floor=99`), path);
+  assert.equal(
+    safeAuthReturn(`${path}?contact=1&unit=${listing}%3Aunit%3A18`),
+    `${path}?contact=1&unit=${listing}%3Aunit%3A18`,
+  );
+  assert.equal(safeAuthReturn(`${path}?unit=${unit}%3Aunit%3A18`), path);
+  assert.equal(
+    safeAuthReturn(`${path}?unit=${unit}&floor=-999`),
+    `${path}?unit=${unit}`,
+  );
+  assert.equal(
+    safeAuthReturn(`/?display=list&listing=${listing}`),
+    `/?listing=${listing}&display=list`,
+  );
+  assert.equal(safeAuthReturn("/?display=untrusted"), "/");
+  assert.equal(safeAuthReturn("/admin/not-a-page"), "/compte");
+});
 test("état signé et autorisation de récupération refusent altération, mauvaise clé, expiration et contexte malformé", () => {
   const key = "qa-only-".repeat(8),
     now = Date.now(),
