@@ -32,8 +32,19 @@ import {
 } from "lucide-react";
 import { api, useSession } from "@/lib/client";
 import { useFavorites } from "@/lib/favorites";
-import { ConditionEvidenceSummary } from "./account/condition-evidence";
-import { CommercialSummary, PhotoCaption } from "./CommercialSummary";
+import {
+  conditionLabels,
+  conditionSourceLabels,
+} from "@/lib/condition-observations";
+import {
+  hasPublicDetail,
+  hasPublicUnitDetails,
+  publicCommercialRows,
+  publicConditionObservations,
+  publicPhotoCaption,
+  publicQualityRows,
+  type PublicDetailRow,
+} from "@/lib/listing-public-details";
 import {
   areaLabel,
   spaceLevelLabel,
@@ -46,19 +57,106 @@ const ParkingViewer = dynamic(() => import("./maps/ParkingViewer"), {
   ssr: false,
   loading: () => <div className="map-loading">Préparation du plan…</div>,
 });
-const qualityLabels = {
-  floor: "État du sol",
-  lighting: "Éclairage",
-  humidity: "Humidité",
-  access: "Accès",
-  maneuver: "Manœuvre",
-};
+function PublicCommercialDetails({
+  rows,
+  unit = false,
+}: {
+  rows: PublicDetailRow[];
+  unit?: boolean;
+}) {
+  if (!rows.length) return null;
+  return (
+    <section>
+      <h3>
+        {unit
+          ? "Dimensions et contraintes déclarées"
+          : "Accès et informations financières"}
+      </h3>
+      <dl className="account-quality-list">
+        {rows.map(({ label, value }) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+function PublicConditionSummary({
+  listing,
+  spaceId = null,
+}: {
+  listing: Listing;
+  spaceId?: string | null;
+}) {
+  const observations = publicConditionObservations(listing, spaceId);
+  if (!observations.length) return null;
+  return (
+    <section aria-label="Sources des observations">
+      <h3>
+        {spaceId
+          ? "Constats propres à cette place"
+          : "Constats sur les parties communes"}
+      </h3>
+      <dl className="account-quality-list">
+        {observations.map((observation) => (
+          <div key={observation.id}>
+            <dt>{conditionLabels[observation.category]}</dt>
+            <dd>
+              {hasPublicDetail(observation.value) ? observation.value : null}
+              {hasPublicDetail(observation.comment) ? (
+                <p>{observation.comment}</p>
+              ) : null}
+              <p className="muted small">
+                {conditionSourceLabels[observation.sourceKind]}
+                {observation.observedAt
+                  ? ` · ${new Date(observation.observedAt).toLocaleDateString("fr-FR", { timeZone: "UTC" })}`
+                  : ""}
+                . Périmètre : {spaceId ? "cette place" : "parties communes"}.
+                Déclaration non certifiée.
+              </p>
+              {observation.evidenceMediaIds.length ? (
+                <p>
+                  {observation.evidenceMediaIds.map((id, index) => (
+                    <a
+                      key={id}
+                      href={`/api/media/${id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Photo liée {index + 1}
+                      {index < observation.evidenceMediaIds.length - 1
+                        ? " · "
+                        : ""}
+                    </a>
+                  ))}
+                </p>
+              ) : null}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
 export default function ListingDetail({
   listing: initialListing,
 }: {
   listing: Listing;
 }) {
   const [listing, setListing] = useState(initialListing);
+  const qualityRows = publicQualityRows(listing.quality);
+  const detailSpaces = listing.spaces.filter((space) =>
+    hasPublicUnitDetails(listing, space.id),
+  );
+  const hasIndividualPhotos = detailSpaces.some(
+    (space) => listing.spacePhotos?.[space.id]?.length,
+  );
+  const hasConditionDetails =
+    qualityRows.length > 0 ||
+    hasPublicDetail(listing.quality.observations) ||
+    publicConditionObservations(listing).length > 0;
   const showcase = isPublicShowcase(listing.id);
   const [unavailable, setUnavailable] = useState(false);
   const [freshnessError, setFreshnessError] = useState("");
@@ -607,124 +705,133 @@ export default function ListingDetail({
             </div>
           </div>
           <h2>Description</h2>
-          <CommercialSummary listing={listing} />
-          {listing.photos.map((url, index) =>
-            listing.commercialDetails?.photoMetadata[
-              url.split("/").at(-1) || ""
-            ] ? (
+          <p style={{ whiteSpace: "pre-line" }}>{listing.description}</p>
+          <PublicCommercialDetails rows={publicCommercialRows(listing)} />
+          {listing.photos.map((url, index) => {
+            const caption = publicPhotoCaption(listing, url);
+            return caption ? (
               <div key={url}>
                 <span className="muted small">Photo générale {index + 1}</span>
-                <PhotoCaption listing={listing} url={url} />
+                <p className="muted small">
+                  {caption} · informations déclarées.
+                </p>
               </div>
-            ) : null,
-          )}
-          <p style={{ whiteSpace: "pre-line" }}>{listing.description}</p>
-          <h2 style={{ marginTop: 32 }}>État du parking</h2>
-          <p className="muted small">
-            Informations du propriétaire
-            {listing.observedAt
-              ? ` · observations du ${new Date(listing.observedAt).toLocaleDateString("fr-FR", { timeZone: "UTC" })}`
-              : ""}
-            .
-          </p>
-          <div className="quality-grid">
-            {Object.entries(qualityLabels).map(([key, label]) => (
-              <div className="quality-item" key={key}>
-                <span>{label}</span>
-                <strong>
-                  {listing.quality[key as keyof typeof listing.quality] ||
-                    "Non renseigné"}
-                </strong>
-              </div>
-            ))}
-          </div>
-          {listing.quality.observations ? (
-            <p className="detail-condition-description">
-              {listing.quality.observations}
-            </p>
-          ) : null}
-          <ConditionEvidenceSummary values={listing.conditionObservations} />
-          <h2 style={{ marginTop: 32 }}>Photos de chaque place</h2>
-          <p className="muted small">
-            Les photos de chaque place complètent les vues générales du parking.
-          </p>
-          {listing.spaces.map((space) => {
-            const photos = listing.spacePhotos?.[space.id] || [];
-            const quality = listing.unitQuality?.[space.id];
-            return (
-              <details className="unit-gallery card" key={space.id}>
-                <summary>
-                  Place {space.number} ·{" "}
-                  {photos.length
-                    ? `${photos.length} photo${photos.length > 1 ? "s" : ""} liée${photos.length > 1 ? "s" : ""} — couverture partielle déclarée`
-                    : "aucune photo individuelle"}
-                </summary>
-                <ConditionEvidenceSummary
-                  values={listing.conditionObservations}
-                  spaceId={space.id}
-                />
-                <CommercialSummary listing={listing} spaceId={space.id} />
-                {quality ? (
-                  <div className="quality-grid">
-                    <p className="muted small">
-                      Origine déclarée :{" "}
-                      {quality.basis === "seller_observation"
-                        ? "observation du vendeur"
-                        : quality.basis === "provided_document"
-                          ? "document fourni"
-                          : "à préciser"}
-                      {quality.observedAt
-                        ? ` · ${new Date(quality.observedAt).toLocaleDateString("fr-FR", { timeZone: "UTC" })}`
-                        : " · date non renseignée"}
-                      . Déclaration non certifiée par la plateforme.
-                    </p>
-                    {Object.entries(qualityLabels).map(([key, label]) => (
-                      <div className="quality-item" key={key}>
-                        <span>{label}</span>
-                        <strong>
-                          {quality[key as keyof typeof qualityLabels]}
-                        </strong>
-                      </div>
-                    ))}
-                    {quality.observations ? (
-                      <p className="detail-condition-description">
-                        {quality.observations}
-                      </p>
-                    ) : null}
-                  </div>
-                ) : (
-                  <p className="muted small">
-                    État individuel non renseigné ; les observations du lot ne
-                    sont pas attribuées automatiquement à cette place.
-                  </p>
-                )}
-                {photos.length ? (
-                  <div className="unit-photo-grid">
-                    {photos.map((photo, index) => (
-                      <figure key={photo} style={{ margin: 0 }}>
-                        <Image
-                          src={photo}
-                          alt={`${listing.isDemo ? "Illustration de démonstration" : "Photo déclarée"} — place ${space.number}, vue ${index + 1}`}
-                          width={600}
-                          height={400}
-                          sizes="(max-width:767px) 100vw, 360px"
-                        />
-                        <figcaption>
-                          <PhotoCaption listing={listing} url={photo} />
-                        </figcaption>
-                      </figure>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="muted small">
-                    Les particularités de cette place restent à vérifier. Les
-                    vues générales ne documentent pas nécessairement ses
-                    dimensions ou ses défauts.
-                  </p>
-                )}
-              </details>
-            );
+            ) : null;
           })}
+          {hasConditionDetails ? (
+            <section>
+              <h2 style={{ marginTop: 32 }}>État du parking</h2>
+              <p className="muted small">
+                Informations du propriétaire
+                {listing.observedAt
+                  ? ` · observations du ${new Date(listing.observedAt).toLocaleDateString("fr-FR", { timeZone: "UTC" })}`
+                  : ""}
+                .
+              </p>
+              {qualityRows.length ? (
+                <div className="quality-grid">
+                  {qualityRows.map(({ label, value }) => (
+                    <div className="quality-item" key={label}>
+                      <span>{label}</span>
+                      <strong>{value}</strong>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {hasPublicDetail(listing.quality.observations) ? (
+                <p className="detail-condition-description">
+                  {listing.quality.observations}
+                </p>
+              ) : null}
+              <PublicConditionSummary listing={listing} />
+            </section>
+          ) : null}
+          {detailSpaces.length ? (
+            <section>
+              <h2 style={{ marginTop: 32 }}>
+                {hasIndividualPhotos
+                  ? "Photos et informations par place"
+                  : "Informations par place"}
+              </h2>
+              {detailSpaces.map((space) => {
+                const photos = listing.spacePhotos?.[space.id] || [];
+                const quality = listing.unitQuality?.[space.id];
+                const rows = publicQualityRows(quality);
+                const hasQuality =
+                  rows.length > 0 || hasPublicDetail(quality?.observations);
+                return (
+                  <details className="unit-gallery card" key={space.id}>
+                    <summary>
+                      Place {space.number}
+                      {photos.length
+                        ? ` · ${photos.length} photo${photos.length > 1 ? "s" : ""}`
+                        : ""}
+                    </summary>
+                    <PublicConditionSummary
+                      listing={listing}
+                      spaceId={space.id}
+                    />
+                    <PublicCommercialDetails
+                      rows={publicCommercialRows(listing, space.id)}
+                      unit
+                    />
+                    {quality && hasQuality ? (
+                      <div className="quality-grid">
+                        <p className="muted small">
+                          Informations du propriétaire
+                          {quality.basis === "seller_observation"
+                            ? " · observation du vendeur"
+                            : quality.basis === "provided_document"
+                              ? " · document fourni"
+                              : ""}
+                          {quality.observedAt
+                            ? ` · ${new Date(quality.observedAt).toLocaleDateString("fr-FR", { timeZone: "UTC" })}`
+                            : ""}
+                          .
+                        </p>
+                        {rows.map(({ label, value }) => (
+                          <div className="quality-item" key={label}>
+                            <span>{label}</span>
+                            <strong>{value}</strong>
+                          </div>
+                        ))}
+                        {hasPublicDetail(quality.observations) ? (
+                          <p className="detail-condition-description">
+                            {quality.observations}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    {photos.length ? (
+                      <div className="unit-photo-grid">
+                        {photos.map((photo, index) => {
+                          const caption = publicPhotoCaption(listing, photo);
+                          return (
+                            <figure key={photo} style={{ margin: 0 }}>
+                              <Image
+                                src={photo}
+                                alt={`${listing.isDemo ? "Illustration de démonstration" : "Photo déclarée"} — place ${space.number}, vue ${index + 1}`}
+                                width={600}
+                                height={400}
+                                sizes="(max-width:767px) 100vw, 360px"
+                              />
+                              {caption ? (
+                                <figcaption>
+                                  <p className="muted small">
+                                    {caption} · informations déclarées.
+                                  </p>
+                                </figcaption>
+                              ) : null}
+                            </figure>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </details>
+                );
+              })}
+            </section>
+          ) : null}
           <h2
             ref={offersHeading}
             tabIndex={-1}
