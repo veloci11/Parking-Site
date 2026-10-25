@@ -16,7 +16,7 @@ Revue parallèle acheteur/mobile, vendeur et comptes/administration, puis contre
 
 ## Vérifications locales
 
-- Suite complète : 310 tests, 307 réussis, 3 conditionnels ignorés, aucun échec.
+- Suite complète avant les deux dernières retouches UX : 310 tests, 307 réussis, 3 conditionnels ignorés, aucun échec. Les quatre tests de panne/reprise puis les cinq tests de présentation des informations ont également réussi ; la CI complète est verte sur le commit applicatif final.
 - Compilation de production, TypeScript, format et contrôle des différences réussis. Cette passe inclut dix tests OAuth avec le SDK réel et un transport isolé ; aucun compte Google ou Apple réel n’a été créé.
 - Revue des dépendances de production : aucune vulnérabilité signalée par `npm audit --omit=dev` au moment du contrôle. Ce résultat ne constitue pas un audit complet de sécurité.
 - Mobile : fenêtres CSS de 320, 375, 390 et 430 px, sans débordement ni scroll global en carte ; panneau, filtres, favoris, niveaux de démonstration et navigation vérifiés. Aucun essai sur iPhone physique n'est revendiqué.
@@ -53,3 +53,21 @@ Les advisors après migration gardent les 31 tables privées sans politique de l
 ## Google et Apple
 
 Code préparé et testé isolément, fournisseurs non activés. Le [guide de configuration](../../OAUTH_SETUP.md) distingue les deux callbacks et la recette restante. L’accès par email ne dépend pas de ces fournisseurs. Les comptes exclusivement sociaux devront disposer d’une réauthentification adaptée pour les opérations sensibles avant leur ouverture commerciale complète.
+
+## Livraison et vérification en ligne — 25 octobre 2026
+
+- Application poussée sur GitHub : `84a6246a75eaf0d3501ec2adf0a5c5db1c583589`.
+- [CI application](https://github.com/veloci11/Parking-Site/actions/runs/40167508372), [SQL](https://github.com/veloci11/Parking-Site/actions/runs/40167508394) et [raster](https://github.com/veloci11/Parking-Site/actions/runs/40167508288) réussies sur ce SHA ; les trois contrôles du push sont également verts. La CI exécute format, TypeScript, suite métier, build et recette HTTP isolée.
+- Compilation Linux réussie : `flE3vcutQb7xkl0d8j_Sg`. Release `20261025-84a6246-listing-details`, bascule atomique du seul service `gp-park.service`, actif et `/api/ready` prêt en mode Supabase.
+- **16 contrôles live réussis** : quatre annonces réelles, prix conservés, filtres charges/taxe, refus des entrées invalides, administration privée, trois icônes et sept photos. Voir `live-http-checks.json`.
+- Contrôle mobile et panne photo exécutés sur `ce77fe0` ; les composants concernés sont inchangés dans `84a6246`. Mobile live 390 × 844 : aucun débordement horizontal ni scroll global de la carte ; panneau dans le viewport, prix/favori/lien d’annonce en pied accessibles. Capture `live-mobile-390.png`.
+- Panne d’un cliché simulée uniquement dans l’onglet de QA : l’état indisponible remplace bien l’ancienne image. Après déblocage, le retry produit **une seule requête média, celle du cliché concerné**, puis la photo s’affiche. Blocage et réglage de cache du navigateur restaurés. Voir `live-mobile-checks.json` et `live-photo-failure-390.png`.
+- Google/Apple restent masqués et inactifs (`providers: []`), chantier différé à la demande du propriétaire. Les prérequis d’ouverture commerciale mentionnés plus haut restent distincts de cette livraison.
+
+## Fiche complète : dernière finition
+
+La description du propriétaire apparaît en premier. Les rubriques sans information utile et les accordéons de photos vides disparaissent ; les notes connues restent visibles. Les montants à 0 €, les équipements explicitement absents et les informations individuelles utiles sont conservés, même sans photo par place. Les prix, le contact et les données source restent inchangés.
+
+Cinq tests ciblés ont réussi, ainsi que TypeScript, le format et les six contrôles CI sur `84a6246`. Après déploiement, les 16 contrôles HTTP ont été rejoués et la fiche publique a été inspectée en 390 × 844 : description avant les détails, note « Résidence récente » conservée, aucune mention de photo individuelle absente ni débordement horizontal. Voir `live-detail-checks.json` et `live-detail-390.png`.
+
+Les serveurs de recette locaux sont arrêtés. L’onglet de contrôle a été fermé après restauration de ses réglages de test.

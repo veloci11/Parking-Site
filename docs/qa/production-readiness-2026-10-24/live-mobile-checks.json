@@ -1,0 +1,28 @@
+{
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "failedPhotoState": {
+    "scrollHeight": 844,
+    "state": "failed",
+    "visibleImages": 0,
+    "width": 390
+  },
+  "mediaRetries": [
+    "https://parking.gilmathis.com/api/media/628242c8-34d7-4914-b4d2-8eac699ff986?w=480"
+  ],
+  "recoveredPhotoState": {
+    "pageScroll": false,
+    "state": "ready",
+    "visibleImages": [
+      {
+        "decoded": true,
+        "src": "https://parking.gilmathis.com/api/media/628242c8-34d7-4914-b4d2-8eac699ff986?w=480"
+      }
+    ]
+  },
+  "simulatedFailure": "One photo blocked in this QA tab only, then unblocked; cache behavior restored",
+  "verifiedCommit": "ce77fe034210c0fdfef7da12cc221e7f665221d9",
+  "unchangedComponentsInRelease": "84a6246a75eaf0d3501ec2adf0a5c5db1c583589"
+}
