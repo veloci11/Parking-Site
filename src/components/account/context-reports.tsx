@@ -1,12 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ContextReport, ContextReportDetail } from "@/lib/context-reports";
 import { reportCategories, reportStatusLabels } from "@/lib/context-reports";
 import { api } from "./shared";
+import { useReportQueue } from "./use-report-queue";
 export default function ContextReports({ admin = false }: { admin?: boolean }) {
-  const [items, setItems] = useState<ContextReport[]>([]),
-    [detail, setDetail] = useState<ContextReportDetail | null>(null),
-    [loading, setLoading] = useState(true),
+  const [detail, setDetail] = useState<ContextReportDetail | null>(null),
+    [filter, setFilter] = useState(admin ? "open" : "all"),
     [reading, setReading] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -14,23 +14,29 @@ export default function ContextReports({ admin = false }: { admin?: boolean }) {
     [reason, setReason] = useState(""),
     [confirmed, setConfirmed] = useState(false);
   const prefix = admin ? "/api/admin/report-context" : "/api/report-context";
-  async function load() {
-    setLoading(true);
-    try {
-      const r = await api<{ data: ContextReport[] }>(
-        `${prefix}${admin ? "" : "/mine"}`,
-      );
-      setItems(r.data);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const queue = useReportQueue<ContextReport>(
+    `${prefix}${admin ? "" : "/mine"}`,
+    filter,
+  );
+  const { items, loading } = queue;
+  const panel = useRef<HTMLElement>(null);
+  const readingGeneration = useRef(0);
+  const sending = useRef(false);
+  useEffect(
+    () => () => {
+      readingGeneration.current++;
+    },
+    [],
+  );
   useEffect(() => {
-    void load();
-  }, [admin]);
+    if (detail) {
+      panel.current?.focus({ preventScroll: true });
+      panel.current?.scrollIntoView({ block: "start", behavior: "instant" });
+    }
+  }, [detail?.report.id]);
   async function read(item: ContextReport) {
+    const generation = ++readingGeneration.current;
+    setNotice("");
     setReading(true);
     setError("");
     setDetail(null);
@@ -40,15 +46,25 @@ export default function ContextReports({ admin = false }: { admin?: boolean }) {
       const r = await api<{ data: ContextReportDetail }>(
         `${prefix}/${item.id}`,
       );
-      setDetail(r.data);
+      if (generation === readingGeneration.current) setDetail(r.data);
     } catch (e) {
-      setError((e as Error).message);
+      if (generation === readingGeneration.current)
+        setError((e as Error).message);
     } finally {
-      setReading(false);
+      if (generation === readingGeneration.current) setReading(false);
     }
   }
   async function act(status?: "reviewed" | "dismissed") {
-    if (!detail || busy || !confirmed || reason.trim().length < 15) return;
+    if (
+      !detail ||
+      busy ||
+      sending.current ||
+      !confirmed ||
+      reason.trim().length < 15
+    )
+      return;
+    sending.current = true;
+    setNotice("");
     setBusy(true);
     setError("");
     try {
@@ -71,11 +87,12 @@ export default function ContextReports({ admin = false }: { admin?: boolean }) {
       setDetail(null);
       setReason("");
       setConfirmed(false);
-      await load();
+      await queue.refresh();
     } catch (e) {
       setError((e as Error).message);
       setConfirmed(false);
     } finally {
+      sending.current = false;
       setBusy(false);
     }
   }
@@ -89,10 +106,12 @@ export default function ContextReports({ admin = false }: { admin?: boolean }) {
         </h2>
         <button
           className="button button-secondary"
-          disabled={busy || loading || reading}
+          disabled={busy || loading || reading || queue.loadingMore}
           onClick={() => {
             setError("");
-            void load();
+            setDetail(null);
+            setConfirmed(false);
+            void queue.refresh();
           }}
         >
           Actualiser
@@ -103,6 +122,46 @@ export default function ContextReports({ admin = false }: { admin?: boolean }) {
           ? "Seul le contexte explicitement transmis dans un signalement est accessible. L’ouverture d’un dossier est journalisée ; aucun accès général aux messages privés n’est proposé."
           : "Consultez la réponse de l’équipe aux messages ou conversations que vous avez signalés."}
       </p>
+      <div
+        className="account-tabs"
+        role="group"
+        aria-label="Filtrer les signalements de conversations"
+      >
+        {[
+          ["open", "À examiner"],
+          ["reviewed", "Traités"],
+          ["dismissed", "Classés"],
+          ["all", "Tous"],
+        ].map(([value, label]) => (
+          <button
+            key={value}
+            className={filter === value ? "active" : ""}
+            aria-pressed={filter === value}
+            disabled={busy || reading}
+            onClick={() => {
+              setFilter(value);
+              setDetail(null);
+              setConfirmed(false);
+              setError("");
+              setNotice("");
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {queue.error ? (
+        <p className="error" role="alert">
+          {queue.error}{" "}
+          <button
+            className="account-link-button"
+            disabled={loading || queue.loadingMore}
+            onClick={() => void queue.retry()}
+          >
+            Réessayer
+          </button>
+        </p>
+      ) : null}
       {error ? (
         <p className="error" role="alert">
           {error}
@@ -119,7 +178,8 @@ export default function ContextReports({ admin = false }: { admin?: boolean }) {
         <div className="account-list">
           {items.map((item) => (
             <button
-              className="account-review-row"
+              className={`account-review-row ${detail?.report.id === item.id ? "active" : ""}`}
+              aria-pressed={detail?.report.id === item.id}
               key={item.id}
               disabled={reading || busy}
               onClick={() => void read(item)}
@@ -136,12 +196,26 @@ export default function ContextReports({ admin = false }: { admin?: boolean }) {
             </button>
           ))}
         </div>
-      ) : (
-        <p className="muted">Aucun signalement.</p>
-      )}
+      ) : !queue.error ? (
+        <p className="muted">Aucun signalement dans cette vue.</p>
+      ) : null}
+      {queue.cursor ? (
+        <button
+          className="button button-secondary"
+          disabled={queue.loadingMore || loading || busy || reading}
+          onClick={() => void queue.more()}
+        >
+          {queue.loadingMore ? "Chargement…" : "Charger les dossiers suivants"}
+        </button>
+      ) : null}
       {reading ? <p role="status">Ouverture du dossier…</p> : null}
       {detail ? (
-        <article className="card account-review-detail">
+        <article
+          className="card account-review-detail"
+          ref={panel}
+          tabIndex={-1}
+          aria-label="Dossier de conversation signalée"
+        >
           <h3>
             {reportCategories[detail.report.category]} ·{" "}
             {reportStatusLabels[detail.report.status]}

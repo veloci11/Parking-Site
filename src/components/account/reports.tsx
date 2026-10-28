@@ -1,9 +1,10 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, Flag, RefreshCw, ShieldCheck } from "lucide-react";
 import { AccountGate, AccountShell, api } from "./shared";
 import ContextReports from "./context-reports";
+import { useReportQueue } from "./use-report-queue";
 import type { User } from "@/lib/types";
 interface Report {
   id: string;
@@ -21,37 +22,32 @@ const labels: Record<Report["status"], string> = {
   dismissed: "Classé sans suite",
 };
 function Content({ user }: { user: User }) {
-  const [items, setItems] = useState<Report[]>([]),
-    [loading, setLoading] = useState(true),
-    [filter, setFilter] = useState("open"),
+  const [filter, setFilter] = useState("open"),
     [selected, setSelected] = useState<string | null>(null),
     [reason, setReason] = useState(""),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const r = await api<{ data: Report[] }>("/api/admin/reports");
-      setItems(r.data);
-      setError("");
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const queue = useReportQueue<Report>("/api/admin/reports", filter);
+  const { items, loading } = queue;
+  const panel = useRef<HTMLElement>(null);
+  const sending = useRef(false);
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (selected) {
+      panel.current?.focus({ preventScroll: true });
+      panel.current?.scrollIntoView({ block: "start", behavior: "instant" });
+    }
+  }, [selected]);
   const item = items.find((r) => r.id === selected);
   async function decide(status: "reviewed" | "dismissed") {
-    if (!item) return;
+    if (!item || sending.current || loading) return;
     if (!reason.trim()) {
       setError("Décrivez les vérifications et le motif de votre décision.");
       return;
     }
+    sending.current = true;
     setBusy(true);
+    setNotice("");
     setError("");
     try {
       await api(`/api/admin/reports/${item.id}/decision`, {
@@ -65,27 +61,30 @@ function Content({ user }: { user: User }) {
       setNotice("La décision et son motif ont été enregistrés.");
       setSelected(null);
       setReason("");
-      await load();
+      await queue.refresh();
     } catch (e) {
       setError((e as Error).message);
     } finally {
+      sending.current = false;
       setBusy(false);
     }
   }
-  const visible = items.filter(
-    (r) =>
-      filter === "all" ||
-      (filter === "open"
-        ? ["open", "pending"].includes(r.status)
-        : r.status === filter),
-  );
+  const visible = items;
   return (
     <AccountShell
       user={user}
       title="Les signalements"
       eyebrow="MODÉRATION"
       action={
-        <button className="button button-secondary" onClick={() => void load()}>
+        <button
+          className="button button-secondary"
+          disabled={loading || queue.loadingMore || busy}
+          onClick={() => {
+            setSelected(null);
+            setReason("");
+            void queue.refresh();
+          }}
+        >
           <RefreshCw size={18} />
           Actualiser
         </button>
@@ -104,6 +103,18 @@ function Content({ user }: { user: User }) {
           Toute mesure sur le contenu doit être vérifiée séparément et tracée.
         </p>
       </div>
+      {queue.error ? (
+        <p className="error" role="alert">
+          {queue.error}{" "}
+          <button
+            className="account-link-button"
+            disabled={loading || queue.loadingMore}
+            onClick={() => void queue.retry()}
+          >
+            Réessayer
+          </button>
+        </p>
+      ) : null}
       {error ? (
         <p className="error" role="alert">
           {error}
@@ -129,7 +140,14 @@ function Content({ user }: { user: User }) {
             key={v}
             className={filter === v ? "active" : ""}
             aria-pressed={filter === v}
-            onClick={() => setFilter(v)}
+            disabled={busy}
+            onClick={() => {
+              setFilter(v);
+              setSelected(null);
+              setReason("");
+              setNotice("");
+              setError("");
+            }}
           >
             {label}
           </button>
@@ -143,7 +161,11 @@ function Content({ user }: { user: User }) {
             <button
               key={r.id}
               className={`account-review-row account-report-row ${selected === r.id ? "active" : ""}`}
+              disabled={busy}
+              aria-pressed={selected === r.id}
               onClick={() => {
+                setError("");
+                setNotice("");
                 setSelected(r.id);
                 setReason(r.decisionReason || "");
               }}
@@ -160,15 +182,31 @@ function Content({ user }: { user: User }) {
             </button>
           ))}
         </div>
-      ) : (
+      ) : !queue.error ? (
         <div className="empty-state account-empty">
           <CheckCircle2 size={32} />
           <h2>Aucun signalement dans cette vue.</h2>
           <p>Les alertes et leur suivi seront réunis ici.</p>
         </div>
-      )}
+      ) : null}
+      {queue.cursor ? (
+        <button
+          className="button button-secondary"
+          disabled={queue.loadingMore || loading || busy}
+          onClick={() => void queue.more()}
+        >
+          {queue.loadingMore
+            ? "Chargement…"
+            : "Charger les signalements suivants"}
+        </button>
+      ) : null}
       {item ? (
-        <section className="card account-review-detail">
+        <section
+          className="card account-review-detail"
+          ref={panel}
+          tabIndex={-1}
+          aria-label="Dossier du signalement"
+        >
           <span className="account-eyebrow">
             DOSSIER · VERSION {item.version}
           </span>
@@ -189,6 +227,7 @@ function Content({ user }: { user: User }) {
             <textarea
               className="input"
               rows={4}
+              disabled={busy || loading}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               minLength={5}
@@ -199,20 +238,21 @@ function Content({ user }: { user: User }) {
           <div className="account-review-actions">
             <button
               className="button button-primary"
-              disabled={busy || reason.trim().length < 5}
+              disabled={busy || loading || reason.trim().length < 5}
               onClick={() => decide("reviewed")}
             >
               Marquer comme traité
             </button>
             <button
               className="button button-secondary"
-              disabled={busy || reason.trim().length < 5}
+              disabled={busy || loading || reason.trim().length < 5}
               onClick={() => decide("dismissed")}
             >
               Classer sans suite
             </button>
             <button
               className="button button-secondary"
+              disabled={busy}
               onClick={() => setSelected(null)}
             >
               Fermer le dossier

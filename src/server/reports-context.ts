@@ -1,3 +1,5 @@
+import { reportPageQuery, localReportPageWhere } from "./report-pagination";
+import { historyCursor } from "./history-pagination";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { db, transact } from "./db";
@@ -360,17 +362,48 @@ export async function handleContextReports(
       return result.data;
     }
     if ((path === "" || path === "mine") && request.method === "GET") {
-      if (client)
-        return respond(
-          (
-            (await rpc("gp_context_reports_list", {
-              p_admin: admin,
-              p_limit: 100,
-            })) || []
-          ).map(mapReport),
-        );
-      return respond(listLocalContextReports(u, admin));
+      const page = reportPageQuery(
+        url,
+        admin ? "context-reports:admin" : `context-reports:${u.id}`,
+        true,
+      );
+      let rows: Record<string, unknown>[];
+      if (client) {
+        rows =
+          (await rpc("gp_context_reports_page", {
+            p_admin: admin,
+            p_status: page.status,
+            p_limit: page.limit,
+            p_after: page.after
+              ? { id: page.after.id, createdAt: page.after.createdAt }
+              : null,
+          })) || [];
+      } else {
+        ensureContextReports();
+        const { conditions, values } = localReportPageWhere(page);
+        if (!admin) {
+          conditions.push("user_id = ?");
+          values.push(u.id);
+        }
+        rows = db()
+          .prepare(
+            `SELECT * FROM context_reports ${conditions.length ? `WHERE ${conditions.join(" AND ")}` : ""} ORDER BY created_at DESC,id LIMIT ?`,
+          )
+          .all(...values, page.limit + 1);
+      }
+      return Response.json(
+        {
+          data: rows.slice(0, page.limit).map(mapReport),
+          nextCursor: historyCursor(
+            page.scope,
+            rows as { id: unknown; created_at: unknown }[],
+            page.limit,
+          ),
+        },
+        { headers: headers() },
+      );
     }
+
     if (path === "" && !admin && request.method === "POST") {
       const input = createSchema.parse(await readBoundedJson(request, 16384));
       return respond(

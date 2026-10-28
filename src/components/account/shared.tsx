@@ -3,18 +3,9 @@ import { requestJson } from "@/lib/request-json";
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Bell,
-  Box,
-  Flag,
-  House,
-  LayoutDashboard,
-  ListChecks,
-  Mail,
-  Settings,
-  ShieldCheck,
-  UserRound,
-} from "lucide-react";
+import { ShieldCheck, UserRound } from "lucide-react";
+import { AccountNav } from "./account-nav";
+export { AccountNav } from "./account-nav";
 import type { User } from "@/lib/types";
 export async function api<T>(
   path: string,
@@ -26,9 +17,12 @@ export function useAccount() {
   const [user, setUser] = useState<User | null>(null),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
-    [mode, setMode] = useState("");
+    [mode, setMode] = useState(""),
+    [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let active = true;
+    setLoading(true);
+    setError("");
     api<{ data: User | null; mode?: string }>("/api/session")
       .then((r) => {
         if (active) {
@@ -45,8 +39,15 @@ export function useAccount() {
     return () => {
       active = false;
     };
-  }, []);
-  return { user, loading, error, mode, setUser };
+  }, [attempt]);
+  return {
+    user,
+    loading,
+    error,
+    mode,
+    setUser,
+    retry: () => setAttempt((n) => n + 1),
+  };
 }
 export function AccountGate({
   children,
@@ -58,7 +59,7 @@ export function AccountGate({
   adminOnly?: boolean;
 }) {
   const path = usePathname();
-  const { user, loading, error } = useAccount();
+  const { user, loading, error, retry } = useAccount();
   const [mfa, setMfa] = useState<"loading" | "allowed" | "blocked" | "error">(
     admin ? "loading" : "allowed",
   );
@@ -111,6 +112,13 @@ export function AccountGate({
         <p className="error" role="alert">
           {error}
         </p>
+        <button
+          type="button"
+          className="button button-secondary"
+          onClick={retry}
+        >
+          Réessayer
+        </button>
       </div>
     );
   if (!user)
@@ -182,168 +190,6 @@ export function AccountGate({
       </div>
     );
   return <>{children(user)}</>;
-}
-export function AccountNav({ user }: { user: User }) {
-  const path = usePathname();
-  const [unread, setUnread] = useState(0);
-  useEffect(() => {
-    let active = true;
-    const load = () => {
-      api<{ unread: number }>("/api/notifications")
-        .then((r) => {
-          if (active) setUnread(r.unread || 0);
-        })
-        .catch(() => {});
-    };
-    load();
-    window.addEventListener("gp:notifications", load);
-    const timer = setInterval(() => {
-      if (!document.hidden) load();
-    }, 30000);
-    return () => {
-      active = false;
-      clearInterval(timer);
-      window.removeEventListener("gp:notifications", load);
-    };
-  }, []);
-  return (
-    <aside className="account-sidebar">
-      <div className="account-person">
-        <div className="account-avatar">
-          {user.name.slice(0, 1).toUpperCase()}
-        </div>
-        <div>
-          <strong>{user.name}</strong>
-          <span className="muted">Mon compte</span>
-        </div>
-      </div>
-      <nav aria-label="Mon espace">
-        <Link
-          href="/compte"
-          aria-current={path === "/compte" ? "page" : undefined}
-        >
-          <LayoutDashboard size={18} />
-          Vue d’ensemble
-        </Link>
-        <Link
-          href="/compte/annonces"
-          aria-current={
-            path.startsWith("/compte/annonces") ||
-            [
-              "/compte/scenes",
-              "/compte/parkings",
-              "/compte/abonnement",
-            ].includes(path)
-              ? "page"
-              : undefined
-          }
-        >
-          <ListChecks size={18} />
-          Mes annonces
-        </Link>
-        <Link
-          href="/compte/messages"
-          aria-current={
-            path.startsWith("/compte/messages") ||
-            path === "/compte/signalements"
-              ? "page"
-              : undefined
-          }
-        >
-          <Mail size={18} />
-          Messages
-        </Link>
-        <Link
-          href="/compte/notifications"
-          aria-current={path === "/compte/notifications" ? "page" : undefined}
-        >
-          <Bell size={18} />
-          Notifications
-          {unread ? (
-            <span
-              className="account-nav-count"
-              aria-label={`${unread} notifications non lues`}
-            >
-              {unread}
-            </span>
-          ) : null}
-        </Link>
-        <Link href="/favoris">
-          <House size={18} />
-          Mes favoris
-        </Link>
-        <Link
-          href="/compte/parametres"
-          aria-current={
-            ["/compte/parametres", "/compte/securite"].includes(path)
-              ? "page"
-              : undefined
-          }
-        >
-          <Settings size={18} />
-          Paramètres
-        </Link>
-        {user.role !== "member" ? (
-          <>
-            <p className="account-nav-label">Administration</p>
-            <Link
-              href="/admin"
-              aria-current={path === "/admin" ? "page" : undefined}
-            >
-              <ShieldCheck size={18} />
-              Modération
-            </Link>
-            <Link
-              href="/admin/signalements"
-              aria-current={path === "/admin/signalements" ? "page" : undefined}
-            >
-              <Flag size={18} />
-              Signalements
-            </Link>
-            <Link
-              href="/admin/scenes"
-              aria-current={path === "/admin/scenes" ? "page" : undefined}
-            >
-              <Box size={18} />
-              Plans 3D à vérifier
-            </Link>
-          </>
-        ) : null}
-        {user.role === "admin" ? (
-          <>
-            <Link
-              href="/admin/parkings"
-              aria-current={path === "/admin/parkings" ? "page" : undefined}
-            >
-              <Box size={18} />
-              Parkings et places
-            </Link>
-            <Link
-              href="/admin/comptes"
-              aria-current={path === "/admin/comptes" ? "page" : undefined}
-            >
-              <ShieldCheck size={18} />
-              Comptes et accès
-            </Link>
-            <Link
-              href="/admin/limites"
-              aria-current={path === "/admin/limites" ? "page" : undefined}
-            >
-              <ListChecks size={18} />
-              Limites des comptes
-            </Link>
-            <Link
-              href="/admin/journal"
-              aria-current={path === "/admin/journal" ? "page" : undefined}
-            >
-              <ListChecks size={18} />
-              Journal administratif
-            </Link>
-          </>
-        ) : null}
-      </nav>
-    </aside>
-  );
 }
 export function AccountShell({
   user,

@@ -1,4 +1,6 @@
+import { reportPageQuery, localReportPageWhere } from "./report-pagination";
 import { handlePrivacyCommands } from "./privacy-commands";
+import { adminReviewPublication } from "@/lib/admin-review-publication";
 import { assertLocalIdfPublication } from "./region";
 import { PARIS_CENTER } from "@/lib/paris-region";
 import { assertLocalOffers } from "./listing-offers";
@@ -815,7 +817,14 @@ export async function handleApi(request: Request): Promise<Response> {
             "SELECT * FROM listings WHERE public_json IS NOT NULL AND status NOT IN ('sold','withdrawn','suspended') ORDER BY updated_at DESC,id",
           )
           .all()
-          .map(privateListing),
+          .map((row) =>
+            adminReviewPublication(
+              JSON.parse(String(row.public_json)) as Listing,
+              Number(row.version),
+              row.status as Listing["status"],
+              !["paused", "expired"].includes(String(row.status)),
+            ),
+          ),
       );
     }
     const suspension = path.match(/^admin\/listings\/([^/]+)\/suspend$/);
@@ -1446,12 +1455,20 @@ export async function handleApi(request: Request): Promise<Response> {
     if (path === "admin/reports" && method === "GET") {
       requireModerator(request);
       ensureNotificationSchema();
-      return respond(
-        db()
-          .prepare("SELECT * FROM reports ORDER BY created_at DESC LIMIT 100")
-          .all()
-          .map(reportDTO),
-      );
+      const page = reportPageQuery(url, "listing-reports");
+      const { conditions, values } = localReportPageWhere(page);
+      const rows = db()
+        .prepare(
+          `SELECT * FROM reports ${conditions.length ? `WHERE ${conditions.join(" AND ")}` : ""} ORDER BY created_at DESC,id LIMIT ?`,
+        )
+        .all(...values, page.limit + 1);
+      return respond(rows.slice(0, page.limit).map(reportDTO), 200, {
+        nextCursor: historyCursor(
+          page.scope,
+          rows as { id: unknown; created_at: unknown }[],
+          page.limit,
+        ),
+      });
     }
     const reportDecision = path.match(/^admin\/reports\/([^/]+)\/decision$/);
     if (reportDecision && method === "POST") {

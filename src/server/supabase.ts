@@ -1,4 +1,6 @@
+import { reportPageQuery } from "./report-pagination";
 import { handlePrivacyCommands } from "./privacy-commands";
+import { adminReviewPublication } from "@/lib/admin-review-publication";
 import { requireModerationMfa } from "./moderation-mfa";
 import { PARIS_CENTER, REGION_MESSAGE } from "@/lib/paris-region";
 import { handleAuthCommands } from "./auth-commands";
@@ -608,17 +610,25 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
       await moderationUser();
       const { data, error } = await client
         .from("listings")
-        .select("draft,row_version,lifecycle_state")
+        .select(
+          "last_published,row_version,lifecycle_state,published_listings(payload)",
+        )
         .not("last_published", "is", null)
         .not("lifecycle_state", "in", "(sold,withdrawn,suspended)")
         .order("updated_at", { ascending: false });
       schemaError(error);
       return respond(
-        (data || []).map((l) => ({
-          ...l.draft,
-          version: l.row_version,
-          status: l.lifecycle_state,
-        })),
+        (data || []).map((l) => {
+          const published = Array.isArray(l.published_listings)
+            ? l.published_listings[0]
+            : l.published_listings;
+          return adminReviewPublication(
+            (published?.payload || l.last_published) as Listing,
+            l.row_version,
+            l.lifecycle_state,
+            Boolean(published?.payload),
+          );
+        }),
       );
     }
     const suspension = path.match(/^admin\/listings\/([^/]+)\/suspend$/);
@@ -1038,16 +1048,25 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
     }
     if (path === "admin/reports" && method === "GET") {
       await moderationUser();
-      const { data, error } = await client
+      const page = reportPageQuery(url, "listing-reports");
+      let query = client
         .from("reports")
         .select(
           "id,listing_id,reason,status,row_version,created_at,decision_reason",
-        )
+        );
+      if (page.states.length) query = query.in("status", page.states);
+      if (page.after)
+        query = query.or(
+          `created_at.lt.${page.after.createdAt},and(created_at.eq.${page.after.createdAt},id.gt.${page.after.id})`,
+        );
+      const { data, error } = await query
         .order("created_at", { ascending: false })
-        .limit(100);
+        .order("id", { ascending: true })
+        .limit(page.limit + 1);
       schemaError(error);
+      const rows = data || [];
       return respond(
-        data?.map((r) => ({
+        rows.slice(0, page.limit).map((r) => ({
           id: r.id,
           listingId: r.listing_id,
           reason: r.reason,
@@ -1055,7 +1074,9 @@ export async function handleSupabaseApi(request: Request): Promise<Response> {
           version: r.row_version,
           createdAt: r.created_at,
           decisionReason: r.decision_reason,
-        })) || [],
+        })),
+        200,
+        { nextCursor: historyCursor(page.scope, rows, page.limit) },
       );
     }
     const reportDecision = path.match(/^admin\/reports\/([^/]+)\/decision$/);

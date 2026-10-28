@@ -1,15 +1,20 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AuditEntry, User } from "@/lib/types";
+import { auditActionLabel } from "@/lib/admin-account-ux";
 import { AccountGate, AccountShell, api } from "./shared";
 function Content({ user }: { user: User }) {
   const [items, setItems] = useState<AuditEntry[]>([]),
     [cursor, setCursor] = useState<string | null>(null),
     [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [failedCursor, setFailedCursor] = useState<string | undefined>();
+  const loadVersion = useRef(0);
   async function load(next?: string) {
+    const version = ++loadVersion.current;
     setError("");
+    setFailedCursor(undefined);
     if (next) setBusy(true);
     else setLoading(true);
     try {
@@ -18,6 +23,7 @@ function Content({ user }: { user: User }) {
       const r = await api<{ data: AuditEntry[]; nextCursor?: string | null }>(
         `/api/admin/audit?${p}`,
       );
+      if (version !== loadVersion.current) return;
       setItems((current) =>
         next
           ? [
@@ -30,14 +36,22 @@ function Content({ user }: { user: User }) {
       );
       setCursor(r.nextCursor || null);
     } catch (e) {
-      setError((e as Error).message);
+      if (version === loadVersion.current) {
+        setError((e as Error).message);
+        setFailedCursor(next);
+      }
     } finally {
-      setLoading(false);
-      setBusy(false);
+      if (version === loadVersion.current) {
+        setLoading(false);
+        setBusy(false);
+      }
     }
   }
   useEffect(() => {
     void load();
+    return () => {
+      loadVersion.current++;
+    };
   }, []);
   return (
     <AccountShell
@@ -60,21 +74,34 @@ function Content({ user }: { user: User }) {
         limités ; aucun texte de conversation ni coordonnées privées.
       </p>
       {error ? (
-        <p className="error" role="alert">
-          {error}
-        </p>
+        <div>
+          <p className="error" role="alert">
+            {error}
+          </p>
+          <button
+            className="button button-secondary"
+            disabled={busy || loading}
+            onClick={() => void load(failedCursor)}
+          >
+            Réessayer le chargement
+          </button>
+        </div>
       ) : null}
-      {loading ? (
+      {loading && !items.length ? (
         <p role="status">Chargement du journal…</p>
       ) : items.length ? (
         <div className="account-audit-list">
           {items.map((item) => (
             <article className="card" key={item.id}>
-              <strong>{item.action}</strong>
+              <strong>{auditActionLabel(item.action)}</strong>
               <time dateTime={item.createdAt}>
                 {new Date(item.createdAt).toLocaleString("fr-FR")}
               </time>
               <dl className="account-quality-list">
+                <div>
+                  <dt>Action</dt>
+                  <dd>{item.action}</dd>
+                </div>
                 <div>
                   <dt>Événement</dt>
                   <dd>{item.id}</dd>
@@ -123,9 +150,9 @@ function Content({ user }: { user: User }) {
             </article>
           ))}
         </div>
-      ) : (
+      ) : !error ? (
         <p className="notice">Aucun événement à afficher.</p>
-      )}
+      ) : null}
       {cursor ? (
         <button
           className="button button-secondary"

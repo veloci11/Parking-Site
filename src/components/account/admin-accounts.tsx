@@ -27,14 +27,22 @@ function Content({ user }: { user: User }) {
     [notice, setNotice] = useState(""),
     [query, setQuery] = useState(""),
     [appliedQuery, setAppliedQuery] = useState(""),
-    [nextCursor, setNextCursor] = useState<string | null>(null);
+    [nextCursor, setNextCursor] = useState<string | null>(null),
+    [failedLoad, setFailedLoad] = useState<{
+      search: string;
+      cursor: string | null;
+    } | null>(null);
   const loadVersion = useRef(0);
+  const decisionHeading = useRef<HTMLHeadingElement>(null);
   async function load(search = appliedQuery, cursor: string | null = null) {
     const version = ++loadVersion.current;
     setLoading(true);
     setError("");
-    setSelected(null);
-    setConfirmed(false);
+    setFailedLoad(null);
+    if (!cursor) {
+      setSelected(null);
+      setConfirmed(false);
+    }
     try {
       const params = new URLSearchParams({ q: search, limit: "50" });
       if (cursor) params.set("cursor", cursor);
@@ -54,7 +62,10 @@ function Content({ user }: { user: User }) {
       setNextCursor(r.nextCursor);
       setAppliedQuery(search);
     } catch (e) {
-      if (version === loadVersion.current) setError((e as Error).message);
+      if (version === loadVersion.current) {
+        setError((e as Error).message);
+        setFailedLoad({ search, cursor });
+      }
     } finally {
       if (version === loadVersion.current) setLoading(false);
     }
@@ -65,6 +76,16 @@ function Content({ user }: { user: User }) {
       loadVersion.current++;
     };
   }, []);
+  useEffect(() => {
+    if (!selected) return;
+    decisionHeading.current?.focus({ preventScroll: true });
+    decisionHeading.current?.scrollIntoView({
+      block: "center",
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth",
+    });
+  }, [selected?.id]);
   const changed =
     selected && (selected.role !== role || selected.status !== status);
   async function decide(e: FormEvent) {
@@ -72,23 +93,31 @@ function Content({ user }: { user: User }) {
     if (!selected || !confirmed || !changed || busy) return;
     setBusy(true);
     setError("");
+    setFailedLoad(null);
     try {
-      await api(`/api/admin/users/${selected.id}/decision`, {
-        method: "POST",
-        body: JSON.stringify({
-          version: selected.version,
-          ...(role !== selected.role ? { role } : {}),
-          ...(status !== selected.status ? { status } : {}),
-          reason: reason.trim(),
-        }),
-      });
+      const result = await api<{ data: AdminUser }>(
+        `/api/admin/users/${selected.id}/decision`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            version: selected.version,
+            ...(role !== selected.role ? { role } : {}),
+            ...(status !== selected.status ? { status } : {}),
+            reason: reason.trim(),
+          }),
+        },
+      );
+      setItems((current) =>
+        current.map((item) =>
+          item.id === result.data.id ? result.data : item,
+        ),
+      );
       setNotice(
         "La décision et son motif ont été enregistrés. Une réactivation du compte ne republie pas ses annonces suspendues.",
       );
       setSelected(null);
       setReason("");
       setConfirmed(false);
-      await load();
     } catch (e) {
       setError((e as Error).message);
       setConfirmed(false);
@@ -155,9 +184,20 @@ function Content({ user }: { user: User }) {
         ) : null}
       </form>
       {error ? (
-        <p className="error" role="alert">
-          {error}
-        </p>
+        <div>
+          <p className="error" role="alert">
+            {error}
+          </p>
+          {failedLoad ? (
+            <button
+              className="button button-secondary"
+              disabled={busy || loading}
+              onClick={() => void load(failedLoad.search, failedLoad.cursor)}
+            >
+              Réessayer le chargement
+            </button>
+          ) : null}
+        </div>
       ) : null}
       {notice ? (
         <p className="notice" role="status">
@@ -170,8 +210,10 @@ function Content({ user }: { user: User }) {
         <div className="account-list">
           {items.map((item) => (
             <button
-              className="account-review-row"
+              className={`account-review-row${selected?.id === item.id ? " active" : ""}`}
               key={item.id}
+              aria-pressed={selected?.id === item.id}
+              aria-controls={selected ? "admin-account-decision" : undefined}
               disabled={
                 busy ||
                 loading ||
@@ -185,6 +227,8 @@ function Content({ user }: { user: User }) {
                 setReason("");
                 setConfirmed(false);
                 setError("");
+                setFailedLoad(null);
+                setNotice("");
               }}
             >
               <span>
@@ -227,8 +271,19 @@ function Content({ user }: { user: User }) {
         </button>
       ) : null}
       {selected ? (
-        <form className="card account-review-detail" onSubmit={decide}>
-          <h2>Décision sur {selected.name}</h2>
+        <form
+          id="admin-account-decision"
+          className="card account-review-detail"
+          aria-labelledby="admin-account-decision-title"
+          onSubmit={decide}
+        >
+          <h2
+            ref={decisionHeading}
+            id="admin-account-decision-title"
+            tabIndex={-1}
+          >
+            Décision sur {selected.name}
+          </h2>
           <p className="muted">
             Compte {selected.id} · version {selected.version}
           </p>

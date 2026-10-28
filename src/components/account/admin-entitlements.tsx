@@ -1,7 +1,6 @@
 "use client";
 import FilterSelect from "../FilterSelect";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import Link from "next/link";
 import {
   type AdminEntitlements,
   type QuotaLimits,
@@ -10,6 +9,10 @@ import {
 import type { AdminUser, User } from "@/lib/types";
 import { AccountGate, AccountShell, api } from "./shared";
 import { UsageList } from "./entitlement-usage";
+import {
+  adaptationExpiryError,
+  adminLocalDateTime,
+} from "@/lib/admin-account-ux";
 const fields: { key: keyof QuotaLimits; label: string; max: number }[] = [
   { key: "activeListings", label: "Annonces actives", max: 500 },
   { key: "draftsPerDay", label: "Nouveaux brouillons / 24 h", max: 1000 },
@@ -38,12 +41,20 @@ function Content({ user }: { user: User }) {
     [userSearch, setUserSearch] = useState(""),
     [appliedUserSearch, setAppliedUserSearch] = useState(""),
     [usersLoading, setUsersLoading] = useState(false),
-    [usersCursor, setUsersCursor] = useState<string | null>(null);
+    [usersCursor, setUsersCursor] = useState<string | null>(null),
+    [usersError, setUsersError] = useState(""),
+    [failedUsersLoad, setFailedUsersLoad] = useState<{
+      search: string;
+      cursor: string | null;
+    } | null>(null),
+    [failedLoad, setFailedLoad] = useState(false);
   const usersVersion = useRef(0);
+  const loadVersion = useRef(0);
   async function loadUsers(search = "", cursor: string | null = null) {
     const version = ++usersVersion.current;
     setUsersLoading(true);
-    setError("");
+    setUsersError("");
+    setFailedUsersLoad(null);
     try {
       const params = new URLSearchParams({ q: search, limit: "50" });
       if (cursor) params.set("cursor", cursor);
@@ -65,14 +76,30 @@ function Content({ user }: { user: User }) {
       setUsersCursor(result.nextCursor);
       setAppliedUserSearch(search);
     } catch (e) {
-      if (version === usersVersion.current) setError((e as Error).message);
+      if (version === usersVersion.current) {
+        setUsersError((e as Error).message);
+        setFailedUsersLoad({ search, cursor });
+      }
     } finally {
       if (version === usersVersion.current) setUsersLoading(false);
     }
   }
+  function applyData(next: AdminEntitlements) {
+    setData(next);
+    setLimits(next.user?.limits ?? next.freePlan.limits);
+    setExpires(
+      next.user?.override?.active
+        ? adminLocalDateTime(next.user.override.expiresAt)
+        : "",
+    );
+    setConfirm(false);
+    setReason("");
+  }
   async function load(id: string) {
+    const version = ++loadVersion.current;
     setBusy(true);
     setError("");
+    setFailedLoad(false);
     setData(null);
     setLimits(null);
     setConfirm(false);
@@ -82,12 +109,14 @@ function Content({ user }: { user: User }) {
       const result = await api<{ data: AdminEntitlements }>(
         `/api/admin/entitlements${id ? `?userId=${encodeURIComponent(id)}` : ""}`,
       );
-      setData(result.data);
-      setLimits(result.data.user?.limits ?? result.data.freePlan.limits);
+      if (version === loadVersion.current) applyData(result.data);
     } catch (e) {
-      setError((e as Error).message);
+      if (version === loadVersion.current) {
+        setError((e as Error).message);
+        setFailedLoad(true);
+      }
     } finally {
-      setBusy(false);
+      if (version === loadVersion.current) setBusy(false);
     }
   }
   useEffect(() => {
@@ -95,6 +124,7 @@ function Content({ user }: { user: User }) {
     void loadUsers();
     return () => {
       usersVersion.current++;
+      loadVersion.current++;
     };
   }, []);
   async function save(e: FormEvent, clear = false) {
@@ -103,17 +133,16 @@ function Content({ user }: { user: User }) {
     setBusy(true);
     setError("");
     setNotice("");
+    setFailedLoad(false);
     try {
       if (!clear && !quotaLimitsSchema.safeParse(limits).success)
         throw new Error(
           "Les limites doivent être des nombres entiers dans les bornes indiquées.",
         );
-      if (
-        userId &&
-        !clear &&
-        (!expires || !Number.isFinite(Date.parse(expires)))
-      )
-        throw new Error("Choisissez une échéance pour cette adaptation.");
+      if (userId && !clear) {
+        const expiryError = adaptationExpiryError(expires);
+        if (expiryError) throw new Error(expiryError);
+      }
       const command = userId
         ? {
             action: clear ? "clear_user_override" : "set_user_override",
@@ -130,16 +159,19 @@ function Content({ user }: { user: User }) {
             limits,
             reason: reason.trim(),
           };
-      await api("/api/admin/entitlements", {
-        method: "POST",
-        body: JSON.stringify(command),
-      });
+      const result = await api<{ data: AdminEntitlements }>(
+        "/api/admin/entitlements",
+        {
+          method: "POST",
+          body: JSON.stringify(command),
+        },
+      );
+      applyData(result.data);
       setNotice(
         clear
           ? "L’adaptation a été retirée. Les limites du forfait gratuit s’appliquent."
           : "Les limites et le motif ont été enregistrés.",
       );
-      await load(userId);
     } catch (e) {
       setError((e as Error).message);
       setConfirm(false);
@@ -148,17 +180,42 @@ function Content({ user }: { user: User }) {
     }
   }
   return (
-    <AccountShell user={user} title="Limites de la V1" eyebrow="ADMINISTRATION">
+    <AccountShell
+      user={user}
+      title="Limites des comptes"
+      eyebrow="ADMINISTRATION"
+      action={
+        <button
+          className="button button-secondary"
+          disabled={busy}
+          onClick={() => {
+            setNotice("");
+            void load(userId);
+          }}
+        >
+          Actualiser
+        </button>
+      }
+    >
       <p className="muted">
-        Le forfait gratuit reste le seul forfait actif. Ces limites ne créent
-        aucun abonnement ni paiement. Les modifications sont versionnées et
-        tracées, avec authentification renforcée sur le site connecté.
+        Ajustez les limites communes ou accordez une adaptation temporaire à un
+        compte. Chaque modification est enregistrée avec son motif.
       </p>
-      <Link href="/compte/securite">Vérifier ma session sécurisée</Link>
       {error ? (
-        <p className="error" role="alert">
-          {error}
-        </p>
+        <div>
+          <p className="error" role="alert">
+            {error}
+          </p>
+          {failedLoad ? (
+            <button
+              className="button button-secondary"
+              disabled={busy}
+              onClick={() => void load(userId)}
+            >
+              Réessayer le chargement des limites
+            </button>
+          ) : null}
+        </div>
       ) : null}
       {notice ? (
         <p className="notice" role="status">
@@ -190,7 +247,39 @@ function Content({ user }: { user: User }) {
         >
           Rechercher
         </button>
+        {userSearch || appliedUserSearch ? (
+          <button
+            type="button"
+            className="button button-secondary"
+            disabled={busy || usersLoading}
+            onClick={() => {
+              setUserSearch("");
+              void loadUsers();
+            }}
+          >
+            Tous les comptes
+          </button>
+        ) : null}
       </form>
+      {usersError ? (
+        <div>
+          <p className="error" role="alert">
+            {usersError}
+          </p>
+          {failedUsersLoad ? (
+            <button
+              type="button"
+              className="button button-secondary"
+              disabled={busy || usersLoading}
+              onClick={() =>
+                void loadUsers(failedUsersLoad.search, failedUsersLoad.cursor)
+              }
+            >
+              Réessayer la recherche des comptes
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       <div className="field">
         <span>{"Portée de la modification"}</span>
         <FilterSelect
@@ -224,6 +313,7 @@ function Content({ user }: { user: User }) {
         </button>
       ) : null}
       {!usersLoading &&
+      !usersError &&
       appliedUserSearch &&
       !users.some(
         (item) =>
@@ -251,6 +341,12 @@ function Content({ user }: { user: User }) {
               ? "Les valeurs ci-dessous remplacent les limites communes jusqu’à l’échéance, dans un maximum de 90 jours. Zéro bloque les nouvelles actions concernées."
               : "Ces valeurs s’appliquent aux comptes sans adaptation active. Zéro bloque les nouvelles actions concernées."}
           </p>
+          {data.user?.override?.active ? (
+            <p className="notice">
+              Adaptation en cours jusqu’au{" "}
+              {new Date(data.user.override.expiresAt).toLocaleString("fr-FR")}.
+            </p>
+          ) : null}
           <div className="form-grid">
             {fields.map((field) => (
               <label className="field" key={field.key}>

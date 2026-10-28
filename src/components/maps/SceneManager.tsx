@@ -1,6 +1,6 @@
 "use client";
 import FilterSelect from "@/components/FilterSelect";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Box,
@@ -17,6 +17,12 @@ import {
   type SceneManifest,
 } from "@/lib/scene-contract";
 import type { Listing, User } from "@/lib/types";
+import { api } from "@/lib/client";
+import { AccountGate, AccountShell } from "@/components/account/shared";
+import {
+  loadSceneEditorSelection,
+  type SceneEditorSource as SourceEntry,
+} from "@/lib/scene-editor-selection";
 interface SceneEntry {
   id: string;
   listing_id: string;
@@ -28,28 +34,6 @@ interface SceneEntry {
   evidence_ids: string[];
   review_reason?: string | null;
 }
-interface SourceEntry {
-  id: string;
-  listing_id: string;
-  mime: string;
-  byte_size: number;
-  processing_state?: "processing" | "ready" | "rejected";
-  previewUrls?: string[];
-  url: string;
-}
-async function api<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    ...options,
-    headers:
-      options?.body instanceof FormData
-        ? options.headers
-        : { "Content-Type": "application/json", ...options?.headers },
-  });
-  const result = await response.json();
-  if (!response.ok)
-    throw new Error(result.error || "Le service des plans est indisponible.");
-  return result.data;
-}
 const states: Record<string, string> = {
   pending_review: "À contrôler",
   approved: "Approuvé",
@@ -57,9 +41,15 @@ const states: Record<string, string> = {
   changes_requested: "Correction demandée",
   retired: "Version remplacée",
 };
-export default function SceneManager({ review = false }: { review?: boolean }) {
-  const [user, setUser] = useState<User | null>(null),
-    [checked, setChecked] = useState(false),
+function SceneManagerContent({
+  user,
+  review,
+}: {
+  user: User;
+  review: boolean;
+}) {
+  const [loading, setLoading] = useState(true),
+    [selecting, setSelecting] = useState(false),
     [listings, setListings] = useState<Listing[]>([]),
     [selected, setSelected] = useState<Listing | null>(null),
     [lookup, setLookup] = useState(""),
@@ -76,79 +66,93 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState(""),
     [error, setError] = useState("");
+  const selectionPending = useRef<AbortController | null>(null);
+  const listPending = useRef<AbortController | null>(null);
+  const selectedId = useRef<string | null>(null);
+  const mutationPending = useRef(false);
   async function reload() {
+    listPending.current?.abort();
+    const controller = new AbortController();
+    listPending.current = controller;
+    const listingId = selectedId.current;
+    setLoading(true);
+    setError("");
     try {
-      setEntries(
-        await api<SceneEntry[]>(
-          `/api/scenes?scope=${review ? "review" : "mine"}`,
-        ),
-      );
-      if (review)
-        setSources(
-          await api<SourceEntry[]>("/api/scenes/sources?scope=review"),
-        );
+      const [models, documents, own] = await Promise.all([
+        api<SceneEntry[]>(`/api/scenes?scope=${review ? "review" : "mine"}`, {
+          signal: controller.signal,
+        }),
+        listingId || review
+          ? api<SourceEntry[]>(
+              listingId
+                ? `/api/scenes/sources?listingId=${encodeURIComponent(listingId)}`
+                : "/api/scenes/sources?scope=review",
+              { signal: controller.signal },
+            )
+          : Promise.resolve([]),
+        review
+          ? Promise.resolve([])
+          : api<Listing[]>("/api/me/listings", { signal: controller.signal }),
+      ]);
+      if (controller.signal.aborted) return;
+      setEntries(models);
+      setListings(own);
+      if (selectedId.current === listingId) setSources(documents);
     } catch (e) {
-      setError((e as Error).message);
+      if (!controller.signal.aborted) setError((e as Error).message);
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
     }
   }
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const session = await api<User | null>("/api/session");
-        if (cancelled) return;
-        setUser(session);
-        if (session) {
-          const own = await api<Listing[]>("/api/me/listings");
-          if (cancelled) return;
-          setListings(own);
-          setEntries(
-            await api<SceneEntry[]>(
-              `/api/scenes?scope=${review ? "review" : "mine"}`,
-            ),
-          );
-          if (review)
-            setSources(
-              await api<SourceEntry[]>("/api/scenes/sources?scope=review"),
-            );
-        }
-      } catch (e) {
-        if (!cancelled) setError((e as Error).message);
-      } finally {
-        if (!cancelled) setChecked(true);
-      }
-    })();
+    void reload();
     return () => {
-      cancelled = true;
+      listPending.current?.abort();
+      selectionPending.current?.abort();
     };
-  }, [review]);
-  async function choose(listing: Listing) {
-    setSelected(listing);
-    setLookup(listing.id);
-    setJSON(JSON.stringify(exampleSceneManifest(listing), null, 2));
-    setEvidence([]);
+  }, [review, user.id]);
+  async function choose(
+    id: string,
+    knownListing?: Listing,
+    entry?: SceneEntry,
+  ) {
+    if (mutationPending.current || !id.trim()) return;
+    selectionPending.current?.abort();
+    const controller = new AbortController();
+    selectionPending.current = controller;
+    setSelecting(true);
     setError("");
+    setNotice("");
     try {
-      setSources(
-        await api<SourceEntry[]>(`/api/scenes/sources?listingId=${listing.id}`),
+      const result = await loadSceneEditorSelection(
+        api,
+        id.trim(),
+        controller.signal,
+        knownListing,
       );
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  }
-  async function find(id = lookup) {
-    try {
-      await choose(
-        await api<Listing>(
-          `/api/scenes?scope=listing&listingId=${encodeURIComponent(id)}`,
+      if (!result || controller.signal.aborted) return;
+      selectedId.current = result.listing.id;
+      setSelected(result.listing);
+      setLookup(result.listing.id);
+      setJSON(
+        JSON.stringify(
+          entry?.manifest || exampleSceneManifest(result.listing),
+          null,
+          2,
         ),
       );
+      setEvidence(entry?.evidence_ids || []);
+      setRights(false);
+      setSources(result.sources);
     } catch (e) {
-      setError((e as Error).message);
+      if (!controller.signal.aborted) setError((e as Error).message);
+    } finally {
+      if (!controller.signal.aborted) setSelecting(false);
     }
   }
   async function upload(file: File) {
-    if (!selected) return;
+    if (!selected || selecting || mutationPending.current) return;
+    mutationPending.current = true;
     setBusy(true);
     setError("");
     try {
@@ -181,11 +185,13 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
     } catch (e) {
       setError((e as Error).message);
     } finally {
+      mutationPending.current = false;
       setBusy(false);
     }
   }
   async function submit() {
-    if (!selected) return;
+    if (!selected || selecting || mutationPending.current) return;
+    mutationPending.current = true;
     setBusy(true);
     setError("");
     try {
@@ -218,10 +224,13 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
     } catch (e) {
       setError((e as Error).message);
     } finally {
+      mutationPending.current = false;
       setBusy(false);
     }
   }
   async function decide(entry: SceneEntry, decision: string) {
+    if (selecting || mutationPending.current) return;
+    mutationPending.current = true;
     setBusy(true);
     setError("");
     try {
@@ -252,67 +261,61 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
     } catch (e) {
       setError((e as Error).message);
     } finally {
+      mutationPending.current = false;
       setBusy(false);
     }
   }
-  if (!checked)
-    return (
-      <main id="main" className="page-shell">
-        <p role="status">Chargement de l’espace plans…</p>
-      </main>
-    );
-  if (!user)
-    return (
-      <main id="main" className="page-shell">
-        <h1>Les plans de mes parkings</h1>
-        <p>
-          Connectez-vous pour transmettre vos plans privés et suivre leur
-          contrôle.
-        </p>
-        <Link
-          className="button button-primary"
-          href="/connexion?next=/compte/scenes"
-        >
-          Se connecter
-        </Link>
-      </main>
-    );
   return (
-    <main id="main" className="page-shell scene-manager">
-      <div className="scene-manager-heading">
-        <div>
-          <span className="badge">
-            <Box size={16} /> Plans intérieurs
-          </span>
-          <h1>
-            {review ? "Contrôler les modèles 3D" : "Les plans de mes parkings"}
-          </h1>
-          <p className="muted">
-            {review
-              ? "Vérifiez les sources, l’échelle, les numéros et le consentement avant de publier une vue métrique."
-              : "Transmettez votre plan et les mesures disponibles. Les documents restent privés ; la modélisation et le contrôle précèdent la publication."}
-          </p>
-        </div>
+    <AccountShell
+      user={user}
+      title={review ? "Plans 3D à vérifier" : "Les plans de mes parkings"}
+      eyebrow={review ? "ADMINISTRATION" : undefined}
+      action={
         <Link
           className="button button-secondary"
-          href={review ? "/admin" : "/compte"}
+          href={review ? "/admin" : "/compte/annonces"}
         >
-          Retour à {review ? "la modération" : "mon compte"}
+          Retour
         </Link>
-      </div>
-      {notice ? (
-        <p className="notice" role="status">
-          {notice}
-        </p>
-      ) : null}
-      {error ? (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {review && !["moderator", "admin"].includes(user.role) ? (
-        <p>Accès réservé à la modération.</p>
-      ) : (
+      }
+    >
+      <div className="scene-manager">
+        <div className="scene-manager-heading">
+          <div>
+            <span className="badge">
+              <Box size={16} /> Plans intérieurs
+            </span>
+            <p className="muted">
+              {review
+                ? "Vérifiez les sources, l’échelle, les numéros et le consentement avant de publier une vue métrique."
+                : "Transmettez votre plan et les mesures disponibles. Les documents restent privés ; la modélisation et le contrôle précèdent la publication."}
+            </p>
+          </div>
+        </div>
+        {notice ? (
+          <p className="notice" role="status">
+            {notice}
+          </p>
+        ) : null}
+        {error ? (
+          <p className="error" role="alert">
+            {error}{" "}
+            <button
+              type="button"
+              className="text-button"
+              disabled={busy || loading || selecting}
+              onClick={() => void reload()}
+            >
+              Actualiser les dossiers
+            </button>
+          </p>
+        ) : null}
+        {loading ? (
+          <p role="status">Chargement des plans et des documents…</p>
+        ) : null}
+        {selecting ? (
+          <p role="status">Ouverture de l’annonce et de ses documents…</p>
+        ) : null}
         <>
           <section className="card scene-manager-card">
             <h2>
@@ -325,6 +328,7 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
                   <input
                     className="input"
                     value={lookup}
+                    disabled={busy}
                     onChange={(e) => setLookup(e.target.value)}
                     placeholder="Identifiant de l’annonce publiée"
                   />
@@ -332,7 +336,8 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
                 <button
                   className="button button-secondary"
                   type="button"
-                  onClick={() => void find()}
+                  disabled={busy || !lookup.trim()}
+                  onClick={() => void choose(lookup)}
                 >
                   Charger l’annonce
                 </button>
@@ -344,9 +349,10 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
                   variant="field"
                   label="Annonce concernée"
                   value={selected?.id || ""}
+                  disabled={busy || loading}
                   onChange={(value) => {
                     const item = listings.find((l) => l.id === value);
-                    if (item) void choose(item);
+                    if (item) void choose(item.id, item);
                   }}
                   options={[
                     { value: "", label: "Choisir une annonce" },
@@ -370,7 +376,7 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
                     className="input"
                     type="file"
                     accept="application/pdf,image/jpeg,image/png,image/webp"
-                    disabled={busy}
+                    disabled={busy || selecting}
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) void upload(file);
@@ -401,7 +407,11 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
                     <label>
                       <input
                         type="checkbox"
-                        disabled={source.processing_state !== "ready"}
+                        disabled={
+                          busy ||
+                          selecting ||
+                          source.processing_state !== "ready"
+                        }
                         checked={evidence.includes(source.id)}
                         onChange={(e) =>
                           setEvidence((current) =>
@@ -458,7 +468,8 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
                     <button
                       type="button"
                       className="button button-secondary"
-                      onClick={() => void find(source.listing_id)}
+                      disabled={busy}
+                      onClick={() => void choose(source.listing_id)}
                     >
                       Préparer cette annonce
                     </button>
@@ -484,10 +495,31 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
                   className="input"
                   type="file"
                   accept="application/json,.json"
+                  disabled={busy || selecting}
                   onChange={(e) => {
                     const file = e.target.files?.[0];
+                    const listingId = selected.id;
+                    const selectionRequest = selectionPending.current;
                     if (file && file.size <= 1024 * 1024)
-                      void file.text().then(setJSON);
+                      void file
+                        .text()
+                        .then((value) => {
+                          if (
+                            selectedId.current === listingId &&
+                            selectionPending.current === selectionRequest &&
+                            !selectionRequest?.signal.aborted
+                          )
+                            setJSON(value);
+                        })
+                        .catch(() => {
+                          if (
+                            selectedId.current === listingId &&
+                            selectionPending.current === selectionRequest
+                          )
+                            setError(
+                              "Le fichier du modèle n’a pas pu être lu. Réessayez.",
+                            );
+                        });
                     else if (file) setError("Modèle JSON limité à 1 Mo.");
                     e.currentTarget.value = "";
                   }}
@@ -498,6 +530,7 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
                 <textarea
                   className="input scene-manager-json"
                   rows={18}
+                  disabled={busy || selecting}
                   value={json}
                   onChange={(e) => setJSON(e.target.value)}
                   spellCheck={false}
@@ -507,6 +540,7 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
                 <input
                   type="checkbox"
                   checked={rights}
+                  disabled={busy || selecting}
                   onChange={(e) => setRights(e.target.checked)}
                 />{" "}
                 Je dispose des droits nécessaires sur ces documents et ces
@@ -515,7 +549,7 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
               <button
                 type="button"
                 className="button button-primary"
-                disabled={busy || !rights || !evidence.length}
+                disabled={busy || selecting || !rights || !evidence.length}
                 onClick={() => void submit()}
               >
                 <ShieldCheck size={18} /> Soumettre le modèle au contrôle
@@ -528,7 +562,7 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
               <button
                 className="button button-secondary"
                 type="button"
-                disabled={busy}
+                disabled={busy || loading || selecting}
                 onClick={() => void reload()}
               >
                 <RefreshCw size={16} /> Actualiser
@@ -572,12 +606,10 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
                     <button
                       type="button"
                       className="button button-secondary"
-                      onClick={() => {
-                        void find(entry.listing_id).then(() => {
-                          setJSON(JSON.stringify(entry.manifest, null, 2));
-                          setEvidence(entry.evidence_ids);
-                        });
-                      }}
+                      disabled={busy}
+                      onClick={() =>
+                        void choose(entry.listing_id, undefined, entry)
+                      }
                     >
                       Préparer une nouvelle version
                     </button>
@@ -647,6 +679,7 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
                           type="button"
                           disabled={
                             busy ||
+                            selecting ||
                             !checks[entry.id] ||
                             entry.creator_id === user.id ||
                             entry.owner_id === user.id
@@ -658,7 +691,9 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
                         </button>
                         <button
                           type="button"
-                          disabled={busy || !reason[entry.id]}
+                          disabled={
+                            busy || selecting || !reason[entry.id]?.trim()
+                          }
                           className="button button-secondary"
                           onClick={() =>
                             void decide(entry, "changes_requested")
@@ -668,7 +703,9 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
                         </button>
                         <button
                           type="button"
-                          disabled={busy || !reason[entry.id]}
+                          disabled={
+                            busy || selecting || !reason[entry.id]?.trim()
+                          }
                           className="button button-secondary"
                           onClick={() => void decide(entry, "reject")}
                         >
@@ -679,113 +716,127 @@ export default function SceneManager({ review = false }: { review?: boolean }) {
                   ) : null}
                 </article>
               ))
-            ) : (
+            ) : !loading && !error ? (
               <p className="empty-state">
                 Aucun modèle{" "}
                 {review ? "en attente de contrôle" : "soumis pour le moment"}.
               </p>
-            )}
+            ) : null}
           </section>
         </>
-      )}
-      <style jsx>{`
-        .scene-manager {
-          max-width: 1100px;
-        }
-        .scene-manager-heading {
-          display: flex;
-          gap: 24px;
-          align-items: flex-start;
-          justify-content: space-between;
-          margin-bottom: 24px;
-        }
-        .scene-manager-heading h1 {
-          margin: 16px 0;
-        }
-        .scene-manager-card {
-          padding: 24px;
-          margin: 24px 0;
-        }
-        .scene-manager-card h2 {
-          display: flex;
-          gap: 8px;
-          align-items: center;
-          margin: 0 0 20px;
-          font-size: 24px;
-        }
-        .scene-manager-card summary {
-          font-size: 20px;
-          font-weight: 600;
-          cursor: pointer;
-          padding: 8px 0;
-        }
-        .scene-manager-inline {
-          display: flex;
-          gap: 12px;
-          align-items: end;
-          flex-wrap: wrap;
-        }
-        .scene-manager-inline .field {
-          flex: 1;
-          min-width: 220px;
-        }
-        .scene-manager-source {
-          display: flex;
-          gap: 16px;
-          align-items: center;
-          flex-wrap: wrap;
-          margin: 16px 0;
-        }
-        .scene-manager-source label,
-        .scene-manager-check {
-          display: flex;
-          gap: 12px;
-          align-items: flex-start;
-          font-size: 14px;
-          line-height: 1.5;
-        }
-        .scene-manager-check {
-          margin: 20px 0;
-        }
-        .scene-manager-check input {
-          margin-top: 4px;
-          accent-color: #6d28ff;
-        }
-        .scene-manager-json,
-        .scene-manager-code {
-          font-family: inherit;
-          font-size: 12px;
-          line-height: 1.5;
-          max-width: 100%;
-          overflow: auto;
-          white-space: pre;
-        }
-        .scene-manager-entry {
-          padding: 24px 0;
-          border-top: 1px solid #e5e7ef;
-        }
-        .scene-manager-entry h3 {
-          font-size: 20px;
-          margin: 12px 0;
-        }
-        .scene-manager-review {
-          background: #f8f9fc;
-          border-radius: 12px;
-          padding: 20px;
-          margin-top: 20px;
-        }
-        @media (max-width: 767px) {
+        <style jsx>{`
+          .scene-manager {
+            max-width: 1100px;
+          }
           .scene-manager-heading {
-            flex-direction: column;
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 24px;
+          }
+          .scene-manager-heading h1 {
+            margin: 16px 0;
           }
           .scene-manager-card {
-            padding: 16px;
+            padding: 24px;
+            margin: 24px 0;
           }
           .scene-manager-card h2 {
-            font-size: 20px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin: 0 0 20px;
+            font-size: 24px;
           }
-        }
-      `}</style>
-    </main>
+          .scene-manager-card summary {
+            font-size: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 8px 0;
+          }
+          .scene-manager-inline {
+            display: flex;
+            gap: 12px;
+            align-items: end;
+            flex-wrap: wrap;
+          }
+          .scene-manager-inline .field {
+            flex: 1;
+            min-width: 220px;
+          }
+          .scene-manager-source {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin: 16px 0;
+          }
+          .scene-manager-source label,
+          .scene-manager-check {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            font-size: 14px;
+            line-height: 1.5;
+          }
+          .scene-manager-check {
+            margin: 20px 0;
+          }
+          .scene-manager-check input {
+            margin-top: 4px;
+            accent-color: #6d28ff;
+          }
+          .scene-manager-json,
+          .scene-manager-code {
+            font-family: inherit;
+            font-size: 12px;
+            line-height: 1.5;
+            max-width: 100%;
+            overflow: auto;
+            white-space: pre;
+          }
+          .scene-manager-entry {
+            padding: 24px 0;
+            border-top: 1px solid #e5e7ef;
+          }
+          .scene-manager-entry h3 {
+            font-size: 20px;
+            margin: 12px 0;
+          }
+          .scene-manager-review {
+            background: #f8f9fc;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+          }
+          @media (max-width: 767px) {
+            .scene-manager-heading {
+              flex-direction: column;
+            }
+            .scene-manager-card {
+              padding: 16px;
+            }
+            .scene-manager-card h2 {
+              font-size: 20px;
+            }
+          }
+        `}</style>
+      </div>
+    </AccountShell>
+  );
+}
+
+export default function SceneManager({ review = false }: { review?: boolean }) {
+  return (
+    <AccountGate admin={review}>
+      {(user) => (
+        <SceneManagerContent
+          key={`${user.id}:${review}`}
+          user={user}
+          review={review}
+        />
+      )}
+    </AccountGate>
   );
 }

@@ -15,6 +15,8 @@ import {
 } from "@/lib/parking-registry";
 import type { Listing, User, AdminUser } from "@/lib/types";
 import { loadRegistrySelection } from "@/lib/registry-selection";
+import { loadAdminAccountPage } from "@/lib/admin-account-ux";
+import { requestJson } from "@/lib/request-json";
 import "@/styles/registry.css";
 const empty: RegistryAdminData = { sites: [], links: [], conflicts: [] };
 function LevelPlanHistory({
@@ -261,6 +263,15 @@ function Content({
   initialListingId?: string;
 }) {
   const [contributorId, setContributorId] = useState("");
+  const [accountSearch, setAccountSearch] = useState(""),
+    [appliedAccountSearch, setAppliedAccountSearch] = useState(""),
+    [accountsCursor, setAccountsCursor] = useState<string | null>(null),
+    [accountsLoading, setAccountsLoading] = useState(false),
+    [accountsError, setAccountsError] = useState(""),
+    [failedAccountsLoad, setFailedAccountsLoad] = useState<{
+      search: string;
+      cursor: string | null;
+    } | null>(null);
   const [data, setData] = useState(empty),
     [pending, setPending] = useState<Listing[]>([]),
     [accounts, setAccounts] = useState<AdminUser[]>([]),
@@ -278,10 +289,47 @@ function Content({
     [notice, setNotice] = useState("");
   const activeListingId = useRef(initialListingId || ""),
     pendingLoad = useRef<AbortController | null>(null),
+    pendingAccountsLoad = useRef<AbortController | null>(null),
     mutationPending = useRef(false);
   const site = data.sites.find((item) => item.id === siteId),
     level = site?.levels.find((item) => item.id === levelId);
   const mutationDisabled = busy || loading || !registryReady;
+  async function loadAccounts(search = "", cursor: string | null = null) {
+    pendingAccountsLoad.current?.abort();
+    const controller = new AbortController();
+    pendingAccountsLoad.current = controller;
+    setAccountsLoading(true);
+    setAccountsError("");
+    setFailedAccountsLoad(null);
+    if (!cursor) setContributorId("");
+    try {
+      const page = await loadAdminAccountPage(
+        requestJson,
+        search,
+        cursor,
+        controller.signal,
+      );
+      if (controller.signal.aborted) return;
+      setAccounts((current) =>
+        cursor
+          ? [
+              ...new Map(
+                [...current, ...page.data].map((item) => [item.id, item]),
+              ).values(),
+            ]
+          : page.data,
+      );
+      setAccountsCursor(page.nextCursor);
+      setAppliedAccountSearch(search);
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        setAccountsError((error as Error).message);
+        setFailedAccountsLoad({ search, cursor });
+      }
+    } finally {
+      if (!controller.signal.aborted) setAccountsLoading(false);
+    }
+  }
   async function reload(
     requestedListingId = activeListingId.current,
     restoreLinkedSite = true,
@@ -297,10 +345,9 @@ function Content({
     const results = await Promise.allSettled([
       loadRegistrySelection(api, requestedListingId, controller.signal),
       api<Listing[]>("/api/admin/revisions", { signal: controller.signal }),
-      api<AdminUser[]>("/api/admin/users", { signal: controller.signal }),
     ]);
     if (controller.signal.aborted) return;
-    const [context, revisions, users] = results;
+    const [context, revisions] = results;
     const failures: string[] = [];
     if (context.status === "fulfilled" && context.value) {
       const { registry, listing: loadedListing } = context.value;
@@ -330,13 +377,6 @@ function Content({
         "La liste des annonces n’a pas pu être chargée. Actualisez pour réessayer.",
       );
     }
-    if (users.status === "fulfilled") setAccounts(users.value);
-    else {
-      setAccounts([]);
-      failures.push(
-        "La liste des comptes n’a pas pu être chargée. Actualisez pour réessayer.",
-      );
-    }
     setError(failures.join(" "));
     setLoading(false);
   }
@@ -344,6 +384,13 @@ function Content({
     void reload(initialListingId || "");
     return () => pendingLoad.current?.abort();
   }, [initialListingId]);
+  useEffect(() => {
+    void loadAccounts();
+    return () => pendingAccountsLoad.current?.abort();
+  }, []);
+  useEffect(() => {
+    setContributorId("");
+  }, [siteId]);
   useEffect(() => {
     setLevelId((current) =>
       site?.levels.some((item) => item.id === current)
@@ -910,6 +957,92 @@ function Content({
           </p>
           <form
             className="registry-grid"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!busy && !accountsLoading) void loadAccounts(accountSearch);
+            }}
+          >
+            <label className="field">
+              Rechercher un compte
+              <input
+                className="input"
+                type="search"
+                maxLength={80}
+                placeholder="Nom public ou identifiant"
+                value={accountSearch}
+                disabled={busy || accountsLoading}
+                onChange={(event) => setAccountSearch(event.target.value)}
+              />
+            </label>
+            <button
+              className="button button-secondary"
+              disabled={busy || accountsLoading}
+            >
+              Rechercher
+            </button>
+            {accountSearch || appliedAccountSearch ? (
+              <button
+                type="button"
+                className="button button-secondary"
+                disabled={busy || accountsLoading}
+                onClick={() => {
+                  setAccountSearch("");
+                  void loadAccounts();
+                }}
+              >
+                Tous les comptes
+              </button>
+            ) : null}
+          </form>
+          {accountsLoading ? (
+            <p role="status">Chargement des comptes…</p>
+          ) : null}
+          {accountsError ? (
+            <div>
+              <p className="error" role="alert">
+                {accountsError}
+              </p>
+              {failedAccountsLoad ? (
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  disabled={busy || accountsLoading}
+                  onClick={() =>
+                    void loadAccounts(
+                      failedAccountsLoad.search,
+                      failedAccountsLoad.cursor,
+                    )
+                  }
+                >
+                  Réessayer le chargement des comptes
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          {!accountsLoading &&
+          !accountsError &&
+          !accounts.some((account) => account.status === "active") ? (
+            <p className="muted" role="status">
+              Aucun compte actif parmi les résultats chargés.
+              {accountsCursor
+                ? " Chargez les comptes suivants ou précisez la recherche."
+                : ""}
+            </p>
+          ) : null}
+          {accountsCursor ? (
+            <button
+              type="button"
+              className="button button-secondary"
+              disabled={busy || accountsLoading}
+              onClick={() =>
+                void loadAccounts(appliedAccountSearch, accountsCursor)
+              }
+            >
+              Afficher les comptes suivants
+            </button>
+          ) : null}
+          <form
+            className="registry-grid"
             onSubmit={(event) =>
               form(event, (v) => ({
                 action: "set_contributor",
@@ -921,39 +1054,33 @@ function Content({
           >
             <label className="field">
               Compte habilité
-              {accounts.length ? (
-                <>
-                  <input type="hidden" name="userId" value={contributorId} />
-                  <FilterSelect
-                    disabled={busy || loading}
-                    variant="field"
-                    label="Compte habilité aux références communes"
-                    value={contributorId}
-                    onChange={setContributorId}
-                    options={[
-                      { value: "", label: "Choisir un compte actif" },
-                      ...accounts
-                        .filter((account) => account.status === "active")
-                        .map((account) => ({
-                          value: account.id,
-                          label: `${account.name} · ${account.role}`,
-                        })),
-                    ]}
-                  />
-                </>
-              ) : (
-                <input
-                  className="input"
-                  name="userId"
-                  required
-                  placeholder="Identifiant du compte validé"
-                />
-              )}
+              <input type="hidden" name="userId" value={contributorId} />
+              <FilterSelect
+                disabled={
+                  busy || loading || accountsLoading || Boolean(accountsError)
+                }
+                variant="field"
+                label="Compte habilité aux références communes"
+                value={contributorId}
+                onChange={setContributorId}
+                options={[
+                  { value: "", label: "Choisir un compte actif" },
+                  ...accounts
+                    .filter((account) => account.status === "active")
+                    .map((account) => ({
+                      value: account.id,
+                      label: `${account.name} · ${account.id}`,
+                    })),
+                ]}
+              />
             </label>
             <button
               className="button button-secondary"
               disabled={
-                mutationDisabled || (accounts.length > 0 && !contributorId)
+                mutationDisabled ||
+                accountsLoading ||
+                Boolean(accountsError) ||
+                !contributorId
               }
             >
               Accorder l’accès commun
