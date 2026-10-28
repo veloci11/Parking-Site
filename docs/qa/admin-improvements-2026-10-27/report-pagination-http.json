@@ -1,0 +1,380 @@
+{
+  "checkedAt": "2026-10-28T04:45:38.183Z",
+  "status": "passed",
+  "scope": "isolated-loopback-http-report-pagination",
+  "origin": "http://127.0.0.1:3002",
+  "fixtureCounts": {
+    "listingReports": 135,
+    "contextReports": 142,
+    "dedicatedAccounts": 4
+  },
+  "fixturesRetainedForUi": false,
+  "cleanupCommand": "node .data/verify-report-pagination-http.mjs --cleanup",
+  "passedChecks": 68,
+  "failedCheck": null,
+  "checks": [
+    {
+      "name": "loopback_server_reports_demo_mode",
+      "passed": true
+    },
+    {
+      "name": "http_server_uses_exact_disposable_database",
+      "passed": true
+    },
+    {
+      "name": "sqlite_guard_matches_http_identity",
+      "passed": true
+    },
+    {
+      "name": "admin_login_and_identity",
+      "passed": true
+    },
+    {
+      "name": "admin_role",
+      "passed": true
+    },
+    {
+      "name": "listing_queue_schema_ready",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "context_queue_schema_ready",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "moderator_login_and_identity",
+      "passed": true
+    },
+    {
+      "name": "moderator_role",
+      "passed": true
+    },
+    {
+      "name": "owner_a_login_and_identity",
+      "passed": true
+    },
+    {
+      "name": "owner_a_role",
+      "passed": true
+    },
+    {
+      "name": "owner_b_login_and_identity",
+      "passed": true
+    },
+    {
+      "name": "owner_b_role",
+      "passed": true
+    },
+    {
+      "name": "listing_admin_all_page_1",
+      "passed": true,
+      "rows": 50
+    },
+    {
+      "name": "listing_admin_all_page_2",
+      "passed": true,
+      "rows": 50
+    },
+    {
+      "name": "listing_admin_all_page_3",
+      "passed": true,
+      "rows": 35
+    },
+    {
+      "name": "listing_admin_all_complete_without_duplicate_or_omission",
+      "passed": true,
+      "pages": 3,
+      "fixtureRows": 135,
+      "totalRows": 135
+    },
+    {
+      "name": "listing_open_page_1",
+      "passed": true,
+      "rows": 5
+    },
+    {
+      "name": "listing_open_complete_without_duplicate_or_omission",
+      "passed": true,
+      "pages": 1,
+      "fixtureRows": 5,
+      "totalRows": 5
+    },
+    {
+      "name": "listing_reviewed_page_1",
+      "passed": true,
+      "rows": 50
+    },
+    {
+      "name": "listing_reviewed_page_2",
+      "passed": true,
+      "rows": 30
+    },
+    {
+      "name": "listing_reviewed_complete_without_duplicate_or_omission",
+      "passed": true,
+      "pages": 2,
+      "fixtureRows": 80,
+      "totalRows": 80
+    },
+    {
+      "name": "listing_dismissed_page_1",
+      "passed": true,
+      "rows": 50
+    },
+    {
+      "name": "listing_dismissed_complete_without_duplicate_or_omission",
+      "passed": true,
+      "pages": 1,
+      "fixtureRows": 50,
+      "totalRows": 50
+    },
+    {
+      "name": "listing_moderator_open_page_1",
+      "passed": true,
+      "rows": 5
+    },
+    {
+      "name": "listing_moderator_open_complete_without_duplicate_or_omission",
+      "passed": true,
+      "pages": 1,
+      "fixtureRows": 5,
+      "totalRows": 5
+    },
+    {
+      "name": "context_admin_all_page_1",
+      "passed": true,
+      "rows": 50
+    },
+    {
+      "name": "context_admin_all_page_2",
+      "passed": true,
+      "rows": 50
+    },
+    {
+      "name": "context_admin_all_page_3",
+      "passed": true,
+      "rows": 42
+    },
+    {
+      "name": "context_admin_all_complete_without_duplicate_or_omission",
+      "passed": true,
+      "pages": 3,
+      "fixtureRows": 142,
+      "totalRows": 142
+    },
+    {
+      "name": "context_open_page_1",
+      "passed": true,
+      "rows": 12
+    },
+    {
+      "name": "context_open_complete_without_duplicate_or_omission",
+      "passed": true,
+      "pages": 1,
+      "fixtureRows": 12,
+      "totalRows": 12
+    },
+    {
+      "name": "context_reviewed_page_1",
+      "passed": true,
+      "rows": 50
+    },
+    {
+      "name": "context_reviewed_page_2",
+      "passed": true,
+      "rows": 30
+    },
+    {
+      "name": "context_reviewed_complete_without_duplicate_or_omission",
+      "passed": true,
+      "pages": 2,
+      "fixtureRows": 80,
+      "totalRows": 80
+    },
+    {
+      "name": "context_dismissed_page_1",
+      "passed": true,
+      "rows": 50
+    },
+    {
+      "name": "context_dismissed_complete_without_duplicate_or_omission",
+      "passed": true,
+      "pages": 1,
+      "fixtureRows": 50,
+      "totalRows": 50
+    },
+    {
+      "name": "context_moderator_open_page_1",
+      "passed": true,
+      "rows": 12
+    },
+    {
+      "name": "context_moderator_open_complete_without_duplicate_or_omission",
+      "passed": true,
+      "pages": 1,
+      "fixtureRows": 12,
+      "totalRows": 12
+    },
+    {
+      "name": "context_owner_a_all_page_1",
+      "passed": true,
+      "rows": 50
+    },
+    {
+      "name": "context_owner_a_all_page_2",
+      "passed": true,
+      "rows": 50
+    },
+    {
+      "name": "context_owner_a_all_page_3",
+      "passed": true,
+      "rows": 35
+    },
+    {
+      "name": "context_owner_a_all_complete_without_duplicate_or_omission",
+      "passed": true,
+      "pages": 3,
+      "fixtureRows": 135,
+      "totalRows": 135
+    },
+    {
+      "name": "context_owner_a_old_open_page_1",
+      "passed": true,
+      "rows": 5
+    },
+    {
+      "name": "context_owner_a_old_open_complete_without_duplicate_or_omission",
+      "passed": true,
+      "pages": 1,
+      "fixtureRows": 5,
+      "totalRows": 5
+    },
+    {
+      "name": "context_owner_b_isolated_page_1",
+      "passed": true,
+      "rows": 7
+    },
+    {
+      "name": "context_owner_b_isolated_complete_without_duplicate_or_omission",
+      "passed": true,
+      "pages": 1,
+      "fixtureRows": 7,
+      "totalRows": 7
+    },
+    {
+      "name": "admin/reports_anonymous_denied",
+      "passed": true,
+      "status": 401
+    },
+    {
+      "name": "admin/reports_member_denied",
+      "passed": true,
+      "status": 403
+    },
+    {
+      "name": "admin/reports_bad_status_rejected",
+      "passed": true,
+      "status": 400
+    },
+    {
+      "name": "admin/reports_duplicate_status_rejected",
+      "passed": true,
+      "status": 400
+    },
+    {
+      "name": "admin/reports_bad_limit_rejected",
+      "passed": true,
+      "status": 400
+    },
+    {
+      "name": "admin/reports_duplicate_limit_rejected",
+      "passed": true,
+      "status": 400
+    },
+    {
+      "name": "admin/reports_bad_cursor_rejected",
+      "passed": true,
+      "status": 400
+    },
+    {
+      "name": "admin/report-context_anonymous_denied",
+      "passed": true,
+      "status": 401
+    },
+    {
+      "name": "admin/report-context_member_denied",
+      "passed": true,
+      "status": 403
+    },
+    {
+      "name": "admin/report-context_bad_status_rejected",
+      "passed": true,
+      "status": 400
+    },
+    {
+      "name": "admin/report-context_duplicate_status_rejected",
+      "passed": true,
+      "status": 400
+    },
+    {
+      "name": "admin/report-context_bad_limit_rejected",
+      "passed": true,
+      "status": 400
+    },
+    {
+      "name": "admin/report-context_duplicate_limit_rejected",
+      "passed": true,
+      "status": 400
+    },
+    {
+      "name": "admin/report-context_bad_cursor_rejected",
+      "passed": true,
+      "status": 400
+    },
+    {
+      "name": "listing_cursor_cannot_cross_status",
+      "passed": true,
+      "status": 400
+    },
+    {
+      "name": "listing_cursor_cannot_cross_to_context",
+      "passed": true,
+      "status": 400
+    },
+    {
+      "name": "admin_context_cursor_cannot_be_reused_by_member",
+      "passed": true,
+      "status": 400
+    },
+    {
+      "name": "owner_context_cursor_cannot_cross_owner",
+      "passed": true,
+      "status": 400
+    },
+    {
+      "name": "owner_context_cursor_cannot_cross_status",
+      "passed": true,
+      "status": 400
+    },
+    {
+      "name": "foreign_context_detail_hidden",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "owner_detail_without_moderator_evidence",
+      "passed": true
+    }
+  ],
+  "supabaseTouched": false,
+  "productionTouched": false,
+  "externalEmailSent": false,
+  "limitations": [
+    "Local SQLite backend only; Supabase RPC and RLS require separate validation.",
+    "Synthetic fixtures are inserted directly to exercise HTTP pagination; report submission and browser interactions are outside this script.",
+    "Fixtures retained in the guarded disposable runtime for the coordinator's UI review; cleanup is explicit."
+  ],
+  "cleanedAt": "2026-10-28T04:50:01.569Z"
+}

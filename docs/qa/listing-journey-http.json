@@ -1,9 +1,9 @@
 {
-  "checkedAt": "2026-10-25T05:26:25.791Z",
+  "checkedAt": "2026-10-28T04:47:13.591Z",
   "status": "passed",
   "scope": "isolated-loopback-http-five-mixed-unit-offers-address-search-manual-modeling-publication-availability-legacy-lot",
   "origin": "http://127.0.0.1:3002",
-  "serverMode": "next start (production build), disposable local SQLite fixtures",
+  "serverMode": "coordinator_unspecified",
   "passed": 169,
   "failedCheck": null,
   "checks": [
