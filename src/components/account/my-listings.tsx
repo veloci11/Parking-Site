@@ -2,7 +2,9 @@
 import { listingPrice, offerLabel } from "@/lib/listing-price";
 import { pricingScope, ListingOffersTable } from "../ListingOffers";
 import { ModelRequest } from "./modeling-request";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import SafePhoto from "../SafePhoto";
+import { updateManagedListing } from "@/lib/seller-account-state";
 import Link from "next/link";
 import { Check, ClipboardList, Pause, Plus, X } from "lucide-react";
 import { AccountGate, AccountShell, api, statusLabels } from "./shared";
@@ -13,19 +15,47 @@ function Content({ user }: { user: User }) {
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(""),
+    [needsRefresh, setNeedsRefresh] = useState(false),
     [notice, setNotice] = useState("");
-  function load() {
+  const readController = useRef<AbortController | null>(null);
+  const sending = useRef(false);
+  const mounted = useRef(true);
+  const load = useCallback(async () => {
+    if (sending.current) return;
+    readController.current?.abort();
+    const controller = new AbortController();
+    readController.current = controller;
     setLoading(true);
     setError("");
-    return api<{ data: Listing[] }>("/api/me/listings")
-      .then((r) => setItems(r.data))
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }
-  useEffect(() => {
-    load();
+    setNotice("");
+    try {
+      const result = await api<{ data: Listing[] }>("/api/me/listings", {
+        signal: controller.signal,
+      });
+      if (controller.signal.aborted) return;
+      setItems(result.data);
+      setNeedsRefresh(false);
+    } catch (e) {
+      if (controller.signal.aborted) return;
+      setError((e as Error).message);
+      setNeedsRefresh(true);
+    } finally {
+      if (!controller.signal.aborted) {
+        readController.current = null;
+        setLoading(false);
+      }
+    }
   }, []);
-  async function lifecycle(item: Listing, action: string) {
+  useEffect(() => {
+    mounted.current = true;
+    void load();
+    return () => {
+      mounted.current = false;
+      readController.current?.abort();
+    };
+  }, [load]);
+  async function changeStatus(item: Listing, action: string) {
+    if (sending.current || readController.current || needsRefresh) return;
     if (
       (action === "sold" || action === "withdraw") &&
       !window.confirm(
@@ -35,37 +65,43 @@ function Content({ user }: { user: User }) {
       )
     )
       return;
+    sending.current = true;
     setBusy(item.id);
     setError("");
+    setNotice("");
     try {
-      await api(`/api/listings/${item.id}/lifecycle`, {
-        method: "POST",
-        body: JSON.stringify({ action, version: item.version }),
-      });
-      setNotice("Le statut de votre annonce a été mis à jour.");
-      await load();
+      const result = await api<{ data: Listing }>(
+        `/api/listings/${item.id}/${action === "availability" ? "availability" : "lifecycle"}`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            ...(action === "availability" ? {} : { action }),
+            version: item.version,
+          }),
+        },
+      );
+      if (!mounted.current) return;
+      // Keep all other rows mounted, including any unsent 3D request.
+      const updated = updateManagedListing(items, item.id, result.data);
+      setItems(updated);
+      setNotice(
+        action === "availability"
+          ? "La disponibilité a été confirmée pour 90 jours."
+          : "Le statut de votre annonce a été mis à jour.",
+      );
     } catch (e) {
-      setError((e as Error).message);
+      if (!mounted.current) return;
+      setError(
+        `${(e as Error).message} Actualisez vos annonces avant une nouvelle action.`,
+      );
+      // A lost response may still follow a successful write. Reload before retrying.
+      setNeedsRefresh(true);
     } finally {
-      setBusy("");
+      sending.current = false;
+      if (mounted.current) setBusy("");
     }
   }
-  async function reconfirm(item: Listing) {
-    setBusy(item.id);
-    setError("");
-    try {
-      await api(`/api/listings/${item.id}/availability`, {
-        method: "POST",
-        body: JSON.stringify({ version: item.version }),
-      });
-      setNotice("La disponibilité a été confirmée pour 90 jours.");
-      await load();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy("");
-    }
-  }
+  const actionsDisabled = !!busy || loading || needsRefresh;
   const visible = items.filter((l) => filter === "all" || l.status === filter);
   return (
     <AccountShell
@@ -123,16 +159,16 @@ function Content({ user }: { user: User }) {
             disabled={loading || !!busy}
             onClick={() => void load()}
           >
-            Réessayer
+            Actualiser mes annonces
           </button>
         </div>
       ) : null}
-      {notice ? (
+      {busy || notice ? (
         <p className="notice" role="status">
-          {notice}
+          {busy ? "Mise à jour de l’annonce…" : notice}
         </p>
       ) : null}
-      {loading ? (
+      {loading && items.length === 0 ? (
         <p role="status">Chargement…</p>
       ) : visible.length ? (
         <div className="account-list">
@@ -140,11 +176,12 @@ function Content({ user }: { user: User }) {
             <article className="account-manage-listing card" key={l.id}>
               <div className="account-listing-image">
                 {l.photos[0] ? (
-                  <img
+                  <SafePhoto
                     src={l.photos[0]}
                     alt={l.title}
-                    loading="lazy"
-                    decoding="async"
+                    width={184}
+                    height={148}
+                    sizes="(max-width: 700px) calc(100vw - 64px), (max-width: 980px) 140px, 184px"
                   />
                 ) : (
                   <ClipboardList size={28} />
@@ -210,8 +247,8 @@ function Content({ user }: { user: User }) {
                   {l.status === "published" ? (
                     <button
                       className="button button-secondary"
-                      disabled={busy === l.id}
-                      onClick={() => void reconfirm(l)}
+                      disabled={actionsDisabled}
+                      onClick={() => void changeStatus(l, "availability")}
                     >
                       Confirmer disponible 90 jours
                     </button>
@@ -237,18 +274,18 @@ function Content({ user }: { user: User }) {
                   {l.status === "published" ? (
                     <>
                       <button
-                        disabled={busy === l.id}
+                        disabled={actionsDisabled}
                         className="button button-secondary"
-                        onClick={() => lifecycle(l, "pause")}
+                        onClick={() => changeStatus(l, "pause")}
                       >
                         <Pause size={16} />
                         Pause
                       </button>
                       {l.pricingMode !== "per_space" ? (
                         <button
-                          disabled={busy === l.id}
+                          disabled={actionsDisabled}
                           className="button button-secondary"
-                          onClick={() => lifecycle(l, "sold")}
+                          onClick={() => changeStatus(l, "sold")}
                         >
                           <Check size={16} />
                           {l.transactionType === "rent" ? "Louée" : "Vendue"}
@@ -258,18 +295,18 @@ function Content({ user }: { user: User }) {
                   ) : null}
                   {l.status === "paused" ? (
                     <button
-                      disabled={busy === l.id}
+                      disabled={actionsDisabled}
                       className="button button-secondary"
-                      onClick={() => lifecycle(l, "resume")}
+                      onClick={() => changeStatus(l, "resume")}
                     >
                       Remettre en ligne
                     </button>
                   ) : null}
                   {["published", "paused", "pending"].includes(l.status) ? (
                     <button
-                      disabled={busy === l.id}
+                      disabled={actionsDisabled}
                       className="button button-secondary"
-                      onClick={() => lifecycle(l, "withdraw")}
+                      onClick={() => changeStatus(l, "withdraw")}
                     >
                       <X size={16} />
                       Retirer

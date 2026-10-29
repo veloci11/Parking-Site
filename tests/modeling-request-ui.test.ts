@@ -15,7 +15,10 @@ test("optional modeling request embeds inside the wizard without nesting a form 
   assert.equal((html.match(/<form\b/g) || []).length, 1);
   assert.match(html, /Modélisation 3D · facultatif/);
   assert.match(html, /ne bloque pas la publication de l’annonce/);
-  assert.match(html, /href="\/compte\/scenes">Ajouter un plan<\/a>/);
+  assert.match(
+    html,
+    /href="\/compte\/scenes\?listingId=test-listing">Ajouter un plan<\/a>/,
+  );
   assert.doesNotMatch(html, /<button(?![^>]*type="button")/);
   assert.doesNotMatch(html, /<details[^>]*\bopen\b/);
 });

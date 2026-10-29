@@ -22,7 +22,10 @@ import {
   MousePointer2,
 } from "lucide-react";
 import { areaLabel, type Listing, type Space } from "@/lib/types";
-import { parsePublicScene, type PublicScene } from "@/lib/scene-contract";
+import type { PublicScene } from "@/lib/scene-contract";
+import { createPublicRefresh } from "@/lib/public-refresh";
+import { loadPublicParkingScene } from "@/lib/public-viewer-data";
+import { movePhotoIndex, photoIndex } from "@/lib/photo-navigation";
 import type {
   PublicParkingLevelPlan,
   PublicParkingSceneGroup,
@@ -148,15 +151,16 @@ function Photos({
       ? listing.spacePhotos[selectedId]
       : listing.photos;
   useEffect(() => setIndex(0), [listing.id, selectedId]);
-  const current = photos[Math.min(index, photos.length - 1)];
+  const position = photoIndex(index, photos.length);
+  const current = photos[position];
   return (
     <div className="gp-viewer-photo">
       {current ? (
         <PreparedPhotos
           key={`${listing.id}:${selectedId || "general"}`}
           photos={photos}
-          index={Math.min(index, photos.length - 1)}
-          alt={`Parking à ${listing.city}, ${listing.district} · photo ${Math.min(index, photos.length - 1) + 1}`}
+          index={position}
+          alt={`Parking à ${listing.city}, ${listing.district} · photo ${position + 1}`}
           width={1200}
           height={800}
           sizes="(max-width:767px) calc(100vw - 48px), (max-width:1200px) 80vw, 960px"
@@ -177,18 +181,20 @@ function Photos({
             type="button"
             aria-label="Photo précédente"
             onClick={() =>
-              setIndex((value) => (value + photos.length - 1) % photos.length)
+              setIndex((value) => movePhotoIndex(value, photos.length, -1))
             }
           >
             <ChevronLeft size={18} />
           </button>
           <span>
-            {index + 1} / {photos.length}
+            {position + 1} / {photos.length}
           </span>
           <button
             type="button"
             aria-label="Photo suivante"
-            onClick={() => setIndex((value) => (value + 1) % photos.length)}
+            onClick={() =>
+              setIndex((value) => movePhotoIndex(value, photos.length, 1))
+            }
           >
             <ChevronRight size={18} />
           </button>
@@ -349,12 +355,14 @@ function PublicPlan({
   selected,
   onSelect,
   demo,
+  loadingFailed,
 }: {
   scene: Scene | null;
   units: UnitReference[];
   selected: string | null;
   onSelect: (id: string) => void;
   demo?: DisplaySpace[];
+  loadingFailed?: boolean;
 }) {
   return (
     <div className="gp-semantic-plan">
@@ -374,8 +382,10 @@ function PublicPlan({
       )}
       {!scene && !demo ? (
         <p>
-          Consultez chaque place et ses dimensions. Le plan de ce niveau n’est
-          pas encore disponible.
+          Consultez chaque place et ses dimensions.
+          {!loadingFailed
+            ? " Le plan de ce niveau n’est pas encore disponible."
+            : ""}
         </p>
       ) : null}
       <div className="gp-semantic-spaces">
@@ -469,6 +479,8 @@ export default function ParkingViewer(props: ParkingViewerProps) {
     null,
   );
   const [loadingScene, setLoadingScene] = useState(false);
+  const [sceneError, setSceneError] = useState("");
+  const [sceneAttempt, setSceneAttempt] = useState(0);
   const [supported, setSupported] = useState<boolean | null>(null);
   const levelLayer = useRef<HTMLDivElement>(null);
   const firstLookup = useRef(true);
@@ -694,6 +706,7 @@ export default function ParkingViewer(props: ParkingViewerProps) {
 
   useEffect(() => {
     setIndividualScene(null);
+    setSceneError("");
     if (
       group ||
       listing.locationPrecision !== "exact_opt_in" ||
@@ -704,33 +717,29 @@ export default function ParkingViewer(props: ParkingViewerProps) {
       setLoadingScene(false);
       return;
     }
-    const controller = new AbortController();
     setLoadingScene(true);
-    void (async () => {
-      let response = await fetch(
-        `/api/scenes?listingId=${encodeURIComponent(listing.id)}&level=${level}`,
-        { signal: controller.signal },
-      );
-      if (!response.ok && firstLookup.current && levels.length > 1)
-        response = await fetch(
-          `/api/scenes?listingId=${encodeURIComponent(listing.id)}`,
-          { signal: controller.signal },
-        );
-      firstLookup.current = false;
-      if (!response.ok) return;
-      const result = await response.json();
-      const parsed = parsePublicScene(result.data);
-      if (parsed && !controller.signal.aborted) {
+    const request = createPublicRefresh({
+      load: (signal) =>
+        loadPublicParkingScene(
+          listing.id,
+          level,
+          firstLookup.current && levels.length > 1,
+          signal,
+        ),
+      onSuccess: (parsed) => {
+        firstLookup.current = false;
         setIndividualScene(parsed);
-        if (parsed.manifest.level !== level)
+        setLoadingScene(false);
+        if (parsed && parsed.manifest.level !== level)
           persistSelection(parsed.manifest.level, null);
-      }
-    })()
-      .catch(() => {})
-      .finally(() => {
-        if (!controller.signal.aborted) setLoadingScene(false);
-      });
-    return () => controller.abort();
+      },
+      onError: () => {
+        setSceneError("Le plan n’a pas pu être chargé. Réessayez.");
+        setLoadingScene(false);
+      },
+    });
+    void request.refresh();
+    return () => request.dispose();
   }, [
     group,
     listing.id,
@@ -738,6 +747,7 @@ export default function ParkingViewer(props: ParkingViewerProps) {
     listing.sceneAvailable,
     level,
     demoAllowed,
+    sceneAttempt,
   ]);
 
   const plan = (
@@ -747,6 +757,7 @@ export default function ParkingViewer(props: ParkingViewerProps) {
       selected={selected}
       onSelect={chooseUnit}
       demo={demoAllowed && levelUnits.length <= 8 ? slots : undefined}
+      loadingFailed={Boolean(sceneError)}
     />
   );
   const title = selectedReference
@@ -842,6 +853,18 @@ export default function ParkingViewer(props: ParkingViewerProps) {
           <LevelSwitch levels={levels} current={level} onChange={chooseLevel} />
         ) : null}
       </div>
+      {sceneError && effectiveMode !== "map" ? (
+        <div className="gp-viewer-model-note" role="alert">
+          <span>{sceneError}</span>
+          <button
+            type="button"
+            className="button button-secondary"
+            onClick={() => setSceneAttempt((attempt) => attempt + 1)}
+          >
+            Réessayer
+          </button>
+        </div>
+      ) : null}
       {lots.length > 1 ? (
         <div
           className="gp-viewer-lots"
@@ -1030,7 +1053,7 @@ export default function ParkingViewer(props: ParkingViewerProps) {
                 </div>
               </>
             ) : null}
-            {effectiveMode === "photo" && !hasModel ? (
+            {effectiveMode === "photo" && !hasModel && !sceneError ? (
               <div className="gp-viewer-model-note">
                 <Layers3 size={15} />
                 <span>Le plan de ce niveau n’est pas encore disponible.</span>

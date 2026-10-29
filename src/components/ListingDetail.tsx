@@ -9,6 +9,8 @@ import {
   spaceOfferStatus,
 } from "./ListingOffers";
 import { loadPublicParkingGroup } from "@/lib/parking-client";
+import { createPublicRefresh } from "@/lib/public-refresh";
+import { loadPublicListing } from "@/lib/public-viewer-data";
 import type { PublicParkingSceneGroup } from "@/lib/parking-registry";
 import { parkingListingGroupLabel } from "@/lib/parking-lots";
 import {
@@ -404,33 +406,29 @@ export default function ListingDetail({
     } catch {
       // A blocked optional history store must not prevent availability checks.
     }
-    async function refresh() {
-      if (document.visibilityState !== "visible") return;
-      try {
-        const response = await fetch(`/api/listings/${initialListing.id}`, {
-          cache: "no-store",
-        });
-        if (response.status === 404) {
-          setUnavailable(true);
-          return;
-        }
-        const result = await response.json();
-        if (!response.ok)
-          throw new Error(
-            "L’état actuel de l’annonce n’a pas pu être vérifié.",
-          );
-        setListing(result.data);
-        setUnavailable(false);
+    const revalidation = createPublicRefresh({
+      load: (signal) => loadPublicListing(initialListing.id, signal),
+      onSuccess: (current) => {
+        if (current) setListing(current);
+        setUnavailable(!current);
         setFreshnessError("");
-      } catch (e) {
-        setFreshnessError((e as Error).message);
-      }
+      },
+      onError: () => {
+        setFreshnessError(
+          "L’état actuel de l’annonce n’a pas pu être vérifié.",
+        );
+      },
+    });
+    function refresh() {
+      if (document.visibilityState !== "visible") return;
+      return revalidation.refresh();
     }
     const timer = setInterval(() => void refresh(), 30000);
     const focus = () => void refresh();
     window.addEventListener("focus", focus);
     document.addEventListener("visibilitychange", focus);
     return () => {
+      revalidation.dispose();
       clearInterval(timer);
       window.removeEventListener("focus", focus);
       document.removeEventListener("visibilitychange", focus);

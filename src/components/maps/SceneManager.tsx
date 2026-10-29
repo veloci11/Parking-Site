@@ -44,15 +44,17 @@ const states: Record<string, string> = {
 function SceneManagerContent({
   user,
   review,
+  initialListingId,
 }: {
   user: User;
   review: boolean;
+  initialListingId?: string;
 }) {
   const [loading, setLoading] = useState(true),
     [selecting, setSelecting] = useState(false),
     [listings, setListings] = useState<Listing[]>([]),
     [selected, setSelected] = useState<Listing | null>(null),
-    [lookup, setLookup] = useState(""),
+    [lookup, setLookup] = useState(initialListingId || ""),
     [entries, setEntries] = useState<SceneEntry[]>([]),
     [sources, setSources] = useState<SourceEntry[]>([]),
     [evidence, setEvidence] = useState<string[]>([]),
@@ -97,7 +99,18 @@ function SceneManagerContent({
       if (controller.signal.aborted) return;
       setEntries(models);
       setListings(own);
-      if (selectedId.current === listingId) setSources(documents);
+      if (
+        initialListingId &&
+        !selectedId.current &&
+        (!selectionPending.current || selectionPending.current.signal.aborted)
+      ) {
+        const listing = own.find((item) => item.id === initialListingId);
+        if (!review && !listing)
+          throw new Error(
+            "Cette annonce n’est pas disponible dans votre compte.",
+          );
+        await choose(initialListingId, listing);
+      } else if (selectedId.current === listingId) setSources(documents);
     } catch (e) {
       if (!controller.signal.aborted) setError((e as Error).message);
     } finally {
@@ -110,7 +123,7 @@ function SceneManagerContent({
       listPending.current?.abort();
       selectionPending.current?.abort();
     };
-  }, [review, user.id]);
+  }, [review, user.id, initialListingId]);
   async function choose(
     id: string,
     knownListing?: Listing,
@@ -145,7 +158,11 @@ function SceneManagerContent({
       setRights(false);
       setSources(result.sources);
     } catch (e) {
-      if (!controller.signal.aborted) setError((e as Error).message);
+      if (!controller.signal.aborted) {
+        setError((e as Error).message);
+        if (selectionPending.current === controller)
+          selectionPending.current = null;
+      }
     } finally {
       if (!controller.signal.aborted) setSelecting(false);
     }
@@ -827,14 +844,21 @@ function SceneManagerContent({
   );
 }
 
-export default function SceneManager({ review = false }: { review?: boolean }) {
+export default function SceneManager({
+  review = false,
+  initialListingId,
+}: {
+  review?: boolean;
+  initialListingId?: string;
+}) {
   return (
     <AccountGate admin={review}>
       {(user) => (
         <SceneManagerContent
-          key={`${user.id}:${review}`}
+          key={`${user.id}:${review}:${initialListingId || ""}`}
           user={user}
           review={review}
+          initialListingId={initialListingId}
         />
       )}
     </AccountGate>

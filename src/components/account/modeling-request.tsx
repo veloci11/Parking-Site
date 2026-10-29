@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Box, RefreshCw } from "lucide-react";
 import FilterSelect from "../FilterSelect";
 import { api } from "./shared";
+import { modelingDecisionConfirmed } from "@/lib/modeling-request-review";
 import type {
   ModelingRequest,
   AdminModelingRequest,
@@ -185,7 +186,10 @@ export function ModelRequest({ listingId }: { listingId: string }) {
           </>
         ) : null}
         <div className="account-review-actions">
-          <Link href="/compte/scenes" className="text-button">
+          <Link
+            href={`/compte/scenes?listingId=${encodeURIComponent(listingId)}`}
+            className="text-button"
+          >
             Ajouter un plan
           </Link>
           <button
@@ -205,18 +209,44 @@ export function ModelRequest({ listingId }: { listingId: string }) {
 function AdminRequestEditor({
   request,
   onSaved,
+  onBusyChange,
+  onReload,
+  onClose,
+  disabled,
 }: {
   request: AdminModelingRequest;
   onSaved: (request: AdminModelingRequest) => void;
+  onBusyChange: (busy: boolean) => void;
+  onReload: () => void;
+  onClose: () => void;
+  disabled: boolean;
 }) {
   const [status, setStatus] = useState<ModelingRequestStatus>(request.status);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [needsReload, setNeedsReload] = useState(false);
   const submitting = useRef(false);
+  const detail = useRef<HTMLElement>(null);
+  useEffect(() => {
+    detail.current?.focus({ preventScroll: true });
+    detail.current?.scrollIntoView({
+      block: "start",
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth",
+    });
+  }, []);
   async function save() {
-    if (submitting.current || status === request.status) return;
+    if (
+      submitting.current ||
+      disabled ||
+      needsReload ||
+      status === request.status
+    )
+      return;
     submitting.current = true;
     setBusy(true);
+    onBusyChange(true);
     setError("");
     try {
       const { data } = await api<{ data: AdminModelingRequest }>(
@@ -230,17 +260,41 @@ function AdminRequestEditor({
           }),
         },
       );
+      if (!modelingDecisionConfirmed(request, status, data)) {
+        throw new Error(
+          "Le changement n’a pas pu être confirmé. Actualisez la demande avant de poursuivre.",
+        );
+      }
       onSaved(data);
     } catch (error) {
       setError((error as Error).message);
+      setNeedsReload(true);
     } finally {
       submitting.current = false;
       setBusy(false);
+      onBusyChange(false);
     }
   }
   return (
-    <article className="card account-review-detail">
-      <h3>{request.listingTitle || "Annonce sans titre"}</h3>
+    <article
+      id="modeling-request-dossier"
+      className="card account-review-detail"
+      ref={detail}
+      tabIndex={-1}
+      aria-label={`Demande 3D · ${request.listingTitle || "Annonce sans titre"}`}
+    >
+      <div className="account-section-title">
+        <h3>{request.listingTitle || "Annonce sans titre"}</h3>
+        <button
+          type="button"
+          className="text-button"
+          style={{ flexShrink: 0, whiteSpace: "nowrap" }}
+          disabled={busy}
+          onClick={onClose}
+        >
+          Fermer
+        </button>
+      </div>
       <p className="muted small">
         {request.ownerName} · demande du {requestDate(request.requestedAt)} ·
         mise à jour le {requestDate(request.updatedAt)}
@@ -259,13 +313,23 @@ function AdminRequestEditor({
           value={status}
           onChange={(value) => setStatus(value as ModelingRequestStatus)}
           options={statusOptions}
-          disabled={busy}
+          disabled={busy || disabled || needsReload}
         />
       </div>
       {error ? (
         <p className="error" role="alert">
           {error}
         </p>
+      ) : null}
+      {needsReload ? (
+        <button
+          type="button"
+          className="button button-secondary"
+          disabled={busy || disabled}
+          onClick={onReload}
+        >
+          Actualiser la demande
+        </button>
       ) : null}
       <p className="small muted">
         Une préparation terminée reste soumise au contrôle et à la publication
@@ -275,7 +339,9 @@ function AdminRequestEditor({
         <button
           type="button"
           className="button button-primary"
-          disabled={busy || status === request.status}
+          disabled={
+            busy || disabled || needsReload || status === request.status
+          }
           onClick={() => void save()}
         >
           {busy ? "Enregistrement…" : "Enregistrer le statut"}
@@ -286,7 +352,10 @@ function AdminRequestEditor({
         >
           Consulter le dossier du parking
         </Link>
-        <Link className="text-button" href="/admin/scenes">
+        <Link
+          className="text-button"
+          href={`/admin/scenes?listingId=${encodeURIComponent(request.listingId)}`}
+        >
           Contrôler les plans et vues 3D
         </Link>
       </div>
@@ -304,48 +373,80 @@ export function AdminModelingRequests() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [status, setStatus] = useState("all");
+  const [saving, setSaving] = useState(false);
+  const [reviewEpoch, setReviewEpoch] = useState(0);
+  const [failedLoad, setFailedLoad] = useState<{
+    offset: number;
+    append: boolean;
+  } | null>(null);
   const controller = useRef<AbortController | null>(null);
-  const load = useCallback(async (offset = 0, append = false) => {
-    controller.current?.abort();
-    const pending = new AbortController();
-    controller.current = pending;
-    setLoading(!append);
-    setLoadingMore(append);
-    setError("");
-    try {
-      const { data } = await api<{ data: ModelingRequestsPage }>(
-        `/api/admin/modeling-requests?offset=${offset}&limit=25`,
-        {
-          signal: pending.signal,
-        },
-      );
-      if (pending.signal.aborted) return;
-      setItems((current) =>
-        append
-          ? [
-              ...current,
-              ...data.requests.filter(
-                (item) =>
-                  !current.some(
-                    (previous) => previous.listingId === item.listingId,
-                  ),
-              ),
-            ]
-          : data.requests,
-      );
-      setTotal(data.total);
-      setNextOffset(data.offset + data.requests.length);
-      setHasMore(data.hasMore);
-    } catch (error) {
-      if (!pending.signal.aborted) setError((error as Error).message);
-    } finally {
-      if (!pending.signal.aborted) {
-        setLoading(false);
-        setLoadingMore(false);
+  const load = useCallback(
+    async (offset = 0, append = false) => {
+      controller.current?.abort();
+      const pending = new AbortController();
+      controller.current = pending;
+      setLoading(!append);
+      setLoadingMore(append);
+      setError("");
+      setFailedLoad(null);
+      try {
+        const params = new URLSearchParams({
+          offset: String(offset),
+          limit: "25",
+        });
+        if (status !== "all") params.set("status", status);
+        const { data } = await api<{ data: ModelingRequestsPage }>(
+          `/api/admin/modeling-requests?${params}`,
+          {
+            signal: pending.signal,
+          },
+        );
+        if (pending.signal.aborted) return;
+        setItems((current) =>
+          append
+            ? [
+                ...current,
+                ...data.requests.filter(
+                  (item) =>
+                    !current.some(
+                      (previous) => previous.listingId === item.listingId,
+                    ),
+                ),
+              ]
+            : data.requests,
+        );
+        setTotal(data.total);
+        setNextOffset(data.offset + data.requests.length);
+        setHasMore(data.hasMore);
+        if (!append) {
+          setReviewEpoch((value) => value + 1);
+          setSelectedId((current) =>
+            data.requests.some((item) => item.listingId === current)
+              ? current
+              : null,
+          );
+        }
+      } catch (error) {
+        if (!pending.signal.aborted) {
+          setError((error as Error).message);
+          setFailedLoad({ offset, append });
+        }
+      } finally {
+        if (!pending.signal.aborted) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
       }
-    }
-  }, []);
+    },
+    [status],
+  );
   useEffect(() => {
+    setItems([]);
+    setSelectedId(null);
+    setTotal(0);
+    setHasMore(false);
+    setNotice("");
     void load();
     return () => controller.current?.abort();
   }, [load]);
@@ -358,12 +459,15 @@ export function AdminModelingRequests() {
     >
       <div className="account-section-title">
         <h2>
-          Demandes 3D <span className="badge">{total}</span>
+          Demandes 3D{" "}
+          <span className="badge">
+            {loading ? "…" : error ? "À actualiser" : total}
+          </span>
         </h2>
         <button
           type="button"
           className="button button-secondary"
-          disabled={loading || loadingMore}
+          disabled={loading || loadingMore || saving}
           onClick={() => void load()}
         >
           <RefreshCw size={16} /> Actualiser
@@ -373,6 +477,18 @@ export function AdminModelingRequests() {
         Préparation manuelle des vues demandées par les annonceurs. Les demandes
         en attente et en cours apparaissent en premier.
       </p>
+      <div className="admin-review-toolbar">
+        <FilterSelect
+          label="Filtrer les demandes 3D"
+          value={status}
+          onChange={setStatus}
+          options={[
+            { value: "all", label: "Toutes les demandes" },
+            ...statusOptions,
+          ]}
+          disabled={saving}
+        />
+      </div>
       {notice ? (
         <p className="notice" role="status">
           {notice}
@@ -383,6 +499,16 @@ export function AdminModelingRequests() {
           {error}
         </p>
       ) : null}
+      {failedLoad ? (
+        <button
+          type="button"
+          className="button button-secondary"
+          disabled={loading || loadingMore || saving}
+          onClick={() => void load(failedLoad.offset, failedLoad.append)}
+        >
+          Réessayer le chargement
+        </button>
+      ) : null}
       {loading ? <p role="status">Chargement des demandes 3D…</p> : null}
       <div className="account-list">
         {items.map((request) => (
@@ -390,8 +516,10 @@ export function AdminModelingRequests() {
             type="button"
             key={request.listingId}
             className={`account-review-row ${request.listingId === selectedId ? "active" : ""}`}
+            disabled={saving || loading || loadingMore || Boolean(error)}
             onClick={() => setSelectedId(request.listingId)}
-            aria-pressed={request.listingId === selectedId}
+            aria-expanded={request.listingId === selectedId}
+            aria-controls="modeling-request-dossier"
           >
             <div>
               <strong>{request.listingTitle || "Annonce sans titre"}</strong>
@@ -404,13 +532,17 @@ export function AdminModelingRequests() {
         ))}
       </div>
       {!loading && !error && !items.length ? (
-        <p className="notice">Aucune demande de modélisation pour le moment.</p>
+        <p className="notice">
+          {status === "all"
+            ? "Aucune demande de modélisation pour le moment."
+            : "Aucune demande avec ce statut."}
+        </p>
       ) : null}
       {hasMore ? (
         <button
           type="button"
           className="button button-secondary"
-          disabled={loading || loadingMore}
+          disabled={loading || loadingMore || saving || Boolean(error)}
           onClick={() => void load(nextOffset, true)}
         >
           {loadingMore ? "Chargement…" : "Afficher plus de demandes"}
@@ -418,9 +550,14 @@ export function AdminModelingRequests() {
       ) : null}
       {selected ? (
         <AdminRequestEditor
-          key={`${selected.listingId}:${selected.version}`}
+          key={`${selected.listingId}:${selected.version}:${reviewEpoch}`}
           request={selected}
+          disabled={loading || loadingMore || Boolean(error)}
+          onBusyChange={setSaving}
+          onReload={() => void load()}
+          onClose={() => setSelectedId(null)}
           onSaved={(saved) => {
+            setSelectedId(null);
             setItems((current) =>
               current.map((item) =>
                 item.listingId === saved.listingId ? saved : item,

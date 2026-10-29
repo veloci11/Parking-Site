@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Bell,
@@ -38,36 +38,65 @@ export function NotificationFeed({ compact = false }: { compact?: boolean }) {
     [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(""),
     [error, setError] = useState("");
+  const [loaded, setLoaded] = useState(false);
+  const [needsRefresh, setNeedsRefresh] = useState(false);
+  const reading = useRef(false);
+  const writing = useRef(false);
+  const generation = useRef(0);
   const load = useCallback(async () => {
+    if (reading.current) return;
+    const request = ++generation.current;
+    reading.current = true;
+    setLoading(true);
+    setError("");
     try {
       const r = await api<{ data: NotificationItem[]; unread: number }>(
         "/api/notifications",
       );
+      if (request !== generation.current) return;
       setItems(r.data);
       setUnread(r.unread);
-      setError("");
+      setLoaded(true);
+      setNeedsRefresh(false);
     } catch (e) {
-      setError((e as Error).message);
+      if (request === generation.current) setError((e as Error).message);
     } finally {
-      setLoading(false);
+      if (request === generation.current) {
+        reading.current = false;
+        setLoading(false);
+      }
     }
   }, []);
   useEffect(() => {
     void load();
+    return () => {
+      generation.current++;
+      reading.current = false;
+    };
   }, [load]);
   async function mark(ids?: string[]) {
+    if (writing.current || reading.current || needsRefresh || !loaded) return;
+    writing.current = true;
     setBusy(ids?.[0] || "all");
     setError("");
+    const request = generation.current;
     try {
       await api("/api/notifications/read", {
         method: "POST",
         body: JSON.stringify(ids ? { ids } : {}),
       });
+      if (request !== generation.current) return;
+      // Once a write succeeds, never offer it again against stale unread data.
+      setNeedsRefresh(true);
       await load();
       window.dispatchEvent(new Event("gp:notifications"));
     } catch (e) {
-      setError((e as Error).message);
+      if (request === generation.current) {
+        setNeedsRefresh(true);
+        setError((e as Error).message);
+      }
     } finally {
+      writing.current = false;
       setBusy("");
     }
   }
@@ -81,11 +110,11 @@ export function NotificationFeed({ compact = false }: { compact?: boolean }) {
         ) : (
           <div className="account-notification-actions">
             <span className="badge">
-              {unread} non lue{unread > 1 ? "s" : ""}
+              {loaded ? `${unread} non lue${unread > 1 ? "s" : ""}` : "—"}
             </span>
             <button
               className="button button-secondary"
-              disabled={!!busy || !unread}
+              disabled={!!busy || loading || needsRefresh || !loaded || !unread}
               onClick={() => void mark()}
             >
               <CheckCheck size={16} />
@@ -94,6 +123,7 @@ export function NotificationFeed({ compact = false }: { compact?: boolean }) {
             <button
               className="button button-secondary"
               onClick={() => void load()}
+              disabled={!!busy || loading}
               aria-label="Actualiser les notifications"
             >
               <RefreshCw size={16} />
@@ -102,11 +132,19 @@ export function NotificationFeed({ compact = false }: { compact?: boolean }) {
         )}
       </div>
       {error ? (
-        <p className="error" role="alert">
-          {error}
-        </p>
+        <div className="notice" role="alert">
+          <p>{error}</p>
+          <button
+            type="button"
+            className="button button-secondary"
+            disabled={!!busy || loading}
+            onClick={() => void load()}
+          >
+            {needsRefresh ? "Actualiser les notifications" : "Réessayer"}
+          </button>
+        </div>
       ) : null}
-      {loading ? (
+      {loading && !loaded ? (
         <p role="status">Chargement des notifications…</p>
       ) : shown.length ? (
         <div className="account-notification-list">
@@ -136,7 +174,7 @@ export function NotificationFeed({ compact = false }: { compact?: boolean }) {
                     <Link href={safeHref(n.url)}>Ouvrir</Link>
                     {!n.readAt ? (
                       <button
-                        disabled={!!busy}
+                        disabled={!!busy || loading || needsRefresh}
                         onClick={() => void mark([n.id])}
                       >
                         <Check size={14} />
@@ -149,7 +187,7 @@ export function NotificationFeed({ compact = false }: { compact?: boolean }) {
             );
           })}
         </div>
-      ) : (
+      ) : loaded && !error ? (
         <div className="account-notification-empty">
           <Bell size={24} />
           <div>
@@ -160,21 +198,29 @@ export function NotificationFeed({ compact = false }: { compact?: boolean }) {
             </p>
           </div>
         </div>
-      )}
+      ) : null}
     </section>
   );
 }
 function NotificationPreferences() {
-  const [enabled, setEnabled] = useState(true),
+  const [enabled, setEnabled] = useState<boolean | null>(null),
     [loading, setLoading] = useState(true),
     [saving, setSaving] = useState(false),
     [error, setError] = useState(""),
-    [notice, setNotice] = useState("");
+    [notice, setNotice] = useState(""),
+    [attempt, setAttempt] = useState(0),
+    [needsReload, setNeedsReload] = useState(false);
+  const savingRef = useRef(false);
   useEffect(() => {
     let active = true;
+    setLoading(true);
+    setError("");
     api<{ data: { emailEnabled: boolean } }>("/api/me/notification-settings")
       .then((r) => {
-        if (active) setEnabled(r.data.emailEnabled);
+        if (active) {
+          setEnabled(r.data.emailEnabled);
+          setNeedsReload(false);
+        }
       })
       .catch((e) => {
         if (active) setError(e.message);
@@ -185,8 +231,10 @@ function NotificationPreferences() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [attempt]);
   async function change(next: boolean) {
+    if (savingRef.current || loading || enabled === null || needsReload) return;
+    savingRef.current = true;
     setSaving(true);
     setError("");
     setNotice("");
@@ -199,7 +247,9 @@ function NotificationPreferences() {
       setNotice("Votre préférence a été enregistrée.");
     } catch (e) {
       setError((e as Error).message);
+      setNeedsReload(true);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }
@@ -211,9 +261,17 @@ function NotificationPreferences() {
         votre choix pour les emails.
       </p>
       {error ? (
-        <p className="error" role="alert">
-          {error}
-        </p>
+        <div className="notice" role="alert">
+          <p>{error}</p>
+          <button
+            type="button"
+            className="button button-secondary"
+            disabled={saving || loading}
+            onClick={() => setAttempt((n) => n + 1)}
+          >
+            {needsReload ? "Relire ma préférence" : "Réessayer"}
+          </button>
+        </div>
       ) : null}
       {notice ? (
         <p className="notice" role="status">
@@ -222,19 +280,19 @@ function NotificationPreferences() {
       ) : null}
       {loading ? (
         <p role="status">Chargement de la préférence…</p>
-      ) : (
+      ) : enabled !== null ? (
         <label className="account-checkbox">
           <input
             type="checkbox"
             checked={enabled}
-            disabled={saving}
+            disabled={saving || needsReload}
             onChange={(e) => void change(e.target.checked)}
           />
           <span>
             Notifications par email pour mes annonces et mes conversations.
           </span>
         </label>
-      )}
+      ) : null}
     </section>
   );
 }
