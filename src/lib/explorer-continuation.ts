@@ -5,6 +5,13 @@ export const explorerPageSize = 24;
 const maxContinuationHint = 100000;
 const lifetime = 30 * 60 * 1000;
 
+/** Restore only the explorer routes that write this navigation context. */
+export function explorerReturnHref(saved: string | null): string {
+  return saved && /^\/(?:explorer|favoris)?(?:\?|$)/.test(saved)
+    ? saved
+    : "/?display=list";
+}
+
 /** Keep only search context and depth; public listings and server cursors are reloaded. */
 export function encodeExplorerContinuation(
   context: string,

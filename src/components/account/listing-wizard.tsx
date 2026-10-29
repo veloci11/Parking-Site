@@ -453,6 +453,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
     const guard = (e: BeforeUnloadEvent) => {
       if (
         dirty.current ||
+        uploading ||
         (spaceCountInput !== null &&
           parseSpaceCount(spaceCountInput) !== latest.current?.spaces.length)
       ) {
@@ -462,7 +463,7 @@ function WizardContent({ user, id }: { user: User; id?: string }) {
     };
     window.addEventListener("beforeunload", guard);
     return () => window.removeEventListener("beforeunload", guard);
-  }, [spaceCountInput]);
+  }, [spaceCountInput, uploading]);
   function change(patch: Partial<Listing>) {
     if (!latest.current) return;
     if (

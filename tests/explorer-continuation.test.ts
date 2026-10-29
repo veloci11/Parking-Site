@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
   encodeExplorerContinuation,
+  explorerReturnHref,
   explorerRequestError,
   loadExplorerWindow,
   restoredResultCount,
@@ -25,6 +26,33 @@ process.env.GP_FORCE_LOCAL_DEMO = "true";
 after(() => {
   resetDbForTests();
   rmSync(directory, { recursive: true, force: true });
+});
+
+test("comparison return preserves the full explorer filters, view and selection", () => {
+  for (const pathname of ["/", "/explorer", "/favoris"])
+    for (const display of ["list", "map"]) {
+      const href = `${pathname}?city=Paris&transactionType=rent&priceMax=200&sort=price_asc&display=${display}&listing=selected-public-id`;
+      const restored = explorerReturnHref(href);
+      assert.equal(restored, href);
+      const params = new URL(restored, "http://localhost").searchParams;
+      assert.equal(readSearch(params).maxPrice, "200");
+      assert.equal(params.get("display"), display);
+      assert.equal(params.get("listing"), "selected-public-id");
+    }
+});
+
+test("comparison return uses its fallback for absent or unrelated navigation", () => {
+  for (const saved of [
+    null,
+    "",
+    "https://example.org/",
+    "//example.org/",
+    "/\\example.org/",
+    "javascript:alert(1)",
+    "/compte",
+    "/favoris/another-page",
+  ])
+    assert.equal(explorerReturnHref(saved), "/?display=list");
 });
 
 test("return after two result pages reloads current public offers and a usable cursor with the same filters and selection", async () => {

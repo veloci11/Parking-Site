@@ -1,5 +1,6 @@
 "use client";
 import { listingPrice, offerLabel } from "@/lib/listing-price";
+import { explorerReturnHref } from "@/lib/explorer-continuation";
 import { pricingScope, SpaceOfferSummary } from "./ListingOffers";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -16,8 +17,16 @@ export default function Comparison() {
   const [loading, setLoading] = useState(true);
   const [missing, setMissing] = useState(0);
   const [error, setError] = useState("");
+  const [backHref, setBackHref] = useState("/?display=list");
   const [transactionType, setTransactionType] = useState<TransactionType>();
   useEffect(() => {
+    try {
+      setBackHref(
+        explorerReturnHref(sessionStorage.getItem("gp:explore:href")),
+      );
+    } catch {
+      // Optional navigation storage must not prevent comparison loading.
+    }
     const params = new URLSearchParams(window.location.search);
     const transaction = params.get("transactionType");
     if (transaction === "sale" || transaction === "rent")
@@ -126,7 +135,7 @@ export default function Comparison() {
             Prix, surfaces et caractéristiques des parkings sélectionnés.
           </p>
         </div>
-        <Link href="/?display=list" className="button button-secondary">
+        <Link href={backHref} className="button button-secondary">
           Retour
         </Link>
       </div>

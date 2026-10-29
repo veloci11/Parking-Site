@@ -84,6 +84,7 @@ export default function Explorer({
   const requestGeneration = useRef(0);
   const windowRequestPending = useRef(false);
   const windowRequest = useRef<AbortController | null>(null);
+  const nextPageRequest = useRef<AbortController | null>(null);
   const resultWindow = useRef<{ context: string; count: number } | null>(null);
   const moreFiltersButton = useRef<HTMLButtonElement>(null);
   const moreFiltersPanel = useRef<HTMLDivElement>(null);
@@ -247,7 +248,8 @@ export default function Explorer({
 
   const load = useCallback(
     async (quiet = false) => {
-      if (quiet && windowRequestPending.current) return;
+      if (quiet && (windowRequestPending.current || nextPageRequest.current))
+        return;
       if (favoritesOnly && favorites.loading) {
         setLoading(true);
         return;
@@ -256,6 +258,8 @@ export default function Explorer({
       setError("");
       const generation = ++requestGeneration.current;
       windowRequest.current?.abort();
+      nextPageRequest.current?.abort();
+      nextPageRequest.current = null;
       const controller = new AbortController();
       windowRequest.current = controller;
       const request = (url: string) =>
@@ -406,6 +410,7 @@ export default function Explorer({
     return () => {
       requestGeneration.current++;
       windowRequest.current?.abort();
+      nextPageRequest.current?.abort();
       window.removeEventListener("popstate", restore);
     };
   }, [applySearch, favoritesOnly]);
@@ -448,10 +453,7 @@ export default function Explorer({
     const onFocus = () => {
       if (document.visibilityState === "visible") void load(true);
     };
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible" && listings.length <= 24)
-        void load(true);
-    }, 30000);
+    const timer = window.setInterval(onFocus, 30000);
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
     return () => {
@@ -459,7 +461,7 @@ export default function Explorer({
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onFocus);
     };
-  }, [initialized, load, listings.length]);
+  }, [initialized, load]);
   useEffect(() => {
     if (
       !initialized ||
@@ -512,7 +514,11 @@ export default function Explorer({
     }
   }, [loading, error, initialized, visibleView]);
   async function loadMore() {
-    if (!nextCursor || loadingMore || windowRequestPending.current) return;
+    if (!nextCursor || nextPageRequest.current || windowRequestPending.current)
+      return;
+    const controller = new AbortController();
+    nextPageRequest.current = controller;
+    const timeout = setTimeout(() => controller.abort(), 30000);
     setLoadingMore(true);
     setPaginationError("");
     const generation = requestGeneration.current;
@@ -522,12 +528,16 @@ export default function Explorer({
       const result = await loadExplorerNextPage(
         { data: listings, nextCursor },
         p,
+        (url) => fetch(url, { signal: controller.signal, cache: "no-store" }),
       );
       if (generation !== requestGeneration.current) return;
       setListings(result.data);
       setNextCursor(result.nextCursor);
       setPaginationError(result.error);
     } finally {
+      clearTimeout(timeout);
+      if (nextPageRequest.current === controller)
+        nextPageRequest.current = null;
       if (generation === requestGeneration.current) setLoadingMore(false);
     }
   }
@@ -1579,6 +1589,7 @@ export default function Explorer({
       {compare.length > 0 && visibleView === "list" ? (
         <a
           className="mobile-compare explorer-compare button"
+          onClick={rememberListPosition}
           href={
             compare.length >= 2
               ? `/comparer?ids=${compare.join(",")}${offerFilter ? `&transactionType=${offerFilter}` : ""}`

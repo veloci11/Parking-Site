@@ -25,7 +25,11 @@ import { areaLabel, type Listing, type Space } from "@/lib/types";
 import type { PublicScene } from "@/lib/scene-contract";
 import { createPublicRefresh } from "@/lib/public-refresh";
 import { loadPublicParkingScene } from "@/lib/public-viewer-data";
-import { movePhotoIndex, photoIndex } from "@/lib/photo-navigation";
+import {
+  movePhotoIndex,
+  photoIndex,
+  selectedPhotoGallery,
+} from "@/lib/photo-navigation";
 import type {
   PublicParkingLevelPlan,
   PublicParkingSceneGroup,
@@ -146,10 +150,7 @@ function Photos({
   selectedId: string | null;
 }) {
   const [index, setIndex] = useState(0);
-  const photos =
-    selectedId && listing.spacePhotos?.[selectedId]?.length
-      ? listing.spacePhotos[selectedId]
-      : listing.photos;
+  const { photos, label } = selectedPhotoGallery(listing, selectedId);
   useEffect(() => setIndex(0), [listing.id, selectedId]);
   const position = photoIndex(index, photos.length);
   const current = photos[position];
@@ -160,7 +161,7 @@ function Photos({
           key={`${listing.id}:${selectedId || "general"}`}
           photos={photos}
           index={position}
-          alt={`Parking à ${listing.city}, ${listing.district} · photo ${position + 1}`}
+          alt={`${label} à ${listing.city}, ${listing.district} · photo ${position + 1}`}
           width={1200}
           height={800}
           sizes="(max-width:767px) calc(100vw - 48px), (max-width:1200px) 80vw, 960px"
@@ -172,8 +173,10 @@ function Photos({
           <p>Les photos de ce niveau ne sont pas encore disponibles.</p>
         </div>
       )}
-      {listing.isDemo && current ? (
-        <span>Illustration · parking de démonstration</span>
+      {current ? (
+        <span>
+          {listing.isDemo ? "Illustration · parking de démonstration" : label}
+        </span>
       ) : null}
       {photos.length > 1 ? (
         <div className="gp-viewer-photo-controls">

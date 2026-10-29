@@ -4,12 +4,15 @@ import Link from "next/link";
 import { Box, RefreshCw } from "lucide-react";
 import FilterSelect from "../FilterSelect";
 import { api } from "./shared";
-import { modelingDecisionConfirmed } from "@/lib/modeling-request-review";
+import {
+  loadModelingRequestPage,
+  modelingDecisionConfirmed,
+  reloadedModelingRequest,
+} from "@/lib/modeling-request-review";
 import type {
   ModelingRequest,
   AdminModelingRequest,
   ModelingRequestStatus,
-  AdminModelingRequests as ModelingRequestsPage,
 } from "@/lib/modeling-requests";
 
 export const modelingRequestStatusLabels: Record<
@@ -367,6 +370,7 @@ export function AdminModelingRequests() {
   const [items, setItems] = useState<AdminModelingRequest[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
+  const [firstOffset, setFirstOffset] = useState(0);
   const [nextOffset, setNextOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -379,10 +383,13 @@ export function AdminModelingRequests() {
   const [failedLoad, setFailedLoad] = useState<{
     offset: number;
     append: boolean;
+    recovery?: AdminModelingRequest;
   } | null>(null);
   const controller = useRef<AbortController | null>(null);
+  // Keep server offsets: deduplication can make a row's displayed index differ.
+  const pageOffsets = useRef(new Map<string, number>());
   const load = useCallback(
-    async (offset = 0, append = false) => {
+    async (offset = 0, append = false, recovery?: AdminModelingRequest) => {
       controller.current?.abort();
       const pending = new AbortController();
       controller.current = pending;
@@ -390,19 +397,21 @@ export function AdminModelingRequests() {
       setLoadingMore(append);
       setError("");
       setFailedLoad(null);
+      if (recovery) setNotice("");
       try {
-        const params = new URLSearchParams({
-          offset: String(offset),
-          limit: "25",
-        });
-        if (status !== "all") params.set("status", status);
-        const { data } = await api<{ data: ModelingRequestsPage }>(
-          `/api/admin/modeling-requests?${params}`,
-          {
-            signal: pending.signal,
-          },
+        const data = await loadModelingRequestPage(
+          api,
+          status,
+          offset,
+          pending.signal,
         );
         if (pending.signal.aborted) return;
+        const recovered = recovery
+          ? reloadedModelingRequest(recovery, data)
+          : null;
+        if (!append) pageOffsets.current.clear();
+        for (const item of data.requests)
+          pageOffsets.current.set(item.listingId, data.offset);
         setItems((current) =>
           append
             ? [
@@ -420,6 +429,7 @@ export function AdminModelingRequests() {
         setNextOffset(data.offset + data.requests.length);
         setHasMore(data.hasMore);
         if (!append) {
+          setFirstOffset(data.offset);
           setReviewEpoch((value) => value + 1);
           setSelectedId((current) =>
             data.requests.some((item) => item.listingId === current)
@@ -427,10 +437,16 @@ export function AdminModelingRequests() {
               : null,
           );
         }
+        if (recovery)
+          setNotice(
+            recovered
+              ? "Demande actualisée. Vérifiez son statut avant de poursuivre."
+              : "La demande ne figure plus sur cette page. Elle a pu changer de statut ou de position. Parcourez la file ou changez le filtre pour la retrouver.",
+          );
       } catch (error) {
         if (!pending.signal.aborted) {
           setError((error as Error).message);
-          setFailedLoad({ offset, append });
+          setFailedLoad({ offset, append, recovery });
         }
       } finally {
         if (!pending.signal.aborted) {
@@ -445,12 +461,22 @@ export function AdminModelingRequests() {
     setItems([]);
     setSelectedId(null);
     setTotal(0);
+    setFirstOffset(0);
     setHasMore(false);
+    pageOffsets.current.clear();
     setNotice("");
     void load();
     return () => controller.current?.abort();
   }, [load]);
   const selected = items.find((request) => request.listingId === selectedId);
+  const reloadSelected = () =>
+    void load(
+      selected
+        ? (pageOffsets.current.get(selected.listingId) ?? firstOffset)
+        : firstOffset,
+      false,
+      selected,
+    );
   return (
     <section
       id="demandes-3d"
@@ -468,7 +494,7 @@ export function AdminModelingRequests() {
           type="button"
           className="button button-secondary"
           disabled={loading || loadingMore || saving}
-          onClick={() => void load()}
+          onClick={reloadSelected}
         >
           <RefreshCw size={16} /> Actualiser
         </button>
@@ -504,12 +530,34 @@ export function AdminModelingRequests() {
           type="button"
           className="button button-secondary"
           disabled={loading || loadingMore || saving}
-          onClick={() => void load(failedLoad.offset, failedLoad.append)}
+          onClick={() =>
+            void load(failedLoad.offset, failedLoad.append, failedLoad.recovery)
+          }
         >
           Réessayer le chargement
         </button>
       ) : null}
       {loading ? <p role="status">Chargement des demandes 3D…</p> : null}
+      {firstOffset > 0 ? (
+        <div className="account-review-actions">
+          <p className="small muted">
+            {items.length
+              ? `Demandes ${firstOffset + 1} à ${nextOffset} sur ${total}.`
+              : "Aucune demande sur cette page."}
+          </p>
+          <button
+            type="button"
+            className="text-button"
+            disabled={loading || loadingMore || saving}
+            onClick={() => {
+              setNotice("");
+              void load();
+            }}
+          >
+            Revenir aux premières demandes
+          </button>
+        </div>
+      ) : null}
       <div className="account-list">
         {items.map((request) => (
           <button
@@ -531,7 +579,7 @@ export function AdminModelingRequests() {
           </button>
         ))}
       </div>
-      {!loading && !error && !items.length ? (
+      {!loading && !error && !items.length && firstOffset === 0 ? (
         <p className="notice">
           {status === "all"
             ? "Aucune demande de modélisation pour le moment."
@@ -554,7 +602,7 @@ export function AdminModelingRequests() {
           request={selected}
           disabled={loading || loadingMore || Boolean(error)}
           onBusyChange={setSaving}
-          onReload={() => void load()}
+          onReload={reloadSelected}
           onClose={() => setSelectedId(null)}
           onSaved={(saved) => {
             setSelectedId(null);
@@ -566,7 +614,7 @@ export function AdminModelingRequests() {
             setNotice(
               `Statut enregistré : ${modelingRequestStatusLabels[saved.status]}.`,
             );
-            void load();
+            void load(firstOffset);
           }}
         />
       ) : null}
