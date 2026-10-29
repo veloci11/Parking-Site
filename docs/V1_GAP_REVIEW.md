@@ -1,5 +1,7 @@
 # Revue ciblée et résolution des écarts V1
 
+> Archive de la revue du 21 octobre. Pour l’état déployé et les limites actuelles, consulter [Exploitation](OPERATIONS.md) et la [livraison du 29 octobre](qa/account-completion-2026-10-29/RELEASE.md). Les chiffres et parcours ci-dessous décrivent cette ancienne étape, pas l’application actuelle.
+
 Mise à jour du 21 octobre 2026. Références : [backlog](plan-construction/specs/backlog.csv) et [cas F01–F20](plan-construction/08_PLAN_DEV_RECETTE_EXPLOITATION.md). La première revue statique avait identifié des écarts de code ; le tableau ci-dessous décrit leurs corrections intégrées. Une fonction livrée ne vaut pas une validation de tous les scénarios navigateur ou une ouverture publique.
 
 État de recette communiqué par le coordinateur : **40 tests unitaires**, **2 parcours HTTP isolés**, **128 + 74 assertions Supabase**, **88 assertions scènes** réussis. Les [compléments SQL V1](qa/supabase-v1-complements.json) exercent les migrations 008/009/010 sur PostgreSQL réel avec rôles/claims de test et rollback ; ce protocole complète les vrais logins GoTrue, sans les remplacer. Migrations 001–010 appliquées ; 010 sur le blocage entre interlocuteurs appliquée et testée en transaction annulée. Aucun déploiement public ni email réel.
