@@ -1,0 +1,60 @@
+{
+  "scope": "connected-queued-history-reauth-smoke",
+  "workerExecuted": false,
+  "archiveStorageExercised": false,
+  "limitations": [
+    "Archive build, download bytes, expiry and purge require the separately configured operator worker; not exercised by this smoke"
+  ],
+  "status": "passed",
+  "checks": [
+    {
+      "name": "owner_login",
+      "passed": true
+    },
+    {
+      "name": "outsider_login",
+      "passed": true
+    },
+    {
+      "name": "connected_mode",
+      "passed": true
+    },
+    {
+      "name": "legacy_export_cannot_skip_reauth",
+      "passed": true
+    },
+    {
+      "name": "wrong_password_refused",
+      "passed": true
+    },
+    {
+      "name": "durable_request_queued",
+      "passed": true
+    },
+    {
+      "name": "history_contains_own_job",
+      "passed": true
+    },
+    {
+      "name": "not_downloadable_before_build",
+      "passed": true
+    },
+    {
+      "name": "outsider_history_excludes_job",
+      "passed": true
+    },
+    {
+      "name": "outsider_queued_download_denied",
+      "passed": true
+    },
+    {
+      "name": "duplicate_pending_export_refused",
+      "passed": true
+    }
+  ],
+  "failure": null,
+  "externalEmailSent": false,
+  "realUserDeleted": false,
+  "productionDeployed": false,
+  "freshArchiveExpiryNotForced": true
+}

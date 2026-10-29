@@ -1,0 +1,27 @@
+{
+  "passed": 16,
+  "checks": [
+    "four_real_ads",
+    "original_prices",
+    "annual_charges_filter",
+    "unknown_property_tax_excluded",
+    "invalid_cost_rejected",
+    "admin_still_private",
+    "brand_icon_/favicon.ico",
+    "brand_icon_/icon.png",
+    "brand_icon_/apple-icon.png",
+    "photo_/api/media/c1c53af8-b84b-47a8-a307-f710da9caab5",
+    "photo_/api/media/628242c8-34d7-4914-b4d2-8eac699ff986",
+    "photo_/api/media/341e2883-75b7-445e-a57f-266348974539",
+    "photo_/api/media/86c6ea2f-66bc-4e03-bc33-1434c06b7acf",
+    "photo_/api/media/44836d24-c935-4e98-8bfb-91279a4b5edb",
+    "photo_/api/media/b9bcdc93-90f5-4d79-8c4b-a3fd7ac1bd03",
+    "photo_/api/media/b3ac71ea-a5cb-414b-8893-d7b25662809c"
+  ],
+  "listings": 4,
+  "photos": 7,
+  "commit": "84a6246a75eaf0d3501ec2adf0a5c5db1c583589",
+  "build": "flE3vcutQb7xkl0d8j_Sg",
+  "url": "https://parking.gilmathis.com",
+  "service": "active"
+}

@@ -1,0 +1,250 @@
+{
+  "checkedAt": "2026-10-22T14:14:03.780Z",
+  "status": "failed-cache-zero-revocation-contract-cleanup-complete",
+  "failedCheck": "default_same_token_url_denies_after_withdrawal",
+  "checks": [
+    {
+      "name": "real_supabase_mode",
+      "passed": true
+    },
+    {
+      "name": "seller_real_login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "seller_identity",
+      "passed": true
+    },
+    {
+      "name": "buyer_real_login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "buyer_identity",
+      "passed": true
+    },
+    {
+      "name": "admin_real_login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "admin_identity",
+      "passed": true
+    },
+    {
+      "name": "admin_mfa_role",
+      "passed": true
+    },
+    {
+      "name": "admin_mfa_mfa_available",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "admin_mfa_no_preexisting_verified_factor",
+      "passed": true
+    },
+    {
+      "name": "admin_mfa_aal1_admin_blocked",
+      "passed": true,
+      "status": 403,
+      "code": "MFA_REQUIRED"
+    },
+    {
+      "name": "admin_mfa_registry_rejects_aal1",
+      "passed": true,
+      "status": 403
+    },
+    {
+      "name": "admin_mfa_factor_enrolled",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "admin_mfa_private_factor_contract",
+      "passed": true
+    },
+    {
+      "name": "admin_mfa_challenge_1",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "admin_mfa_code_verified",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "admin_mfa_session_aal2",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "admin_mfa_own_factor_verified",
+      "passed": true
+    },
+    {
+      "name": "create",
+      "passed": true,
+      "status": 201
+    },
+    {
+      "name": "upload_0",
+      "passed": true,
+      "status": 201
+    },
+    {
+      "name": "upload_1",
+      "passed": true,
+      "status": 201
+    },
+    {
+      "name": "upload_2",
+      "passed": true,
+      "status": 201
+    },
+    {
+      "name": "save_complete_fixture",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "submit",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "approve_new_copies",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "buyer_aal1_member",
+      "passed": true
+    },
+    {
+      "name": "new_copy_declares_cache_zero",
+      "passed": true
+    },
+    {
+      "name": "withdraw",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "fresh_origin_denies_withdrawn_media",
+      "passed": true
+    },
+    {
+      "name": "default_same_token_url_denies_after_withdrawal",
+      "passed": false
+    },
+    {
+      "name": "admin_mfa_own_factor_removed",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "admin_mfa_own_factor_absent",
+      "passed": true,
+      "status": 200
+    }
+  ],
+  "reads": [
+    {
+      "name": "published_default_url",
+      "status": 200,
+      "bytes": 7368,
+      "cacheControl": "private, max-age=0",
+      "cfCacheStatus": "MISS",
+      "age": null,
+      "date": "Thu, 22 Oct 2026 14:13:58 GMT"
+    },
+    {
+      "name": "withdrawn_same_token_default_url",
+      "status": 200,
+      "bytes": 7368,
+      "cacheControl": "private, max-age=0",
+      "cfCacheStatus": "HIT",
+      "age": null,
+      "date": "Thu, 22 Oct 2026 14:14:00 GMT"
+    },
+    {
+      "name": "withdrawn_same_token_nonce_no_store",
+      "status": 400,
+      "bytes": 88,
+      "cacheControl": null,
+      "cfCacheStatus": "BYPASS",
+      "age": null,
+      "date": "Thu, 22 Oct 2026 14:14:01 GMT"
+    }
+  ],
+  "signedUrlProbe": {
+    "ttlSeconds": 60,
+    "minted": true,
+    "urlOrTokenRecorded": false,
+    "beforeWithdrawalStatus": 200,
+    "afterWithdrawalReadExecuted": false,
+    "reason": "Probe stopped at the default-URL revocation failure; no signed token or URL persisted."
+  },
+  "adminFactorRevoked": true,
+  "withdrawn": true,
+  "cleanup": {
+    "status": "completed-real-db-and-storage-sdk",
+    "finishedAt": "2026-10-22T14:16:23.723604+00:00",
+    "authUsersDeleted": 3,
+    "listingRowsDeleted": 2,
+    "publishedFixtureCount": 1,
+    "preUploadAttemptCount": 1,
+    "siteCountDeleted": 1,
+    "storageBuckets": [
+      {
+        "bucket": "private-uploads",
+        "requested": 3,
+        "deleted": 3
+      },
+      {
+        "bucket": "public-approved",
+        "requested": 3,
+        "deleted": 3
+      },
+      {
+        "bucket": "scene-sources",
+        "requested": 0,
+        "deleted": 0
+      }
+    ],
+    "cleanupFactorRevoked": true,
+    "afterInventory": {
+      "authUsers": 0,
+      "listings": 0,
+      "published": 0,
+      "modelingRequests": 0,
+      "storageObjects": 0,
+      "sites": 0,
+      "levels": 0,
+      "spaces": 0,
+      "mfaFactors": 0,
+      "mfaRequired": true,
+      "unclaimedAdminReservations": 1,
+      "migrations": 34
+    }
+  },
+  "buildId": "LiFv9DktYLtVHLZRc0FU9",
+  "priorFailureProof": "docs/qa/withdrawal-storage-cache.json",
+  "realSupabase": true,
+  "syntheticOnly": true,
+  "externalEmailSent": false,
+  "credentialsIncluded": false,
+  "instantRevocationOfCachedOrAlreadyDownloadedBytesClaimed": false,
+  "passedChecks": 31,
+  "failedChecks": 1,
+  "conclusion": "New approved copy really declares private,max-age=0, but default authenticated Storage URL still yields CF HIT/HTTP200 after withdrawal. Same-token nonce/no-store reaches origin and deniesHTTP400. Cache-control zero alone does not close the CDN revocation gap.",
+  "initialProbeCodeCorrection": {
+    "report": "docs/qa/storage-cache-zero-initial.json",
+    "cause": "Probe client initially marked multipart upload as JSON; fixed in probe only, no product error inferred. Its withdrawn draft stayed in exact cleanup inventory."
+  }
+}

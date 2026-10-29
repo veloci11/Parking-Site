@@ -1,0 +1,329 @@
+{
+  "priorAttempts": [],
+  "resumed": false,
+  "checkedAt": "2026-10-21T19:54:02.069Z",
+  "status": "passed",
+  "scope": "connected-quarantine-smoke",
+  "remoteWorkerExecuted": false,
+  "limitations": [
+    "Processing, ready previews, model publication/review and navigation are not exercised by this quarantine smoke; operator worker and physical pilot remain separate"
+  ],
+  "checks": [
+    {
+      "name": "supabase_mode_http",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "connected_supabase_mode",
+      "passed": true
+    },
+    {
+      "name": "seller_login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "seller_identity",
+      "passed": true
+    },
+    {
+      "name": "seller_direct_login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "buyer_login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "buyer_identity",
+      "passed": true
+    },
+    {
+      "name": "buyer_direct_login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "outsider_login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "outsider_identity",
+      "passed": true
+    },
+    {
+      "name": "outsider_direct_login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "moderator_login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "moderator_identity",
+      "passed": true
+    },
+    {
+      "name": "moderator_direct_login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "moderator_mfa_role",
+      "passed": true
+    },
+    {
+      "name": "moderator_mfa_mfa_available",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "moderator_mfa_no_preexisting_verified_factor",
+      "passed": true
+    },
+    {
+      "name": "moderator_mfa_factor_enrolled",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "moderator_mfa_private_factor_contract",
+      "passed": true
+    },
+    {
+      "name": "moderator_mfa_challenge_1",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "moderator_mfa_code_verified",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "moderator_mfa_session_aal2",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "moderator_mfa_own_factor_verified",
+      "passed": true
+    },
+    {
+      "name": "scene_listing_draft_created",
+      "passed": true,
+      "status": 201
+    },
+    {
+      "name": "scene_gallery_upload_1",
+      "passed": true,
+      "status": 201
+    },
+    {
+      "name": "scene_gallery_upload_2",
+      "passed": true,
+      "status": 201
+    },
+    {
+      "name": "scene_gallery_upload_3",
+      "passed": true,
+      "status": 201
+    },
+    {
+      "name": "scene_listing_saved",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "scene_listing_submitted",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "admin_mfa_login",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "admin_mfa_identity",
+      "passed": true
+    },
+    {
+      "name": "admin_mfa_role",
+      "passed": true
+    },
+    {
+      "name": "admin_mfa_mfa_available",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "admin_mfa_no_preexisting_verified_factor",
+      "passed": true
+    },
+    {
+      "name": "admin_mfa_registry_rejects_aal1",
+      "passed": true,
+      "status": 403
+    },
+    {
+      "name": "admin_mfa_factor_enrolled",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "admin_mfa_private_factor_contract",
+      "passed": true
+    },
+    {
+      "name": "admin_mfa_challenge_1",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "admin_mfa_code_verified",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "admin_mfa_session_aal2",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "admin_mfa_own_factor_verified",
+      "passed": true
+    },
+    {
+      "name": "scene_listing_published",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "private_source_application/pdf_uploaded",
+      "passed": true,
+      "status": 201
+    },
+    {
+      "name": "quarantined_original_not_readable",
+      "passed": true
+    },
+    {
+      "name": "guest_quarantined_source_hidden",
+      "passed": true
+    },
+    {
+      "name": "outsider_quarantined_source_hidden",
+      "passed": true
+    },
+    {
+      "name": "owner_quarantine_metadata",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "source_processing_without_preview",
+      "passed": true
+    },
+    {
+      "name": "private_source_image/png_uploaded",
+      "passed": true,
+      "status": 201
+    },
+    {
+      "name": "quarantined_original_not_readable",
+      "passed": true
+    },
+    {
+      "name": "guest_quarantined_source_hidden",
+      "passed": true
+    },
+    {
+      "name": "outsider_quarantined_source_hidden",
+      "passed": true
+    },
+    {
+      "name": "owner_quarantine_metadata",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "source_processing_without_preview",
+      "passed": true
+    },
+    {
+      "name": "quarantine_cannot_support_public_model",
+      "passed": true,
+      "status": 400,
+      "code": "SCENE_ERROR"
+    },
+    {
+      "name": "quarantine_model_error_code",
+      "passed": true
+    },
+    {
+      "name": "direct_quarantine_scene_refused",
+      "passed": true,
+      "status": 400,
+      "code": "P0001"
+    },
+    {
+      "name": "direct_quarantine_source_not_ready",
+      "passed": true
+    },
+    {
+      "name": "quarantine_fixture_no_public_scene",
+      "passed": true,
+      "status": 404,
+      "code": "NOT_FOUND"
+    },
+    {
+      "name": "direct_source_other_user_query",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "rls_no_other_user_sources",
+      "passed": true
+    },
+    {
+      "name": "quarantine_fixture_withdrawn",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "moderator_mfa_own_factor_removed",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "moderator_mfa_own_factor_absent",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "admin_mfa_own_factor_removed",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "admin_mfa_own_factor_absent",
+      "passed": true,
+      "status": 200
+    }
+  ],
+  "failure": null,
+  "fixture": "explicitly fictional test inventory, no real parking pilot",
+  "fixtureKeptForVisualQA": false,
+  "withdrawn": true,
+  "externalEmailsSent": false,
+  "qrSecretOrTotpIncluded": false,
+  "qaFactorsRevoked": true,
+  "geometrySource": "Parametric fixture rejected while source remains quarantined; no model approved"
+}

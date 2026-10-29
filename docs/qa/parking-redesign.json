@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-10-21T20:25:41.721711+00:00",
+  "scope": "Local demo browser acceptance; rebuilt production preview on 127.0.0.1:3000",
+  "status": "passed",
+  "route": "/annonces/10000000-0000-4000-8000-000000000001/lyon-part-dieu",
+  "checks": {
+    "fixedIsometricCamera": "drag before/after screenshots identical",
+    "linkedListingSelection": "click space13 opens sibling listing7 with floor/unit context",
+    "levels": "-1 to -2 and back four times retain WebGL3D; correct space24 at -2",
+    "views": "Photos to3D and Plan2D coherent with fictional cutaway",
+    "refresh": "30seconds preserves chosen level -2",
+    "mobile": "390x844; no horizontal overflow; all controls and footer visible",
+    "fallback": "Montchat no approved model retains photos and absence-of-plan label",
+    "disposal": "Canvas persists across levels; context-loss listener removed on cleanup; no drei Html DOM labels"
+  },
+  "geometry": "Fictional cutaway and decorative cars only for demo; measured plans render documented geometry. No real parking or photorealistic survey claimed.",
+  "captures": [
+    "parking-redesign-desktop.jpg",
+    "parking-redesign-mobile.jpg",
+    "parking-redesign-no-model-mobile.jpg",
+    "parking-production-desktop.jpg",
+    "parking-production-mobile.jpg",
+    "inspector-covered-access.png"
+  ],
+  "coveredIcon": "Car under shelter replaces generic cube",
+  "accessLabel": "Declared badge/key/gate/door/lift or factual legacy access; unknown shown À préciser",
+  "build": "production build passed, same UI also checked in development desktop/mobile",
+  "publicDeployment": false,
+  "productionVerification": {
+    "primaryAction": "Consulter l’annonce opens its own page",
+    "floorSwitch": "-1 to -2 retains Plan3D; selected Place24 displayed",
+    "linkedListing": "Click Place24 opens listing7 and 32000EUR total lot price, floor-2/unit retained",
+    "sources": "Fictional demo only",
+    "mobile": "390CSSpx, scrollWidth390, canvas346x360, level-2 selected and Plan3D still active; rendered control text12px",
+    "typography": "New viewer CSS follows charter12/14/16/20px instead of introducing10/11/13/18px",
+    "browserConsole": "No warnings/errors in the final production QA tab"
+  }
+}

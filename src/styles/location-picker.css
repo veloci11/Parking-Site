@@ -1,0 +1,140 @@
+.gp-location-picker {
+  margin-bottom: 24px;
+}
+.gp-address-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  padding: 4px 0;
+}
+.gp-address-search > svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.gp-address-search > input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  padding: 14px 0;
+  font: inherit;
+  font-size: 16px;
+  color: var(--text);
+}
+.gp-address-search:focus-within {
+  border-bottom-color: var(--brand);
+}
+.gp-address-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 12px 36px #23173914;
+}
+.gp-address-results ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.gp-address-results button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  border-radius: 10px;
+  text-align: left;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+}
+.gp-address-results button:hover,
+.gp-address-results [aria-selected="true"] button {
+  background: #f5f2fb;
+}
+.gp-address-results span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.gp-address-results small,
+.gp-location-credit {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.gp-address-results p {
+  padding: 12px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.gp-location-help {
+  margin-top: 10px;
+  font-size: 14px;
+}
+.gp-location-precision {
+  display: flex;
+  gap: 12px;
+  margin: 20px 0;
+}
+.gp-location-precision button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.gp-location-precision button[aria-pressed="true"] {
+  background: #f5f1e3;
+  border-color: #d6c59b;
+}
+.gp-location-precision span {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.gp-location-precision small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.gp-location-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: #f8f7fa;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+@media (max-width: 600px) {
+  .gp-location-precision {
+    flex-direction: column;
+  }
+  .gp-address-results {
+    left: -8px;
+    right: -8px;
+  }
+}

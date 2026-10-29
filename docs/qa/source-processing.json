@@ -1,0 +1,34 @@
+{
+  "module": "023-private-source-processing",
+  "status": "local-verification",
+  "tests": {
+    "sceneAndRaster": { "passed": 13, "failed": 0, "skipped": 0 },
+    "typecheck": "passed",
+    "sql": {
+      "engine": "PostgreSQL 14 isolated local database sources023",
+      "migrationCompilation": "passed",
+      "transactionalRecipe": "passed and rolled back",
+      "scope": "Real source tables and added processing functions; legacy scene and export cores stubbed in sandbox; full remote recipe remains coordinator responsibility"
+    }
+  },
+  "inputs": "Inert generated minimal PDF and solid-color PNG; corrupt bytes, oversized source, forced timeout, malformed/oversized/trailing framed renderer output",
+  "containerAdapter": {
+    "implemented": true,
+    "immutableImageRequired": true,
+    "productionTestBypassRefused": true,
+    "daemonPreflightBeforeLease": true,
+    "localUnixEndpointRequired": true,
+    "workerLockfile": "npm ci --omit=dev --ignore-scripts --no-audit --no-fund --dry-run passed on macOS arm64",
+    "dockerDaemon": "Docker 29.9.2, Linux arm64, local Unix socket; cgroup memory/swap/PID support and builtin seccomp verified",
+    "baseImage": "docker.io/library/node:24.13.0-bookworm-slim@sha256:4660b1ca8b28d6d1906fd644abe34b2ed81d15434d26d845ef0aced307cf4b6f",
+    "imageBuilt": true,
+    "localImageId": "sha256:27c79edfe5116ab39c2c15c5e4f46d6c13d56a3434c5618a08f32647c99f82ef",
+    "realContainerTest": "passed: inert PDF rendered; active PDF and corrupt input rejected; forced timeout killed; no test container remains",
+    "runtimeIsolationInspected": true,
+    "runtimePolicy": "network none, IPC none, readonly rootfs, tmpfs 64 MiB noexec/nosuid/nodev, nonroot 65532:65532, all capabilities dropped, no-new-privileges, seccomp builtin, memory/swap 384 MiB, pids 48, no binds or app credentials"
+  },
+  "remoteWorkerExecuted": false,
+  "humanDocumentsProcessed": false,
+  "osContainerIsolationDeployed": false,
+  "antivirusClaim": false
+}

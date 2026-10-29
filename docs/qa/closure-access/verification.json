@@ -1,0 +1,50 @@
+{
+  "date": "2026-10-22",
+  "buildId": "C5S5S_JI7BzEPLunNgjBe",
+  "scope": "isolated-local-production-browser",
+  "tests": {
+    "total": 233,
+    "passed": 230,
+    "failed": 0,
+    "skipped": 3
+  },
+  "format": "passed",
+  "build": "passed",
+  "listReturn": {
+    "initialCards": 24,
+    "loadedCards": 38,
+    "returnedCards": 38,
+    "selectedFixture": 30,
+    "windowScrollY": 3717
+  },
+  "mapReturn": {
+    "returnedCards": 38,
+    "selectedFixture": 30,
+    "panelScrollTop": 8458
+  },
+  "filterFocusRestored": [
+    "Escape",
+    "close",
+    "results"
+  ],
+  "networkSearch": {
+    "frenchError": true,
+    "staleCountHidden": true,
+    "retryVersaillesCards": 1
+  },
+  "mapUnavailable": {
+    "hintDisplay": "none",
+    "retryPassed": true
+  },
+  "actualScreenReaderTested": false,
+  "actualBrowserZoom200Tested": false,
+  "remoteMutations": false,
+  "publicDeployment": false,
+  "cleanup": {
+    "isolatedRuntimeRemoved": true,
+    "tabClosed": true,
+    "viewportRestored": true,
+    "networkSimulationReset": true,
+    "ports3000_3001_3002Closed": true
+  }
+}

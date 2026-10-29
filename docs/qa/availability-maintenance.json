@@ -1,0 +1,10 @@
+{
+ "status":"local_sandbox_passed",
+ "remoteExecuted":false,
+ "humanDataTouched":false,
+ "postgresVersion":"14",
+ "sqlCompilation":true,
+ "sandboxTransactionRolledBack":true,
+ "verified":["first approval opens 90 days","confirmation increments version without content timestamp","minor edit preserves deadline","14-day reminder idempotent","3-day reminder","deadline hides listing and scene","expired confirmation refused","expired pause resume refused","expiry removes public projection","storage cleanup blocks republication","review restores availability after cleanup","suspended account refused","job grants exclude public and ordinary users"],
+ "limitations":["existing auth and moderation helper functions stubbed in isolated SQL harness","no live Supabase maintenance or real parking data","no scheduler configured","retention purge disabled"]
+}

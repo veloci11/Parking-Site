@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-10-22T08:54:02.765593+00:00",
+  "status": "passed_for_deposit_mobile",
+  "buildCommit": "d2c326693c8e07d38de034cdddf335bdb2a34f78",
+  "serverMode": "production_local_demo",
+  "origin": "http://127.0.0.1:3002",
+  "viewport": {
+    "cssWidth": 390,
+    "cssHeight": 844,
+    "deviceScaleFactor": 1,
+    "documentClientWidth": 390,
+    "documentScrollWidth": 390,
+    "headingBounds": [20, 370]
+  },
+  "journey": {
+    "listingId": "e3180f96-ff61-4d6e-a3c4-4fd399e9bd9a",
+    "numberedSpaces": ["18", "19", "20", "21", "22"],
+    "salesEuros": [28000, 29000, 30000],
+    "monthlyRentsEuros": [150, 160],
+    "actualFileChooserPngCount": 3,
+    "previewRead": true,
+    "attestation": true,
+    "submitted": true,
+    "published": false,
+    "confirmation": "Votre annonce est entre de bonnes mains. Elle a été transmise à la modération."
+  },
+  "evidence": [
+    "docs/qa/resume-captures/01-mobile-deposit-fixed.png",
+    "docs/qa/resume-captures/02-mobile-deposit-submitted.png"
+  ],
+  "limitations": [
+    "Synthetic data in isolated SQLite; not real Auth/Storage integration",
+    "Other source changes under development are not included in this captured build",
+    "Disposed with the dedicated test database after final UI checks"
+  ],
+  "publicDeployment": false,
+  "externalEmailSent": false
+}

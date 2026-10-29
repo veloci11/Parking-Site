@@ -1,0 +1,63 @@
+{
+  "checkedAt": "2026-10-21",
+  "module": "029-owner-admin-bootstrap",
+  "status": "passed-real-supabase-sql-and-independent-local-review",
+  "migration": {
+    "file": "supabase/migrations/20261022021335_owner_admin_bootstrap.sql",
+    "sha256": "c8245c9d25244eb2353e498dda364b5e1683308be3ff380b08b73918d3ec1417",
+    "permanentlyApplied": true,
+    "evidenceSource": "Coordinator confirmation"
+  },
+  "realSqlRecipe": {
+    "file": "supabase/tests/owner-admin-bootstrap.sql",
+    "sha256": "76841e6338d35babf8c1b0750d59211879e86cc92d27d370164ab5327d3eea89",
+    "passed": true,
+    "transaction": "rolled-back",
+    "evidenceSource": "Coordinator confirmation of complete recipe execution"
+  },
+  "independentReview": {
+    "scope": "029 source, role/status creation and grants, Auth trigger order, email confirmation, expiry, singleton serialization and audit",
+    "actionableIssueConfirmed": false,
+    "localPostgresVersion": "14.21",
+    "localAuthStubAdjustment": "Added email text to the isolated clone only; existing role/status/audit triggers retained",
+    "originalRecipePassed": true,
+    "additionalRecipe": {
+      "file": "supabase/tests/owner-admin-bootstrap-review.sql",
+      "sha256": "f45044427a90bfb3307ab315d706ec8a4ba1d69e5f4808a539f2164c1c2efc86",
+      "passed": true,
+      "transaction": "rolled-back",
+      "finalAssertion": {
+        "owner_admin_bootstrap_review_closed": 1
+      },
+      "realExecutionClaimed": false
+    },
+    "actualRoleDenials": [
+      "anon private-table read",
+      "anon private claim",
+      "authenticated private-table read",
+      "authenticated private claim",
+      "authenticated app_roles update",
+      "authenticated Auth email confirmation update"
+    ],
+    "twoSessionConcurrency": {
+      "bothTransactionsCommitted": true,
+      "secondTransactionWaitSeconds": 1.96,
+      "adminCount": 1,
+      "memberCount": 1,
+      "claimedReservationCount": 1,
+      "grantAuditCount": 1,
+      "syntheticFixturesOnly": true,
+      "disposableCloneDeletedAfterVerification": true
+    }
+  },
+  "operatorReservation": {
+    "createdByCoordinator": true,
+    "defaultLifetimeDays": 30,
+    "humanAuthAccountCreated": false,
+    "realEmailReceivedOrVerifiedClaimed": false,
+    "humanMfaEnrolledClaimed": false
+  },
+  "credentialsIncluded": false,
+  "realIdentityIncluded": false,
+  "publicDeploymentClaimed": false
+}

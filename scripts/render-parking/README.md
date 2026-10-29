@@ -1,0 +1,1 @@
+See ../../docs/OPS_PARKING_RENDER.md for commands, projection format, evidence boundaries and attribution. All scene creation is confined to a new Blender background process. Original GLB and final .blend files are reproducible source artifacts; only public/parking-renders plates and JSON are frontend assets.

@@ -1,0 +1,175 @@
+{
+  "checkedAt": "2026-10-22T03:49:38.387367+00:00",
+  "status": "paused_after_production_http_and_browser_sanity_mobile_wizard_recheck_pending",
+  "scope": "isolated-loopback-browser-ui",
+  "origin": "http://127.0.0.1:3000",
+  "serverMode": "mixed-development-and-production-local",
+  "browser": "Chrome extension in development; coordinator integrated browser in development and production",
+  "passed": [
+    "ordinary_registration_private_seller_with_versioned_preparatory_documents",
+    "email_verification_via_own_local_reception_no_external_email",
+    "draft_created_through_ui",
+    "monthly_rent_offer_selected_through_ui",
+    "paris_75012_private_location_and_distinct_public_sector_saved",
+    "public_location_confirmation_saved",
+    "invalid_negative_width_save_shows_error_and_keeps_places_step",
+    "dimensions_corrected_and_save_recovers",
+    "seller_declared_fictional_floor_observation_saved"
+  ],
+  "savedDraft": {
+    "state": "draft",
+    "photos": 0,
+    "fixtureOnly": true,
+    "submitted": false
+  },
+  "notCompleted": [
+    "complete_deposit_repeated_in_browser_on_production_build",
+    "browser_listing_moderation_and_publication",
+    "browser_buyer_contact",
+    "browser_withdrawal",
+    "browser_admin_own_deposit",
+    "exact_desktop_1440_by_1000_viewport"
+  ],
+  "uploadObstacle": "Chrome extension file chooser is available but setFiles requires Allow access to file URLs; native picker was interrupted by another active Chrome task. No settings changed; no unrelated files uploaded.",
+  "screenshots": [
+    "docs/qa/listing-journey-captures/01-save-failure-keeps-step.jpg"
+  ],
+  "httpJourneyExecuted": true,
+  "productionBuildTested": true,
+  "supabaseTouched": false,
+  "externalEmailSent": false,
+  "next": "Stop the local production server, verify QA ports closed, then clean the isolated database, media and private runtime.",
+  "newContract": {
+    "checkedAt": "2026-10-22T03:06:01.941535+00:00",
+    "serverMode": "next-development",
+    "formSteps": 3,
+    "passed": [
+      "new_three_step_form_loaded_after_full_reload",
+      "price_per_space_saved_via_ui",
+      "lot_conversion_saved_with_4000000_cents_and_no_space_offer_fields",
+      "per_space_conversion_restores_cached_1850000_cents_without_prorata",
+      "five_spaces_three_sale_two_rent_with_distinct_prices_saved",
+      "autocomplete_75012_returns_paris_12th_municipality_and_IGN_addresses",
+      "municipal_sector_selected_without_any_geocoordinate_input",
+      "server_stores_paris_75012_without_exact_address",
+      "confirmation_button_saves_server_confirmation_then_opens_step_two",
+      "title_and_228_character_description_saved",
+      "preview_refuses_zero_photos_and_stays_on_step_two",
+      "painted_number_is_first_visible_field_in_each_space_card",
+      "same_nonempty_number_on_same_level_keeps_first_step_with_actionable_message",
+      "corrected_numbers_18_19_20_21_22_saved_then_photos_step_opened",
+      "optional_space_photo_coverage_and_caption_date_sections_collapsed_by_default",
+      "optional_manual_modeling_request_visible_after_photos_without_submission_requirement"
+    ],
+    "savedOffers": {
+      "salePriceCents": [2800000, 2900000, 3000000],
+      "monthlyRentCents": [15000, 16000]
+    },
+    "browserFileUploadCompleted": false,
+    "publicationCompleted": false,
+    "next": "Complete three-step deposit is proven in development; production HTTP and integrated browser sanity are recorded separately below.",
+    "screenshots": [
+      "docs/qa/listing-journey-captures/04-five-unit-offers-saved.jpg",
+      "docs/qa/listing-journey-captures/06-photos-options-collapsed-development.jpg"
+    ]
+  },
+  "viewerChecks": {
+    "twelveToThirteenChangesSelectionAndListing": true,
+    "levelMinusTwoSelectsTwentyFour": true,
+    "manualRotationExposed": false,
+    "exactResponsiveDimensionsVerified": false,
+    "observedDesktopCssViewport": {
+      "width": 1600,
+      "height": 1111
+    },
+    "viewportOverrideReset": true,
+    "screenshots": [
+      "docs/qa/listing-journey-captures/02-viewer-desktop-observed.jpg",
+      "docs/qa/listing-journey-captures/03-viewer-level-minus2.jpg"
+    ]
+  },
+  "httpReport": "docs/qa/listing-journey-http.json",
+  "integratedBrowser": {
+    "source": "coordinator browser run reported in the shared task",
+    "checkedAt": "2026-10-22T03:23:24.929427+00:00",
+    "serverMode": "next-development",
+    "fixtureId": "9e430f5e-bd4a-429d-8e9c-11e9b8cccfc8",
+    "persona": "demo_seller",
+    "passed": [
+      "three_step_ui_with_no_geocoordinate_fields",
+      "autocomplete_75012_selects_paris_12th_and_approximate_sector",
+      "five_explicit_numbers_18_19_20_21_22_match_gallery_labels",
+      "three_synthetic_png_files_uploaded_through_real_integrated_browser_file_chooser",
+      "three_sale_prices_2800000_2900000_3000000_and_two_monthly_rents_15000_16000",
+      "title_and_260_character_description",
+      "preview_displays_each_individual_offer",
+      "attestation_then_submission_reaches_sent_for_moderation_confirmation"
+    ],
+    "submitted": true,
+    "published": false,
+    "productionBuildTested": false,
+    "screenshot": "docs/qa/listing-journey-captures/05-iab-deposit-submitted.jpg"
+  },
+  "developmentFixtureCleanup": {
+    "ports3000And3002ClosedBeforeCleanup": true,
+    "oldDatabaseMediaAndPrivateRuntimeRemoved": true,
+    "source": "coordinated --cleanup after development server shutdown",
+    "productionFixturePreparedSeparately": true
+  },
+  "productionHttp": {
+    "report": "docs/qa/listing-journey-http.json",
+    "passed": 176,
+    "serverMode": "production",
+    "status": "passed",
+    "withdrawalDeferred": false,
+    "browserUiExercisedByHttpScript": false,
+    "newManualModelingChecks": 35,
+    "withdrawnPhotosPrivate": true,
+    "buyerConversationPreserved": true
+  },
+  "productionIntegratedBrowser": {
+    "source": "coordinator integrated-browser production run reported in the shared task",
+    "serverMode": "production",
+    "checkedAt": "2026-10-22T03:49:38.387560+00:00",
+    "passed": [
+      "owner_sends_optional_manual_modeling_request_for_seed_box",
+      "administrator_sets_request_in_progress_and_owner_sees_same_status",
+      "parking_selection_twelve_to_thirteen_keeps_same_image_element_AX217_and_listing_seven_route",
+      "level_minus_two_selects_space_twenty_four",
+      "map_tab_after_photos_loads_paris_map",
+      "reserved_space_nineteen_has_disabled_contact_cta",
+      "mobile_parking_and_offers_document_client_width_equals_scroll_width_390"
+    ],
+    "mobileViewport": {
+      "width": 390,
+      "height": 844,
+      "method": "coordinator CDP viewport override",
+      "documentClientWidth": 390,
+      "documentScrollWidth": 390
+    },
+    "desktopViewport1440By1000Verified": false,
+    "mobileTable": {
+      "horizontalScrollIntended": true,
+      "allPriceAndStatusColumnsVisibleWithoutScrolling": false,
+      "observation": "The offers table has a 640px minimum width inside an overflow:auto container. Screenshot13 alone shows only its first columns; document width alone is not evidence that every inner element fits."
+    },
+    "screenshots": [
+      "docs/qa/listing-journey-captures/07-production-admin-modeling.jpg",
+      "docs/qa/listing-journey-captures/08-production-owner-modeling.jpg",
+      "docs/qa/listing-journey-captures/09-production-parking-lots.jpg",
+      "docs/qa/listing-journey-captures/10-production-paris-map.jpg",
+      "docs/qa/listing-journey-captures/11-production-mobile-parking.png",
+      "docs/qa/listing-journey-captures/12-production-five-offers.jpg",
+      "docs/qa/listing-journey-captures/13-production-mobile-offers.png"
+    ]
+  },
+  "pauseInventory": {
+    "checkedAt": "2026-10-22T04:16:15.034316+00:00",
+    "productionFixtureAndPrivateRuntimeAbsent": true,
+    "taskServersClosed": true,
+    "lastWizardMobileCssBuildPassed": true,
+    "lastWizardMobileCssBrowserRecheckPending": true,
+    "transientCapture13NotFinalLayoutEvidence": true,
+    "stableTableCapture": "docs/qa/listing-journey-captures/15-mobile-table-layout.png"
+  }
+}

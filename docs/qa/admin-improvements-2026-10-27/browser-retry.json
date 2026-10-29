@@ -1,0 +1,7 @@
+{
+  "scope": "local synthetic fixture",
+  "refreshRetryFirstPage": true,
+  "requests": [
+    "http://127.0.0.1:3002/api/admin/reports?status=all&limit=50"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-21T20:33:22.395548+00:00",
+  "command": "GP_SOURCE_RASTER_IMAGE=<immutable local image> npm test",
+  "tests": 111,
+  "passed": 109,
+  "failed": 0,
+  "skipped": 2,
+  "skipReason": "Two opt-in HTTP tests are run separately against the production build by scripts/verify-local-http.ts.",
+  "realDockerTest": "passed",
+  "emailsSent": false,
+  "publicDeployment": false,
+  "planArtifacts": {
+    "command": ".data/plan-validation-venv/bin/python docs/plan-construction/scripts/validate-plan.py",
+    "assertions": 440,
+    "tasks": 35,
+    "status": "passed",
+    "scope": "Construction documents and schemas only, not application runtime or production"
+  },
+  "productionBuild": {
+    "status": "passed",
+    "distDir": ".next",
+    "buildId": "ornYT0fEqsXvxNJyZZDC_"
+  },
+  "typecheck": "passed",
+  "format": "passed after final normalization"
+}

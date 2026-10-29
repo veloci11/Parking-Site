@@ -1,0 +1,54 @@
+{
+  "checkedAt": "2026-10-21",
+  "module": "026-common-parking-level-plans",
+  "status": "passed-remote-sql",
+  "confirmationSource": "Coordinator reported successful permanent migration application and complete rollback recipe on the configured Supabase development project",
+  "migration": {
+    "file": "supabase/migrations/20261021200524_common_parking_level_plans.sql",
+    "sha256": "ce2d12784023d510c393be52a4bf95b709cdf606f19194a8a1d56268e89d6577",
+    "permanentlyApplied": true,
+    "appliedBy": "coordinator using Supabase apply_migration",
+    "mfa025PreviouslyApplied": true
+  },
+  "remoteSql": {
+    "file": "supabase/tests/common-parking-level-plans.sql",
+    "sha256": "2e98cad180a7d856daeaf8f1f50f6a57228c3b9539c88a382802b6a3f24a8bb8",
+    "completeRecipe": "passed without error",
+    "historicalSceneValidator": "Real gp_validate_scene on Supabase; no local substitute",
+    "transaction": "rolled back",
+    "finalAssertion": "common_plan_internal_bypasses_closed=1",
+    "fixtures": "Synthetic Auth identities, canonical parking units, geometry and controlled Storage metadata rows; all recipe mutations rolled back",
+    "storageServiceFileUploadExecuted": false,
+    "humanDocumentsProcessed": false,
+    "emailsSent": false
+  },
+  "verified": [
+    "AAL1 administrator denied and AAL2 moderator denied common-plan publication",
+    "Explicit administrator AAL2 publication of a single calibrated coordinate frame",
+    "Complete canonical level mapping with coherent dimensions and nonoverlapping rectangles",
+    "Ready same-parking evidence required; active common-plan evidence excluded from orphan candidates before LIMIT",
+    "Version conflicts and unknown command fields rejected",
+    "All eligible same-parking listings and two levels returned",
+    "Only explicitly published level has renderable common geometry",
+    "Area offers cannot open public shared parking and are excluded from the common geometry",
+    "Private canonical IDs, source IDs, private lot references and canonical labels absent from public projection",
+    "Nonready sources, changed physical dimensions and withdrawn plans hide common geometry",
+    "Direct table access and internal RPC bypasses denied"
+  ],
+  "localVerification": {
+    "dedicatedTests": { "file": "tests/parking-level-plans.test.ts", "passed": 2, "failed": 0 },
+    "typecheck": "passed",
+    "observedFullSuite": { "tests": 110, "passed": 107, "skipped": 3, "failed": 0 },
+    "postgres14": "Migration and rollback recipe passed; historical scene validator explicitly stubbed in this local harness without PostGIS",
+    "demo": "Two explicitly fictitious Part-Dieu listings, three public units across -1/-2, isDemo true and fidelity schematic; unrelated city examples remain separate"
+  },
+  "limitations": [
+    "No automatic geometric merge of individual listing scenes",
+    "No additional administrator UI form for common-plan publication claimed",
+    "Remote SQL fixtures do not prove actual source ingestion, rasterization or Storage upload through the service",
+    "Connected browser rendering and local visual acceptance are separate evidence",
+    "No real parking survey, human operator enrollment or public production launch proved by this recipe"
+  ],
+  "credentialsIncluded": false,
+  "publicDeploymentClaimed": false
+}

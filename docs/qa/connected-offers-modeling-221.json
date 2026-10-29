@@ -1,0 +1,1139 @@
+{
+  "checkedAt": "2026-10-22T13:51:20.372Z",
+  "status": "failed-storage-cache-assertion-cleanup-complete",
+  "scope": "real-connected-http-offers030-manual-modeling031",
+  "origin": "http://127.0.0.1:3001",
+  "project": "srrmysturoloovpuuojp",
+  "backend": "real Supabase GoTrue/PostgREST/Storage via loopback production build",
+  "passed": 221,
+  "failedCheck": "withdrawn_approved_storage_sdk_read_denied",
+  "checks": [
+    {
+      "name": "connected_session_http",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "real_supabase_backend_selected",
+      "passed": true
+    },
+    {
+      "name": "demo_login_unavailable",
+      "passed": true,
+      "httpStatus": 404,
+      "code": "NOT_FOUND"
+    },
+    {
+      "name": "local_mailbox_unavailable",
+      "passed": true,
+      "httpStatus": 404,
+      "code": "NOT_FOUND"
+    },
+    {
+      "name": "seller_real_gotrue_cookie_login",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "seller_verified_identity",
+      "passed": true
+    },
+    {
+      "name": "seller_server_role",
+      "passed": true
+    },
+    {
+      "name": "seller_session_cookie_persisted",
+      "passed": true
+    },
+    {
+      "name": "buyer_real_gotrue_cookie_login",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "buyer_verified_identity",
+      "passed": true
+    },
+    {
+      "name": "buyer_server_role",
+      "passed": true
+    },
+    {
+      "name": "buyer_session_cookie_persisted",
+      "passed": true
+    },
+    {
+      "name": "outsider_real_gotrue_cookie_login",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "outsider_verified_identity",
+      "passed": true
+    },
+    {
+      "name": "outsider_server_role",
+      "passed": true
+    },
+    {
+      "name": "outsider_session_cookie_persisted",
+      "passed": true
+    },
+    {
+      "name": "moderator_real_gotrue_cookie_login",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "moderator_verified_identity",
+      "passed": true
+    },
+    {
+      "name": "moderator_server_role",
+      "passed": true
+    },
+    {
+      "name": "moderator_session_cookie_persisted",
+      "passed": true
+    },
+    {
+      "name": "admin_real_gotrue_cookie_login",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_verified_identity",
+      "passed": true
+    },
+    {
+      "name": "admin_server_role",
+      "passed": true
+    },
+    {
+      "name": "admin_session_cookie_persisted",
+      "passed": true
+    },
+    {
+      "name": "seller_aal1_modeling_queue_refused",
+      "passed": true,
+      "httpStatus": 403,
+      "code": "FORBIDDEN"
+    },
+    {
+      "name": "buyer_aal1_modeling_queue_refused",
+      "passed": true,
+      "httpStatus": 403,
+      "code": "FORBIDDEN"
+    },
+    {
+      "name": "outsider_aal1_modeling_queue_refused",
+      "passed": true,
+      "httpStatus": 403,
+      "code": "FORBIDDEN"
+    },
+    {
+      "name": "moderator_aal1_modeling_queue_refused",
+      "passed": true,
+      "httpStatus": 403,
+      "code": "MFA_REQUIRED"
+    },
+    {
+      "name": "admin_aal1_modeling_queue_refused",
+      "passed": true,
+      "httpStatus": 403,
+      "code": "MFA_REQUIRED"
+    },
+    {
+      "name": "admin_mfa_role",
+      "passed": true
+    },
+    {
+      "name": "admin_mfa_mfa_available",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_mfa_no_preexisting_verified_factor",
+      "passed": true
+    },
+    {
+      "name": "admin_mfa_aal1_admin_blocked",
+      "passed": true,
+      "httpStatus": 403,
+      "code": "MFA_REQUIRED"
+    },
+    {
+      "name": "admin_mfa_registry_rejects_aal1",
+      "passed": true,
+      "httpStatus": 403
+    },
+    {
+      "name": "admin_mfa_factor_enrolled",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_mfa_private_factor_contract",
+      "passed": true
+    },
+    {
+      "name": "admin_mfa_challenge_1",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_mfa_code_verified",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_mfa_session_aal2",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_mfa_own_factor_verified",
+      "passed": true
+    },
+    {
+      "name": "moderator_mfa_role",
+      "passed": true
+    },
+    {
+      "name": "moderator_mfa_mfa_available",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "moderator_mfa_no_preexisting_verified_factor",
+      "passed": true
+    },
+    {
+      "name": "moderator_mfa_aal1_admin_blocked",
+      "passed": true,
+      "httpStatus": 403,
+      "code": "MFA_REQUIRED"
+    },
+    {
+      "name": "moderator_mfa_factor_enrolled",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "moderator_mfa_private_factor_contract",
+      "passed": true
+    },
+    {
+      "name": "moderator_mfa_challenge_1",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "moderator_mfa_code_verified",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "moderator_mfa_session_aal2",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "moderator_mfa_own_factor_verified",
+      "passed": true
+    },
+    {
+      "name": "moderator_aal2_still_cannot_read_modeling_queue",
+      "passed": true,
+      "httpStatus": 403,
+      "code": "FORBIDDEN"
+    },
+    {
+      "name": "admin_queue_limit_bounded",
+      "passed": true,
+      "httpStatus": 400,
+      "code": "MODELING_REQUEST_INVALID"
+    },
+    {
+      "name": "mixed_zero_price_private_draft_created",
+      "passed": true,
+      "httpStatus": 201
+    },
+    {
+      "name": "five_zero_prices_allowed_in_draft",
+      "passed": true
+    },
+    {
+      "name": "outsider_private_draft_hidden",
+      "passed": true,
+      "httpStatus": 404,
+      "code": "NOT_FOUND"
+    },
+    {
+      "name": "direct_draft_rls_query",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "direct_draft_rls_no_rows",
+      "passed": true
+    },
+    {
+      "name": "offer_owner_injection_refused",
+      "passed": true,
+      "httpStatus": 400,
+      "code": "VALIDATION_ERROR"
+    },
+    {
+      "name": "own_initial_modeling_followup",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "modeling_initially_optional_null",
+      "passed": true
+    },
+    {
+      "name": "modeling_status_injection_refused",
+      "passed": true,
+      "httpStatus": 400,
+      "code": "MODELING_REQUEST_INVALID"
+    },
+    {
+      "name": "modeling_note_length_bounded",
+      "passed": true,
+      "httpStatus": 400,
+      "code": "MODELING_REQUEST_INVALID"
+    },
+    {
+      "name": "owner_requests_manual_modeling",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "request_private_dto",
+      "passed": true
+    },
+    {
+      "name": "request_replay_http",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "request_replay_immutable",
+      "passed": true
+    },
+    {
+      "name": "buyer_private_request_hidden",
+      "passed": true,
+      "httpStatus": 404,
+      "code": "NOT_FOUND"
+    },
+    {
+      "name": "buyer_foreign_request_creation_refused",
+      "passed": true,
+      "httpStatus": 404,
+      "code": "NOT_FOUND"
+    },
+    {
+      "name": "outsider_private_request_hidden",
+      "passed": true,
+      "httpStatus": 404,
+      "code": "NOT_FOUND"
+    },
+    {
+      "name": "outsider_foreign_request_creation_refused",
+      "passed": true,
+      "httpStatus": 404,
+      "code": "NOT_FOUND"
+    },
+    {
+      "name": "guest_request_read_refused",
+      "passed": true,
+      "httpStatus": 401,
+      "code": "UNAUTHENTICATED"
+    },
+    {
+      "name": "own_request_direct_read",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "own_request_direct_scope",
+      "passed": true
+    },
+    {
+      "name": "other_request_rls_read",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "other_request_rls_empty",
+      "passed": true
+    },
+    {
+      "name": "private_actor_columns_not_selectable",
+      "passed": true,
+      "httpStatus": 403,
+      "code": "42501"
+    },
+    {
+      "name": "direct_owner_status_write_denied",
+      "passed": true,
+      "httpStatus": 403,
+      "code": "42501"
+    },
+    {
+      "name": "anonymous_request_table_denied",
+      "passed": true,
+      "httpStatus": 401,
+      "code": "42501"
+    },
+    {
+      "name": "admin_aal2_queue_read",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "queue_single_private_request",
+      "passed": true
+    },
+    {
+      "name": "admin_starts_manual_preparation",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "status_version_increment",
+      "passed": true
+    },
+    {
+      "name": "seller_status_change_denied",
+      "passed": true,
+      "httpStatus": 403,
+      "code": "FORBIDDEN"
+    },
+    {
+      "name": "moderator_status_change_denied",
+      "passed": true,
+      "httpStatus": 403,
+      "code": "FORBIDDEN"
+    },
+    {
+      "name": "stale_modeling_version_refused",
+      "passed": true,
+      "httpStatus": 409,
+      "code": "VERSION_CONFLICT"
+    },
+    {
+      "name": "same_status_retry_http",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "same_status_no_new_version",
+      "passed": true
+    },
+    {
+      "name": "owner_sees_in_progress",
+      "passed": true
+    },
+    {
+      "name": "photo_1_upload_http",
+      "passed": true,
+      "httpStatus": 201
+    },
+    {
+      "name": "photo_1_guest_denied_before_publication",
+      "passed": true
+    },
+    {
+      "name": "photo_1_outsider_denied_before_publication",
+      "passed": true
+    },
+    {
+      "name": "photo_1_owner_read",
+      "passed": true
+    },
+    {
+      "name": "photo_1_webp_without_exif",
+      "passed": true
+    },
+    {
+      "name": "photo_1_direct_storage_ownership_enforced",
+      "passed": true
+    },
+    {
+      "name": "photo_2_upload_http",
+      "passed": true,
+      "httpStatus": 201
+    },
+    {
+      "name": "photo_2_guest_denied_before_publication",
+      "passed": true
+    },
+    {
+      "name": "photo_2_outsider_denied_before_publication",
+      "passed": true
+    },
+    {
+      "name": "photo_2_owner_read",
+      "passed": true
+    },
+    {
+      "name": "photo_2_webp_without_exif",
+      "passed": true
+    },
+    {
+      "name": "photo_2_direct_storage_ownership_enforced",
+      "passed": true
+    },
+    {
+      "name": "photo_3_upload_http",
+      "passed": true,
+      "httpStatus": 201
+    },
+    {
+      "name": "photo_3_guest_denied_before_publication",
+      "passed": true
+    },
+    {
+      "name": "photo_3_outsider_denied_before_publication",
+      "passed": true
+    },
+    {
+      "name": "photo_3_owner_read",
+      "passed": true
+    },
+    {
+      "name": "photo_3_webp_without_exif",
+      "passed": true
+    },
+    {
+      "name": "photo_3_direct_storage_ownership_enforced",
+      "passed": true
+    },
+    {
+      "name": "idf_mixed_draft_saved",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "separate_location_preview_confirmation",
+      "passed": true
+    },
+    {
+      "name": "mixed_submission_pending",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "registry_required_before_publication",
+      "passed": true,
+      "httpStatus": 409,
+      "code": "REGISTRY_LINK_REQUIRED"
+    },
+    {
+      "name": "all_five_places_physically_mapped",
+      "passed": true
+    },
+    {
+      "name": "manual_preparation_ready",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "owner_reads_ready",
+      "passed": true
+    },
+    {
+      "name": "owner_cannot_reset_ready_or_note",
+      "passed": true
+    },
+    {
+      "name": "ready_does_not_publish_listing",
+      "passed": true,
+      "httpStatus": 404,
+      "code": "NOT_FOUND"
+    },
+    {
+      "name": "ready_preserves_pending_commercial_revision",
+      "passed": true
+    },
+    {
+      "name": "private_scene_inventory_read",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "private_source_inventory_read",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "ready_did_not_generate_scene",
+      "passed": true
+    },
+    {
+      "name": "ready_did_not_generate_common_plan",
+      "passed": true
+    },
+    {
+      "name": "prelink_version_stale",
+      "passed": true,
+      "httpStatus": 409,
+      "code": "VERSION_CONFLICT"
+    },
+    {
+      "name": "mixed_listing_approved_normally",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "published_mixed_public_read",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "public_five_individual_prices",
+      "passed": true
+    },
+    {
+      "name": "public_has_three_sales_two_monthly_rents",
+      "passed": true
+    },
+    {
+      "name": "public_unit_aliases_hide_private_ids",
+      "passed": true
+    },
+    {
+      "name": "public_never_contains_private_request_or_location",
+      "passed": true
+    },
+    {
+      "name": "approved_photo_public_read",
+      "passed": true
+    },
+    {
+      "name": "approved_photo_real_webp",
+      "passed": true
+    },
+    {
+      "name": "approved_storage_sdk_read_allowed_by_publication",
+      "passed": true
+    },
+    {
+      "name": "sale_individual_budget_http",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "sale_individual_budget",
+      "passed": true
+    },
+    {
+      "name": "sale_individual_budget_contextual_price",
+      "passed": true
+    },
+    {
+      "name": "rental_individual_budget_http",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "rental_individual_budget",
+      "passed": true
+    },
+    {
+      "name": "rental_individual_budget_contextual_price",
+      "passed": true
+    },
+    {
+      "name": "sale_budget_too_low_http",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "sale_budget_too_low",
+      "passed": true
+    },
+    {
+      "name": "same_space_price_area_required_http",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "same_space_price_area_required",
+      "passed": true
+    },
+    {
+      "name": "same_space_rent_area_required_http",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "same_space_rent_area_required",
+      "passed": true
+    },
+    {
+      "name": "same_space_matching_area_level_http",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "same_space_matching_area_level",
+      "passed": true
+    },
+    {
+      "name": "same_space_matching_area_level_contextual_price",
+      "passed": true
+    },
+    {
+      "name": "legacy_lot_created_without_conversion",
+      "passed": true,
+      "httpStatus": 201
+    },
+    {
+      "name": "photo_4_upload_http",
+      "passed": true,
+      "httpStatus": 201
+    },
+    {
+      "name": "photo_4_guest_denied_before_publication",
+      "passed": true
+    },
+    {
+      "name": "photo_4_outsider_denied_before_publication",
+      "passed": true
+    },
+    {
+      "name": "photo_4_owner_read",
+      "passed": true
+    },
+    {
+      "name": "photo_4_webp_without_exif",
+      "passed": true
+    },
+    {
+      "name": "photo_4_direct_storage_ownership_enforced",
+      "passed": true
+    },
+    {
+      "name": "photo_5_upload_http",
+      "passed": true,
+      "httpStatus": 201
+    },
+    {
+      "name": "photo_5_guest_denied_before_publication",
+      "passed": true
+    },
+    {
+      "name": "photo_5_outsider_denied_before_publication",
+      "passed": true
+    },
+    {
+      "name": "photo_5_owner_read",
+      "passed": true
+    },
+    {
+      "name": "photo_5_webp_without_exif",
+      "passed": true
+    },
+    {
+      "name": "photo_5_direct_storage_ownership_enforced",
+      "passed": true
+    },
+    {
+      "name": "photo_6_upload_http",
+      "passed": true,
+      "httpStatus": 201
+    },
+    {
+      "name": "photo_6_guest_denied_before_publication",
+      "passed": true
+    },
+    {
+      "name": "photo_6_outsider_denied_before_publication",
+      "passed": true
+    },
+    {
+      "name": "photo_6_owner_read",
+      "passed": true
+    },
+    {
+      "name": "photo_6_webp_without_exif",
+      "passed": true
+    },
+    {
+      "name": "photo_6_direct_storage_ownership_enforced",
+      "passed": true
+    },
+    {
+      "name": "legacy_total_price_saved",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "legacy_lot_submitted",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "legacy_lot_approved",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "legacy_price_remains_whole_lot",
+      "passed": true
+    },
+    {
+      "name": "price_sorted_first_page",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "total_counts_two_listings_once_before_limit",
+      "passed": true
+    },
+    {
+      "name": "price_sorted_keyset_next_page",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "cursor_has_no_duplicate_listing",
+      "passed": true
+    },
+    {
+      "name": "contextual_offer_price_sort_http",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "sort_uses_matching_offer_not_global_minimum",
+      "passed": true
+    },
+    {
+      "name": "same_offer_filter_before_page_limit",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "same_offer_total_and_price_before_limit",
+      "passed": true
+    },
+    {
+      "name": "sale_cursor_rejected_for_rental_context",
+      "passed": true,
+      "httpStatus": 400,
+      "code": "INVALID_CURSOR"
+    },
+    {
+      "name": "second_optional_manual_request",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_declines_second_manual_request",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_queue_status_filter_http",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_queue_status_filtered_total",
+      "passed": true
+    },
+    {
+      "name": "reauthenticated_owner_export_includes_requests",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "own_manual_notes_exported_without_staff_attribution",
+      "passed": true
+    },
+    {
+      "name": "buyer_contacts_public_seller",
+      "passed": true,
+      "httpStatus": 201
+    },
+    {
+      "name": "private_message_sent",
+      "passed": true,
+      "httpStatus": 201
+    },
+    {
+      "name": "third_party_conversation_hidden",
+      "passed": true,
+      "httpStatus": 403,
+      "code": "FORBIDDEN"
+    },
+    {
+      "name": "commercial_revision_saved",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "previous_price_stays_public_before_review",
+      "passed": true
+    },
+    {
+      "name": "commercial_revision_resubmitted",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "price_change_approved_without_registry_rebind",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "reviewed_price_now_public",
+      "passed": true
+    },
+    {
+      "name": "individual_status_revision_saved",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "previous_availability_until_review",
+      "passed": true
+    },
+    {
+      "name": "status_revision_submitted",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "status_change_approved_without_registry_rebind",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "published_reserved_sold_rented_states",
+      "passed": true
+    },
+    {
+      "name": "reserved_sold_excluded_http",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "reserved_sold_excluded",
+      "passed": true
+    },
+    {
+      "name": "remaining_sale_included_http",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "remaining_sale_included",
+      "passed": true
+    },
+    {
+      "name": "rented_excluded_http",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "rented_excluded",
+      "passed": true
+    },
+    {
+      "name": "remaining_rental_included_http",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "remaining_rental_included",
+      "passed": true
+    },
+    {
+      "name": "legacy_lot_withdrawn",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "legacy_lot_hidden_after_withdrawal",
+      "passed": true,
+      "httpStatus": 404,
+      "code": "NOT_FOUND"
+    },
+    {
+      "name": "owner_withdraws_publication",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "withdrawn_listing_404",
+      "passed": true,
+      "httpStatus": 404,
+      "code": "NOT_FOUND"
+    },
+    {
+      "name": "withdrawn_catalog_http",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "withdrawn_catalog_empty",
+      "passed": true
+    },
+    {
+      "name": "withdrawn_photo_private_again",
+      "passed": true
+    },
+    {
+      "name": "approved_bucket_has_no_unconditional_public_route",
+      "passed": true
+    },
+    {
+      "name": "withdrawn_approved_storage_sdk_read_denied",
+      "passed": false
+    },
+    {
+      "name": "moderator_mfa_own_factor_removed",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "moderator_mfa_own_factor_absent",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_mfa_own_factor_removed",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_mfa_own_factor_absent",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "seller_logged_out",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "buyer_logged_out",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "outsider_logged_out",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "moderator_logged_out",
+      "passed": true,
+      "httpStatus": 200
+    },
+    {
+      "name": "admin_logged_out",
+      "passed": true,
+      "httpStatus": 200
+    }
+  ],
+  "syntheticFixturesOnly": true,
+  "fixtureSetup": "Five coordinator-created .invalid identities, email confirmed directly for these fixtures only; no email sent. Signup delivery is not tested.",
+  "mfa": {
+    "realTotp": true,
+    "adminAal2": true,
+    "moderatorAal2": true,
+    "factorsRevoked": true,
+    "initialAal1RouteBugFixedAndRetested": true
+  },
+  "withdrawn": true,
+  "cleanup": {
+    "status": "completed-real-supabase-and-storage-sdk",
+    "finishedAt": "2026-10-22T14:02:31.737760+00:00",
+    "exactUsersDeleted": 5,
+    "exactListingsDeleted": 2,
+    "exactSitesDeleted": 2,
+    "storageBuckets": [
+      {
+        "bucket": "private-uploads",
+        "requested": 6,
+        "deleted": 6
+      },
+      {
+        "bucket": "public-approved",
+        "requested": 6,
+        "deleted": 6
+      },
+      {
+        "bucket": "scene-sources",
+        "requested": 0,
+        "deleted": 0
+      }
+    ],
+    "cleanupFactorRevoked": true,
+    "afterInventory": {
+      "authUsers": 0,
+      "listings": 0,
+      "published": 0,
+      "modelingRequests": 0,
+      "mediaAssets": 0,
+      "storageObjects": 0,
+      "sites": 0,
+      "levels": 0,
+      "spaces": 0,
+      "registryLinks": 0,
+      "scenes": 0,
+      "sceneSources": 0,
+      "conversations": 0,
+      "messages": 0,
+      "mfaFactors": 0,
+      "mfaRequired": true,
+      "unclaimedAdminReservations": 1,
+      "migrations": 34
+    },
+    "method": "Scoped guarded SQL dependency deletion; actual Storage SDK removal with per-directory post-state; guarded Auth deletion; final MCP SELECT inventory",
+    "credentialsPrinted": false,
+    "completeProviderLogErasureClaimed": false
+  },
+  "cleanupInventory": ".data/connected-offers-modeling-artifacts.json",
+  "automatedModeling": false,
+  "actualSceneGenerated": false,
+  "actualArchiveBuilt": false,
+  "externalEmailSent": false,
+  "humanAuthCreated": false,
+  "publicDeployment": false,
+  "sqlRollbackClaimedAsHttp": false,
+  "withdrawalStorageFinding": {
+    "status": "reproduced-cache-propagation-gap",
+    "proof": "docs/qa/withdrawal-storage-cache.json",
+    "persistentRlsBypassProven": false,
+    "fixVerified": false,
+    "freshOriginDenied": true,
+    "freshOriginStatus": 400,
+    "sameTokenNonceNoStore": true,
+    "legacyDefaultUrlCachedReadObserved": true,
+    "cacheControlZeroImplementedForNewApprovedCopies": true,
+    "mitigationLiveVerified": true,
+    "mitigationClosesGap": false,
+    "cacheZeroFollowup": "docs/qa/storage-cache-zero.json"
+  },
+  "failedAssertions": 1,
+  "notExecutedAfterFailure": [
+    "conversation_preserved_after_withdrawal",
+    "private_modeling_followup_preserved_after_withdrawal"
+  ],
+  "limitations": [
+    "HTTP221 passed and one cache assertion failed; not a fully passed acceptance suite",
+    "Published media already read through Storage remained CF HIT after withdrawal for the same token/URL; same-token fresh-origin request was denied",
+    "Cache-Control zero was tested on a new copy and did not prevent the immediate default-URL CDN HIT after withdrawal; origin denial remains effective, and already cached bytes are not claimed revoked",
+    "Synthetic confirmed Auth setup bypasses signup-email delivery; no real user or email created"
+  ]
+}

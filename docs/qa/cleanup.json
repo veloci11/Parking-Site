@@ -1,0 +1,80 @@
+{
+  "at": "2026-10-21T17:26:27.849Z",
+  "status": "passed",
+  "scope": {
+    "sources": [
+      ".data/supabase-qa-result.json",
+      ".data/supabase-qa.json",
+      ".data/supabase-scenes-qa-result.json"
+    ],
+    "selection": "Exact fixture UUIDs only; shared users retained until scene owner all-clear",
+    "humanAccountsDeleted": 0,
+    "nonQaUsersBefore": 0
+  },
+  "main": {
+    "databaseDeleted": {
+      "listings": 6,
+      "mediaAssets": 14,
+      "revisions": 4,
+      "publishedListings": 1,
+      "activeSpaceClaims": 2,
+      "conversations": 3,
+      "reports": 1
+    },
+    "storageDeleted": {
+      "privateUploads": 14,
+      "publicApproved": 14
+    },
+    "remainingListingAndMediaRows": 0
+  },
+  "scene": {
+    "owner": "cartes_3d",
+    "pending": false,
+    "withdrawalVerified": true,
+    "databaseDeleted": {
+      "scenes": 2,
+      "sources": 2,
+      "listings": 1,
+      "revisions": 5,
+      "mediaAssets": 3
+    },
+    "storageDeleted": {
+      "sceneSources": 2,
+      "privateUploads": 3,
+      "publicApproved": 3
+    },
+    "evidence": "docs/qa/scenes-integration.json"
+  },
+  "sharedQaUsers": {
+    "before": 4,
+    "deleted": 4,
+    "remaining": 0,
+    "sceneOwnerAllClear": true
+  },
+  "method": {
+    "database": "Transactional bounded SQL with ownership guard",
+    "storage": "Supabase SDK authenticated owner/moderator; no service-role key; signout scope local",
+    "secretsIncluded": false
+  },
+  "residualsDeleted": {
+    "notifications": 17,
+    "outbox": 17,
+    "auditEvents": 22,
+    "rateLimits": 7
+  },
+  "after": {
+    "qaUsers": 0,
+    "nonQaUsers": 0,
+    "listings": 0,
+    "scenes": 0,
+    "sceneSources": 0,
+    "mediaAssets": 0,
+    "storageObjects": 0,
+    "conversations": 0,
+    "notifications": 0,
+    "outbox": 0,
+    "auditEvents": 0,
+    "rateLimits": 0
+  },
+  "verification": "Project SQL inventory after SDK object deletion and exact QA-user transaction; no human accounts existed or were deleted."
+}

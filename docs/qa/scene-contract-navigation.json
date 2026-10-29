@@ -1,0 +1,12 @@
+{
+ "status":"local_passed_awaiting_coordinator_remote_apply",
+ "runtimeContract":"gp-parametric-level/1.1",
+ "manifestSchemaVersion":"gp-parametric-1.1",
+ "legacyParametricVersionAccepted":"1.0",
+ "canonicalParkingLevelSchemaImported":false,
+ "tests":{"scene":7,"interiorNavigation":2,"typecheck":"passed"},
+ "sqlSandbox":{"postgresVersion":"14","compiled":true,"rolledBack":true,"metadataNullProofRejected":true,"nonIsoDateRejected":true,"foreignEvidenceRejected":true,"legacyGeometryNormalized":true,"publicProjectionHidesPrivateSourceAndUnitIds":true,"scopedReviewedProjection":true,"existingGeometryAuthHelpersStubbed":true},
+ "remoteAppliedByThisAgent":false,
+ "humanDataTouched":false,
+ "remaining":["canonical shared parking/level/space registry","canonical parking-level schema adapter","controlled shared-scene rollback","live visual verification of return navigation by coordinator"]
+}

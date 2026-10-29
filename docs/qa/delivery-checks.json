@@ -1,0 +1,42 @@
+{
+  "checkedAt": "2026-10-21T17:54:02.983363+00:00",
+  "local": {
+    "typescript": "passed",
+    "format": "passed",
+    "nodeTests": {
+      "passed": 40,
+      "skippedOptionalHttp": 2,
+      "failed": 0
+    },
+    "isolatedHttp": {
+      "passed": 2,
+      "failed": 0
+    },
+    "productionBuild": "passed",
+    "productionSmoke": {
+      "supabaseHealth": "passed",
+      "emptyCatalog": "passed"
+    },
+    "dependencyAudit": {
+      "productionKnownVulnerabilities": 0,
+      "fullKnownVulnerabilities": 0
+    }
+  },
+  "github": {
+    "verifiedCommit": "a2e4d10055b5c6c6f83d6d2ee56c22dbf3d32400",
+    "workflowRuns": [
+      {
+        "url": "https://github.com/veloci11/Parking-Site/actions/runs/39647386340",
+        "result": "success"
+      },
+      {
+        "url": "https://github.com/veloci11/Parking-Site/actions/runs/39647375768",
+        "result": "success"
+      }
+    ]
+  },
+  "limits": [
+    "Subsequent preview-command/documentation commits require their own CI result.",
+    "No public deployment or physical parking pilot is claimed."
+  ]
+}

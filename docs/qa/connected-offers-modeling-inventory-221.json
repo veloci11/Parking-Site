@@ -1,0 +1,89 @@
+{
+  "scope": "030/031 connected synthetic fixture lifecycle",
+  "evidence": "Actual Supabase MCP SELECT inventories and scoped DML setup; distinct from HTTP assertions",
+  "initialBeforeSetup": {
+    "authUsers": 0,
+    "listings": 0,
+    "published": 0,
+    "modelingRequests": 0,
+    "storageObjects": 0,
+    "migrations": 31,
+    "unclaimedAdminReservations": 1
+  },
+  "setup": {
+    "fixtureUsers": 5,
+    "confirmedUsers": 5,
+    "roles": {
+      "member": 3,
+      "moderator": 1,
+      "admin": 1
+    },
+    "externalEmailSent": false,
+    "humanAuthCreated": false,
+    "globalAuthSettingsChanged": false
+  },
+  "afterInitialHttpFailureBeforeProductMutations": {
+    "authUsers": 5,
+    "listings": 0,
+    "published": 0,
+    "sites": 0,
+    "levels": 0,
+    "spaces": 0,
+    "modelingRequests": 0,
+    "storageObjects": 0,
+    "mfaFactors": 0,
+    "mfaRequired": true,
+    "unclaimedAdminReservations": 1
+  },
+  "cleanupStatus": "completed-real-supabase-and-storage-sdk",
+  "privateCredentialsIncluded": false,
+  "cleanup": {
+    "status": "completed-real-supabase-and-storage-sdk",
+    "finishedAt": "2026-10-22T14:02:31.737760+00:00",
+    "exactUsersDeleted": 5,
+    "exactListingsDeleted": 2,
+    "exactSitesDeleted": 2,
+    "storageBuckets": [
+      {
+        "bucket": "private-uploads",
+        "requested": 6,
+        "deleted": 6
+      },
+      {
+        "bucket": "public-approved",
+        "requested": 6,
+        "deleted": 6
+      },
+      {
+        "bucket": "scene-sources",
+        "requested": 0,
+        "deleted": 0
+      }
+    ],
+    "cleanupFactorRevoked": true,
+    "afterInventory": {
+      "authUsers": 0,
+      "listings": 0,
+      "published": 0,
+      "modelingRequests": 0,
+      "mediaAssets": 0,
+      "storageObjects": 0,
+      "sites": 0,
+      "levels": 0,
+      "spaces": 0,
+      "registryLinks": 0,
+      "scenes": 0,
+      "sceneSources": 0,
+      "conversations": 0,
+      "messages": 0,
+      "mfaFactors": 0,
+      "mfaRequired": true,
+      "unclaimedAdminReservations": 1,
+      "migrations": 34
+    },
+    "method": "Scoped guarded SQL dependency deletion; actual Storage SDK removal with per-directory post-state; guarded Auth deletion; final MCP SELECT inventory",
+    "credentialsPrinted": false,
+    "completeProviderLogErasureClaimed": false
+  },
+  "schemaChangeDuringCampaign": "Coordinator separately applied032/033/034; these are not fixture mutations or HTTP assertions"
+}

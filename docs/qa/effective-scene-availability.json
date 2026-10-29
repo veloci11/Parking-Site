@@ -1,0 +1,58 @@
+{
+  "checkedAt": "2026-10-21",
+  "module": "027-effective-scene-availability",
+  "status": "passed-remote-sql",
+  "confirmationSource": "Coordinator confirmed permanent Supabase migration application and complete rollback recipe with the real gp_validate_scene",
+  "migration": {
+    "file": "supabase/migrations/20261021202450_effective_scene_availability.sql",
+    "sha256": "eb3a196b5fbd7b389fb54f5048e74bcd5a4b420577967a7edb264d6208ac1622",
+    "remoteAppliedByThisAgent": false,
+    "permanentlyApplied": true,
+    "appliedBy": "coordinator using Supabase apply_migration",
+    "applied026Modified": false
+  },
+  "remoteSql": {
+    "completeRecipe": "passed without error",
+    "historicalSceneValidator": "Real gp_validate_scene on Supabase; no substitute",
+    "transaction": "rolled back",
+    "finalAssertion": "effective_scene_availability_contract_closed=1"
+  },
+  "sqlRecipe": {
+    "file": "supabase/tests/effective-scene-availability.sql",
+    "sha256": "c7082158a99642247e2edbea9a39338a2c1891187e83efe060b6bb19e29ffa11",
+    "engine": "PostgreSQL 14 isolated local registry027 database",
+    "compilation": "passed",
+    "transaction": "passed and rolled back",
+    "finalAssertion": "effective_scene_availability_contract_closed=1",
+    "historicalSceneRead": "Real migration003 read implementation installed in the isolated harness",
+    "historicalGeometryValidator": "Explicit local substitute without PostGIS; the separate remote recipe subsequently passed with the real validator"
+  },
+  "localVerification": {
+    "typecheck": "passed",
+    "postExpirationPatchTargetedTests": { "tests": 10, "passed": 10, "failed": 0, "skipped": 0 },
+    "expirationPatch": "Raw publication expiry checked before public projection and before pagination; expired detail absent and scene-filter total zero",
+    "observedFullSuiteBeforeExpirationPatch": { "tests": 111, "passed": 108, "skipped": 3, "failed": 0 },
+    "skips": "Two HTTP tests without configured origin and the real Docker raster without a configured pinned image",
+    "dedicatedTestFile": "tests/parking-level-plans.test.ts",
+    "sqlRegressions": "019, 022, 024, 025 and 026 rollback recipes passed after 027"
+  },
+  "verified": [
+    "Canonical public group uses any valid common level plan for effective scene availability",
+    "Grouped approved individual scene cannot bypass a missing common frame",
+    "Common-only listing appears in the scene filter with sceneAvailable true",
+    "Filter and matching total computed before keyset pagination and LIMIT",
+    "Second common listing retained across keyset pages without duplication",
+    "Common plan withdrawal or source quarantine removes the scene flag and scene-filter match",
+    "Ungrouped approved individual scene remains available with ready present sources",
+    "Area, missing, stale mapping, nonready evidence and expired publication are not scene ready",
+    "API detail, local SSR and group listing flags use the same effective rule",
+    "Private wrapper remains nonexecutable and public boolean helper exposes no private data"
+  ],
+  "limitations": [
+    "No source file uploaded through the Storage service or human document processed by the SQL fixtures",
+    "Browser visual acceptance and public production deployment are separate evidence"
+  ],
+  "credentialsIncluded": false,
+  "emailsSent": false,
+  "publicDeploymentClaimed": false
+}

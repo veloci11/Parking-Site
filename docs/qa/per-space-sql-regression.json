@@ -1,0 +1,72 @@
+{
+  "checkedAt": "2026-10-22T03:21:18.408Z",
+  "project": "srrmysturoloovpuuojp",
+  "migration": "030",
+  "method": "Supabase MCP execute_sql; each complete recipe in BEGIN/ROLLBACK; errors abort the recipe",
+  "recipes": [
+    {
+      "file": "supabase/tests/canonical-parking-registry.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase/tests/catalog-v2.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase/tests/commercial-details-preview.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase/tests/common-parking-level-plans.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase/tests/condition-observations.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase/tests/conversation-blocks.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase/tests/effective-scene-availability.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase/tests/entitlements-anti-abuse.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase/tests/interlocutor-blocks.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase/tests/notifications.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase/tests/profiles-admin-history.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase/tests/rls.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase/tests/sale-rent-transactions.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase/tests/suspension-unit-quality.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase/tests/unit-galleries.sql",
+      "passed": true
+    },
+    {
+      "file": "supabase/tests/ile-de-france-scope.sql",
+      "passed": true
+    }
+  ]
+}

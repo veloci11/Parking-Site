@@ -1,0 +1,104 @@
+{
+  "checkedAt": "2026-10-23T01:53:25.265283+00:00",
+  "origin": "https://parking.gilmathis.com",
+  "network": "curl from Ubuntu public DNS and HTTPS without resolver override",
+  "sourceCommit": "1fdf563b17d4b954435d500f211a0a2169a02bd7",
+  "buildId": "kEIJcoXo8PKR1eZavY5Sr",
+  "checks": [
+    {
+      "path": "/",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/health",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/ready",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/session",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/listings?limit=1",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/connexion",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/inscription",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/deposer",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/admin/revisions",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "path": "/api/conversations",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "path": "/api/auth/demo",
+      "status": 404,
+      "passed": true
+    },
+    {
+      "path": "/api/auth/demo",
+      "status": 403,
+      "passed": true
+    },
+    {
+      "path": "/robots.txt",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/auth/commands/policy",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "path": "/brand/gp-logo.png",
+      "status": 200,
+      "passed": true,
+      "sha256MatchesRelease": true
+    },
+    {
+      "path": "/parking-renders/demo-level-minus-1.webp",
+      "status": 200,
+      "passed": true,
+      "sha256MatchesRelease": true
+    },
+    {
+      "path": "/parking-renders/demo-level-minus-2.webp",
+      "status": 200,
+      "passed": true,
+      "sha256MatchesRelease": true
+    }
+  ],
+  "passed": 17,
+  "anonymousSession": true,
+  "publicInventoryCount": 0,
+  "noIndex": true,
+  "createdAccounts": false,
+  "sentEmails": false,
+  "demoPersonaAvailable": false
+}
